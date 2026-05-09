@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Settings page (`src/features/settings/SettingsView.tsx`) with sections for output folder, parallel-download limit, cookies-from-browser, ffmpeg path override, yt-dlp output template, and default preset. All values persist via the existing `ytbr.settings.v1` localStorage key (zustand-persist merges new fields onto defaults at hydration, so the v0.1.0 install carries over without a migration). UI-only in this commit — only the output folder is wired into the download path; parallel limit, cookies, ffmpeg override, output template, and default preset land in subsequent iterations.
+
 ## [0.1.0] - 2026-05-10
 
 First public release. Iteration 1 of the YTBR Tauri desktop frontend for yt-dlp:

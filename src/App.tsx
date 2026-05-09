@@ -24,6 +24,7 @@ import { UrlInput } from "@/features/url-input/UrlInput";
 import { FormatTable } from "@/features/format-picker/FormatTable";
 import { PresetButtons } from "@/features/format-picker/PresetButtons";
 import { OutputDirPicker } from "@/features/settings/OutputDirPicker";
+import { SettingsView } from "@/features/settings/SettingsView";
 import { QueueView } from "@/features/queue/QueueView";
 
 type Route = "download" | "queue" | "settings";
@@ -97,9 +98,7 @@ function App() {
         <div className="flex-1 overflow-auto p-6">
           {route === "download" && <DownloadView />}
           {route === "queue" && <QueueView />}
-          {route === "settings" && (
-            <Placeholder text="Default profile, cookies, ffmpeg path arrive in iteration 2." />
-          )}
+          {route === "settings" && <SettingsView />}
         </div>
       </main>
     </div>
