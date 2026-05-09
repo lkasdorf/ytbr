@@ -1,0 +1,64 @@
+YTBR
+Copyright 2026 Leon Kasdorf
+
+This product includes software developed by the YTBR project authors.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this product except in compliance with the License. You may
+obtain a copy of the License in the LICENSE file at the root of this
+repository or at http://www.apache.org/licenses/LICENSE-2.0.
+
+================================================================================
+Third-party software bundled with YTBR
+================================================================================
+
+YTBR ships two standalone executables ("sidecars") that are invoked by
+the application but remain independent programs. They are not statically
+linked into the YTBR binary.
+
+  yt-dlp
+    Homepage: https://github.com/yt-dlp/yt-dlp
+    License:  The Unlicense (public domain)
+
+  ffmpeg (LGPL build)
+    Homepage: https://ffmpeg.org/
+    Source:   https://github.com/BtbN/FFmpeg-Builds
+    License:  GNU Lesser General Public License v2.1 or later (LGPL-2.1-or-later)
+
+    The bundled ffmpeg binary is built without GPL-only components. Per
+    LGPL Section 6, end users may replace it: locate the ffmpeg sidecar
+    inside the YTBR installation directory and substitute a compatible
+    binary. The full LGPL text and a pointer to upstream sources are
+    reproduced in THIRD_PARTY_LICENSES.md.
+
+================================================================================
+Third-party libraries linked into YTBR
+================================================================================
+
+YTBR depends on a number of open-source libraries, each distributed under
+its own permissive license (Apache-2.0, MIT, BSD, ISC, MPL-2.0, Unicode,
+Zlib, Unlicense, or CC0-1.0). The complete list with versions and license
+texts is generated automatically and committed at the project root as
+THIRD_PARTY_LICENSES.md.
+
+Notable upstream projects:
+
+  Tauri          https://tauri.app/                MIT OR Apache-2.0
+  React          https://react.dev/                MIT
+  Vite           https://vitejs.dev/               MIT
+  TypeScript     https://www.typescriptlang.org/   Apache-2.0
+  Tailwind CSS   https://tailwindcss.com/          MIT
+  shadcn/ui      https://ui.shadcn.com/            MIT
+  Zustand        https://zustand-demo.pmnd.rs/     MIT
+  lucide-react   https://lucide.dev/               ISC
+
+================================================================================
+Trademarks and platform affiliation
+================================================================================
+
+YTBR is an independent open-source project. It is not affiliated with,
+endorsed by, or sponsored by any video platform, streaming service, or
+content provider. Names of third-party platforms, formats, codecs, or
+tools mentioned in source files, documentation, or this NOTICE are the
+property of their respective owners and are used solely for the purpose
+of describing what YTBR interoperates with.
