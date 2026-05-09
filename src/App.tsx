@@ -2,7 +2,15 @@
 // Copyright (c) 2026 Leon Kasdorf
 
 import { useState } from "react";
-import { Download, ListVideo, Settings as SettingsIcon } from "lucide-react";
+import {
+  Download,
+  ListVideo,
+  Settings as SettingsIcon,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 
 type Route = "download" | "queue" | "settings";
@@ -56,22 +64,88 @@ function App() {
           <h1 className="text-base font-medium capitalize">{route}</h1>
         </header>
         <div className="flex-1 overflow-auto p-6">
-          <Placeholder route={route} />
+          {route === "download" && <DownloadView />}
+          {route === "queue" && <Placeholder text="Job queue with progress and status arrives in iteration 2." />}
+          {route === "settings" && <Placeholder text="Default profile, cookies, ffmpeg path arrive in iteration 2." />}
         </div>
       </main>
     </div>
   );
 }
 
-function Placeholder({ route }: { route: Route }) {
-  const messages: Record<Route, string> = {
-    download: "URL input and format picker land here in iteration 1.",
-    queue: "Job queue with progress and status arrives in iteration 2.",
-    settings: "Default profile, cookies, ffmpeg path arrive in iteration 2.",
-  };
+function Placeholder({ text }: { text: string }) {
   return (
     <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
-      <p className="text-sm text-muted-foreground">{messages[route]}</p>
+      <p className="text-sm text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
+type ProbeState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ok"; version: string }
+  | { status: "error"; message: string };
+
+function DownloadView() {
+  const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
+
+  async function check() {
+    setProbe({ status: "loading" });
+    try {
+      const version = await invoke<string>("ytdlp_version");
+      setProbe({ status: "ok", version });
+    } catch (err) {
+      setProbe({ status: "error", message: String(err) });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Placeholder text="URL input and format picker land here in iteration 1." />
+
+      <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold">Sidecar smoke test</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Calls the bundled <code className="font-mono">yt-dlp --version</code> via the
+              Tauri shell sidecar. Verifies the binary is reachable from the app.
+            </p>
+          </div>
+          <button
+            onClick={check}
+            disabled={probe.status === "loading"}
+            className={cn(
+              "shrink-0 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors",
+              "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
+            )}
+          >
+            {probe.status === "loading" ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                Checking…
+              </span>
+            ) : (
+              "Check yt-dlp"
+            )}
+          </button>
+        </div>
+
+        {probe.status === "ok" && (
+          <div className="mt-4 flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+            <CheckCircle2 className="size-4 text-emerald-500" />
+            <span className="text-muted-foreground">yt-dlp</span>
+            <code className="font-mono">{probe.version}</code>
+          </div>
+        )}
+        {probe.status === "error" && (
+          <div className="mt-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
+            <AlertCircle className="size-4 shrink-0 text-destructive" />
+            <code className="break-all font-mono text-xs">{probe.message}</code>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

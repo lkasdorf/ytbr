@@ -13,8 +13,10 @@
     "windows": [
       {
         "title": "YTBR",
-        "width": 800,
-        "height": 600
+        "width": 1100,
+        "height": 720,
+        "minWidth": 800,
+        "minHeight": 560
       }
     ],
     "security": {
@@ -24,6 +26,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": [
+      "binaries/yt-dlp",
+      "binaries/ffmpeg"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

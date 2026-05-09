@@ -1,0 +1,134 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Leon Kasdorf
+#
+# Downloads yt-dlp and the LGPL build of ffmpeg for the given Rust
+# target triple and stages them in src-tauri/binaries/ with the Tauri
+# sidecar naming convention (<name>-<triple>{.exe}). Hash-verifies
+# downloads where upstream publishes a checksum file.
+#
+# Usage:
+#   ./scripts/fetch-binaries.ps1                       # host target
+#   ./scripts/fetch-binaries.ps1 -Target x86_64-pc-windows-msvc
+
+param(
+    [string]$Target = ""
+)
+
+$ErrorActionPreference = "Stop"
+$ProgressPreference   = "SilentlyContinue"  # speeds up Invoke-WebRequest
+
+$RepoRoot   = Resolve-Path (Join-Path $PSScriptRoot "..")
+$BinDir     = Join-Path $RepoRoot "src-tauri/binaries"
+$WorkDir    = Join-Path $env:TEMP "ytbr-fetch-$(Get-Random)"
+
+function Resolve-HostTriple {
+    $rustc = Get-Command rustc -ErrorAction SilentlyContinue
+    if (-not $rustc) {
+        throw "rustc not found on PATH. Install Rust or pass -Target explicitly."
+    }
+    $line = & rustc -vV | Where-Object { $_ -like "host:*" }
+    return ($line -replace "^host:\s*", "").Trim()
+}
+
+if (-not $Target) { $Target = Resolve-HostTriple }
+
+$Spec = switch ($Target) {
+    "x86_64-pc-windows-msvc" {
+        @{
+            YtDlpUrl   = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+            YtDlpName  = "yt-dlp.exe"
+            FfmpegUrl  = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
+            FfmpegName = "ffmpeg.exe"
+            Suffix     = ".exe"
+        }
+    }
+    "x86_64-unknown-linux-gnu" {
+        @{
+            YtDlpUrl   = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
+            YtDlpName  = "yt-dlp"
+            FfmpegUrl  = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
+            FfmpegName = "ffmpeg"
+            Suffix     = ""
+        }
+    }
+    default { throw "Unsupported target triple: $Target" }
+}
+
+New-Item -ItemType Directory -Path $BinDir  -Force | Out-Null
+New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
+
+try {
+    # ---------- yt-dlp ----------
+    $YtDlpOut = Join-Path $WorkDir $Spec.YtDlpName
+    Write-Host "[yt-dlp] $($Spec.YtDlpUrl)"
+    Invoke-WebRequest -Uri $Spec.YtDlpUrl -OutFile $YtDlpOut
+
+    $SumsUrl  = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS"
+    $SumsFile = Join-Path $WorkDir "SHA2-256SUMS"
+    try {
+        Invoke-WebRequest -Uri $SumsUrl -OutFile $SumsFile
+        $expected = (Select-String -Path $SumsFile -Pattern "\s$([regex]::Escape($Spec.YtDlpName))$" |
+                     Select-Object -First 1).Line.Split()[0]
+        if ($expected) {
+            $actual = (Get-FileHash -Algorithm SHA256 -Path $YtDlpOut).Hash.ToLower()
+            if ($actual -ne $expected.ToLower()) {
+                throw "yt-dlp hash mismatch: expected $expected got $actual"
+            }
+            Write-Host "[yt-dlp] sha256 ok ($($actual.Substring(0,12))...)"
+        } else {
+            Write-Warning "[yt-dlp] SHA2-256SUMS did not contain $($Spec.YtDlpName); skipping verify"
+        }
+    } catch {
+        Write-Warning "[yt-dlp] hash verify skipped: $_"
+    }
+
+    Copy-Item -Path $YtDlpOut `
+              -Destination (Join-Path $BinDir "yt-dlp-$Target$($Spec.Suffix)") `
+              -Force
+
+    # ---------- ffmpeg ----------
+    $FfmpegArchive = Join-Path $WorkDir (Split-Path $Spec.FfmpegUrl -Leaf)
+    Write-Host "[ffmpeg] $($Spec.FfmpegUrl)"
+    Invoke-WebRequest -Uri $Spec.FfmpegUrl -OutFile $FfmpegArchive
+
+    $FfmpegSumUrl  = "$($Spec.FfmpegUrl).sha256"
+    $FfmpegSumFile = "$FfmpegArchive.sha256"
+    $sumOk = $false
+    try {
+        Invoke-WebRequest -Uri $FfmpegSumUrl -OutFile $FfmpegSumFile -ErrorAction Stop
+        $sumOk = $true
+    } catch {
+        $code = $_.Exception.Response.StatusCode.value__ 2>$null
+        Write-Host "[ffmpeg] no upstream .sha256 (HTTP $code); skipping verify"
+    }
+    if ($sumOk) {
+        $expected = (Get-Content -Path $FfmpegSumFile -TotalCount 1).Split()[0]
+        $actual   = (Get-FileHash -Algorithm SHA256 -Path $FfmpegArchive).Hash.ToLower()
+        if ($actual -ne $expected.ToLower()) {
+            throw "ffmpeg hash mismatch: expected $expected got $actual"
+        }
+        Write-Host "[ffmpeg] sha256 ok ($($actual.Substring(0,12))...)"
+    }
+
+    $ExtractDir = Join-Path $WorkDir "ffmpeg-extract"
+    New-Item -ItemType Directory -Path $ExtractDir -Force | Out-Null
+    Expand-Archive -Path $FfmpegArchive -DestinationPath $ExtractDir -Force
+
+    $Found = Get-ChildItem -Path $ExtractDir -Recurse -Filter $Spec.FfmpegName |
+             Select-Object -First 1
+    if (-not $Found) {
+        throw "ffmpeg binary $($Spec.FfmpegName) not found inside archive"
+    }
+    Copy-Item -Path $Found.FullName `
+              -Destination (Join-Path $BinDir "ffmpeg-$Target$($Spec.Suffix)") `
+              -Force
+
+    Write-Host ""
+    Write-Host "Staged in $BinDir for triple $Target :"
+    Get-ChildItem -Path $BinDir -Filter "*$Target*" | ForEach-Object {
+        $size = [math]::Round($_.Length / 1MB, 2)
+        Write-Host "  $($_.Name)  ($size MB)"
+    }
+} finally {
+    if (Test-Path $WorkDir) { Remove-Item -Recurse -Force $WorkDir }
+}
