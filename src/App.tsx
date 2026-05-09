@@ -3,15 +3,16 @@
 
 import { useState } from "react";
 import {
+  AlertCircle,
   Download,
   ListVideo,
   Settings as SettingsIcon,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
 } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
+import { probeUrl, type ProbeResult } from "@/lib/tauri-bridge";
+import { formatDuration } from "@/lib/format-utils";
+import { UrlInput } from "@/features/url-input/UrlInput";
+import { FormatTable } from "@/features/format-picker/FormatTable";
 
 type Route = "download" | "queue" | "settings";
 
@@ -23,7 +24,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { id: "download", label: "Download", icon: Download },
-  { id: "queue", label: "Queue", icon: ListVideo },
+  { id: "queue",    label: "Queue",    icon: ListVideo },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -65,8 +66,12 @@ function App() {
         </header>
         <div className="flex-1 overflow-auto p-6">
           {route === "download" && <DownloadView />}
-          {route === "queue" && <Placeholder text="Job queue with progress and status arrives in iteration 2." />}
-          {route === "settings" && <Placeholder text="Default profile, cookies, ffmpeg path arrive in iteration 2." />}
+          {route === "queue" && (
+            <Placeholder text="Job queue with progress and status arrives in iteration 2." />
+          )}
+          {route === "settings" && (
+            <Placeholder text="Default profile, cookies, ffmpeg path arrive in iteration 2." />
+          )}
         </div>
       </main>
     </div>
@@ -84,17 +89,17 @@ function Placeholder({ text }: { text: string }) {
 type ProbeState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ok"; version: string }
+  | { status: "ok"; result: ProbeResult }
   | { status: "error"; message: string };
 
 function DownloadView() {
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
 
-  async function check() {
+  async function run(url: string) {
     setProbe({ status: "loading" });
     try {
-      const version = await invoke<string>("ytdlp_version");
-      setProbe({ status: "ok", version });
+      const result = await probeUrl(url);
+      setProbe({ status: "ok", result });
     } catch (err) {
       setProbe({ status: "error", message: String(err) });
     }
@@ -102,51 +107,47 @@ function DownloadView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Placeholder text="URL input and format picker land here in iteration 1." />
+      <UrlInput loading={probe.status === "loading"} onProbe={run} />
 
-      <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-semibold">Sidecar smoke test</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Calls the bundled <code className="font-mono">yt-dlp --version</code> via the
-              Tauri shell sidecar. Verifies the binary is reachable from the app.
-            </p>
-          </div>
-          <button
-            onClick={check}
-            disabled={probe.status === "loading"}
-            className={cn(
-              "shrink-0 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors",
-              "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
-            )}
-          >
-            {probe.status === "loading" ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="size-4 animate-spin" />
-                Checking…
-              </span>
-            ) : (
-              "Check yt-dlp"
-            )}
-          </button>
+      {probe.status === "idle" && (
+        <Placeholder text="Paste a URL above to list available formats." />
+      )}
+
+      {probe.status === "error" && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <AlertCircle className="size-4 shrink-0 text-destructive" />
+          <code className="break-all font-mono text-xs">{probe.message}</code>
         </div>
+      )}
 
-        {probe.status === "ok" && (
-          <div className="mt-4 flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-            <CheckCircle2 className="size-4 text-emerald-500" />
-            <span className="text-muted-foreground">yt-dlp</span>
-            <code className="font-mono">{probe.version}</code>
-          </div>
-        )}
-        {probe.status === "error" && (
-          <div className="mt-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
-            <AlertCircle className="size-4 shrink-0 text-destructive" />
-            <code className="break-all font-mono text-xs">{probe.message}</code>
-          </div>
-        )}
-      </div>
+      {probe.status === "ok" && <ProbeResultView result={probe.result} />}
     </div>
+  );
+}
+
+function ProbeResultView({ result }: { result: ProbeResult }) {
+  return (
+    <>
+      <div className="flex gap-4 rounded-lg border border-border bg-card p-4">
+        {result.thumbnail && (
+          <img
+            src={result.thumbnail}
+            alt=""
+            className="h-20 w-32 shrink-0 rounded-md object-cover"
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-semibold">{result.title}</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {result.uploader && <span>{result.uploader} · </span>}
+            <span>{formatDuration(result.durationSecs)}</span>
+            <span> · {result.formats.length} formats</span>
+          </p>
+        </div>
+      </div>
+
+      <FormatTable formats={result.formats} />
+    </>
   );
 }
 
