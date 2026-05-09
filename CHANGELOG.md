@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-05-10
+
+First public release. Iteration 1 of the YTBR Tauri desktop frontend for yt-dlp:
+URL probe, sortable format table, quick presets, queued downloads with live
+progress and cancel, video+audio muxing via bundled LGPL ffmpeg, persisted
+output directory.
+
 ### Added
 
 - Tauri 2.11 + React 19 + TypeScript 5.8 + Vite 7 desktop shell scaffolded for Windows 11 and Linux (deb + AppImage).
@@ -37,4 +44,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `OneDrive` sync touches file metadata frequently enough that `tauri dev`'s Rust file watcher mistakes it for an edit and rebuilds mid-run; always pass `--no-watch` while developing.
 - Some antivirus engines flag UPX-compressed binaries as suspicious (heuristic, not signature-based). YTBR's installer is unsigned today; once code-signing is in place, AV vendors stop short-circuiting on UPX heuristics. Fallback option if a specific AV blocks the bundled ffmpeg: comment out the upx step in `fetch-binaries.{ps1,sh}` for that release.
 
-[Unreleased]: https://github.com/lkasdorf/ytbr/compare/HEAD...HEAD
+[Unreleased]: https://github.com/lkasdorf/ytbr/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/lkasdorf/ytbr/releases/tag/v0.1.0
