@@ -22,6 +22,7 @@ import { isActive, useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
 import { FormatTable } from "@/features/format-picker/FormatTable";
+import { PresetButtons } from "@/features/format-picker/PresetButtons";
 import { OutputDirPicker } from "@/features/settings/OutputDirPicker";
 import { QueueView } from "@/features/queue/QueueView";
 
@@ -130,22 +131,12 @@ function DownloadView() {
     }
   }
 
-  async function handleDownload(format: Format) {
+  async function enqueue(formatId: string) {
     if (!outputDir || probe.status !== "ok") return;
-    // YouTube serves anything above 360p as a video-only stream that
-    // needs to be muxed with a separate audio stream. yt-dlp won't do
-    // this implicitly when an explicit format id is given, so we ask
-    // for "<id>+bestaudio" and fall back to the best combined format
-    // if the merge can't happen for some reason.
-    const kind = classifyFormat(format.vcodec, format.acodec);
-    const formatId =
-      kind === "video" ? `${format.formatId}+bestaudio/best` : format.formatId;
     try {
-      const id = await enqueueJob({
-        url: probe.url,
-        formatId,
-        outputDir,
-      });
+      const id = await enqueueJob({ url: probe.url, formatId, outputDir });
+      // Optimistic insert so the Queue tab shows the row before the
+      // first job-status event lands.
       useJobsStore.getState().upsert({
         id,
         spec: { url: probe.url, formatId, outputDir },
@@ -156,6 +147,17 @@ function DownloadView() {
     } catch (err) {
       console.error("enqueue failed", err);
     }
+  }
+
+  function handleFormatRow(format: Format) {
+    // YouTube serves anything above 360p as a video-only stream that
+    // needs to be muxed with a separate audio stream. yt-dlp won't do
+    // this implicitly when given an explicit format id, so we ask for
+    // "<id>+bestaudio" and fall back to the best combined format.
+    const kind = classifyFormat(format.vcodec, format.acodec);
+    const selector =
+      kind === "video" ? `${format.formatId}+bestaudio/best` : format.formatId;
+    void enqueue(selector);
   }
 
   return (
@@ -177,7 +179,8 @@ function DownloadView() {
       {probe.status === "ok" && (
         <ProbeResultView
           result={probe.result}
-          onDownload={handleDownload}
+          onDownloadFormat={handleFormatRow}
+          onDownloadPreset={(selector) => void enqueue(selector)}
           downloadDisabledReason={
             outputDir ? undefined : "Choose an output folder before downloading"
           }
@@ -189,13 +192,16 @@ function DownloadView() {
 
 function ProbeResultView({
   result,
-  onDownload,
+  onDownloadFormat,
+  onDownloadPreset,
   downloadDisabledReason,
 }: {
   result: ProbeResult;
-  onDownload: (format: Format) => void;
+  onDownloadFormat: (format: Format) => void;
+  onDownloadPreset: (selector: string) => void;
   downloadDisabledReason?: string;
 }) {
+  const disabled = downloadDisabledReason != null;
   return (
     <>
       <div className="flex gap-4 rounded-lg border border-border bg-card p-4">
@@ -216,9 +222,15 @@ function ProbeResultView({
         </div>
       </div>
 
+      <PresetButtons
+        onPick={onDownloadPreset}
+        disabled={disabled}
+        disabledReason={downloadDisabledReason}
+      />
+
       <FormatTable
         formats={result.formats}
-        onDownload={onDownload}
+        onDownload={onDownloadFormat}
         downloadDisabledReason={downloadDisabledReason}
       />
     </>
