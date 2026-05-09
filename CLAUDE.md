@@ -105,6 +105,19 @@ src/
 - Rust modules over fat files. New Tauri commands go in `commands/<group>.rs`, registered in `commands/mod.rs` + the `invoke_handler!` macro in `lib.rs`.
 - Frontend TS strict mode (`noUnusedLocals`, `noUnusedParameters`, etc.). Path alias `@/*` → `src/*`.
 - shadcn/ui set up manually (CLI hangs in non-interactive shells); add components by hand into `src/components/ui/` if you need them, with `style: new-york`, slate base.
+- **`CHANGELOG.md` is updated alongside meaningful commits**, not only at session end. Keep a Changelog 1.1.0 categories under `[Unreleased]`. The `/end-session` skill is the safety net.
+- App version is sourced from `package.json#version` and injected as `__APP_VERSION__` via `vite.config.ts` → shown in the sidebar header. Bump `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` together when cutting a release; the prompt's helper-script-keeps-them-synchronized check is still TODO.
+
+## Memories and the `/end-session` skill
+
+Two parallel memory locations:
+
+- **Source of truth (auto-loaded)**: `~/.claude/projects/<project-hash>/memory/` — Claude Code reads `MEMORY.md` and the linked files at session start.
+- **Versioned copy in repo**: `.claude/memory/` — same files, kept in sync so they're visible on GitHub and survive a fresh clone.
+
+The `/end-session` skill itself lives **outside the repo** at `~/.claude/skills/end-session/SKILL.md` (user-global). The repo intentionally only versions `.claude/memory/`; `.claude/skills/` and `.claude/settings*.json` are gitignored. The skill handles the routine wrap-up — survey what changed, update memories on both sides, append CHANGELOG entries, commit + push. Invoke whenever wrapping a working session, or as a mid-session checkpoint.
+
+**Fresh-clone bootstrap**: copy the repo's `.claude/memory/*.md` into `~/.claude/projects/<your-project-hash>/memory/` before the first session — Claude won't auto-load from the repo path. Re-author the `/end-session` skill in your own `~/.claude/skills/` if you want it (the skill body is short and the wiring is documented in this file).
 
 ## Gotchas
 

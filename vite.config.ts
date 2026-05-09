@@ -5,8 +5,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 
 const host = process.env.TAURI_DEV_HOST;
+
+const pkg = JSON.parse(
+  readFileSync(path.resolve(import.meta.dirname, "./package.json"), "utf-8"),
+) as { version: string };
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
@@ -16,6 +21,10 @@ export default defineConfig(async () => ({
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
     },
+  },
+
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

@@ -16,6 +16,12 @@ dist-ssr
 src-tauri/binaries/*
 !src-tauri/binaries/.gitkeep
 
+# Claude Code: only memory is versioned. Skills and settings are
+# user-local — see CLAUDE.md "Memories and the /end-session skill".
+.claude/*
+!.claude/memory/
+!.claude/memory/**
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -55,8 +55,11 @@ function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-        <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+        <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
           <span className="text-lg font-semibold tracking-tight">YTBR</span>
+          <span className="font-mono text-[10px] text-sidebar-foreground/50" title="App version">
+            v{__APP_VERSION__}
+          </span>
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-2">
           {NAV.map((item) => {

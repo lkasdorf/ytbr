@@ -1,0 +1,5 @@
+- [User profile (Leon Kasdorf)](user_profile.md) — name, GitHub `lkasdorf`, Win11 + OneDrive setup, German-speaking
+- [YTBR workflow preferences](ytbr_workflow.md) — stop after each step, one question at a time, commit on confirm
+- [YTBR performance constraints](ytbr_perf_constraints.md) — startup <1.5 s, install lean; user reinforced beyond prompt
+- [YTBR backlog and project state](ytbr_backlog.md) — Iter 1 done, paused; Iter 2/3 + cross-cutting open work
+- [YTBR external references](ytbr_references.md) — repo URL, prompt-md location, upstream sidecar sources
