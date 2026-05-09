@@ -32,6 +32,10 @@ function Resolve-HostTriple {
 
 if (-not $Target) { $Target = Resolve-HostTriple }
 
+# UPX is pinned for reproducible compression of the ffmpeg sidecar.
+# Bump $UpxVersion when upstream ships a fix you need.
+$UpxVersion = "5.0.2"
+
 $Spec = switch ($Target) {
     "x86_64-pc-windows-msvc" {
         @{
@@ -40,6 +44,8 @@ $Spec = switch ($Target) {
             FfmpegUrl  = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
             FfmpegName = "ffmpeg.exe"
             Suffix     = ".exe"
+            UpxUrl     = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-win64.zip"
+            UpxExe     = "upx.exe"
         }
     }
     "x86_64-unknown-linux-gnu" {
@@ -49,6 +55,8 @@ $Spec = switch ($Target) {
             FfmpegUrl  = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
             FfmpegName = "ffmpeg"
             Suffix     = ""
+            UpxUrl     = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-amd64_linux.tar.xz"
+            UpxExe     = "upx"
         }
     }
     default { throw "Unsupported target triple: $Target" }
@@ -119,6 +127,29 @@ try {
     if (-not $Found) {
         throw "ffmpeg binary $($Spec.FfmpegName) not found inside archive"
     }
+
+    # ---------- upx (compress ffmpeg in place) ----------
+    # BtbN's LGPL ffmpeg ships ~164 MB statically linked. UPX --best --lzma
+    # cuts it to ~50-60 MB at the cost of a small startup decompress hit
+    # (irrelevant: ffmpeg is launched on demand, not on app boot).
+    $UpxArchive = Join-Path $WorkDir (Split-Path $Spec.UpxUrl -Leaf)
+    $UpxExtract = Join-Path $WorkDir "upx"
+    Write-Host "[upx] $($Spec.UpxUrl)"
+    Invoke-WebRequest -Uri $Spec.UpxUrl -OutFile $UpxArchive
+    New-Item -ItemType Directory -Path $UpxExtract -Force | Out-Null
+    Expand-Archive -Path $UpxArchive -DestinationPath $UpxExtract -Force
+
+    $UpxExePath = (Get-ChildItem -Path $UpxExtract -Recurse -Filter $Spec.UpxExe |
+                   Select-Object -First 1).FullName
+    if (-not $UpxExePath) { throw "upx not found inside $UpxArchive" }
+
+    $beforeMb = [math]::Round((Get-Item $Found.FullName).Length / 1MB, 2)
+    Write-Host "[upx] compressing ffmpeg ($beforeMb MB) with --best --lzma ..."
+    & $UpxExePath --best --lzma --quiet $Found.FullName
+    if ($LASTEXITCODE -ne 0) { throw "upx exited with code $LASTEXITCODE" }
+    $afterMb = [math]::Round((Get-Item $Found.FullName).Length / 1MB, 2)
+    Write-Host "[upx] $beforeMb MB -> $afterMb MB"
+
     Copy-Item -Path $Found.FullName `
               -Destination (Join-Path $BinDir "ffmpeg-$Target$($Spec.Suffix)") `
               -Force

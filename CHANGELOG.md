@@ -29,11 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `.gitignore` now excludes the entire `.claude/` directory. Claude Code artifacts (memories, skills, settings, hooks) are user-local — none of it lives in the repo. The earlier `.claude/memory/` mirror was removed.
+- `scripts/fetch-binaries.{ps1,sh}` now UPX-compress the bundled LGPL ffmpeg sidecar (`upx --best --lzma`, pinned to UPX v5.0.2). The Windows ffmpeg binary drops from 164.12 MB to 38.27 MB (-76.7%), bringing total sidecar disk footprint to ~56 MB and the install-size goal of <80 MB within reach. Decompress overhead is paid once on each ffmpeg launch (tens of ms on modern hardware) and is irrelevant since ffmpeg is spawned on-demand, not on app boot.
 
 ### Notes
 
 - `--no-playlist` is hardcoded in both the probe and runner. Playlist support is a planned follow-up; the current `VideoInfo` deserializer doesn't model `entries[]`.
-- The bundled LGPL ffmpeg is 164 MB, which blows the prompt's `<80 MB` installer goal. Slimming work is pending before any release.
 - `OneDrive` sync touches file metadata frequently enough that `tauri dev`'s Rust file watcher mistakes it for an edit and rebuilds mid-run; always pass `--no-watch` while developing.
+- Some antivirus engines flag UPX-compressed binaries as suspicious (heuristic, not signature-based). YTBR's installer is unsigned today; once code-signing is in place, AV vendors stop short-circuiting on UPX heuristics. Fallback option if a specific AV blocks the bundled ffmpeg: comment out the upx step in `fetch-binaries.{ps1,sh}` for that release.
 
 [Unreleased]: https://github.com/lkasdorf/ytbr/compare/HEAD...HEAD

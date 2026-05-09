@@ -28,6 +28,10 @@ if [ -z "$target" ]; then
   target="$(rustc -vV | awk '/^host:/ {print $2}')"
 fi
 
+# UPX is pinned for reproducible compression of the ffmpeg sidecar.
+# Bump UPX_VERSION when upstream ships a fix you need.
+UPX_VERSION="5.0.2"
+
 case "$target" in
   x86_64-pc-windows-msvc)
     ytdlp_url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
@@ -35,6 +39,8 @@ case "$target" in
     ffmpeg_url="https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
     ffmpeg_name="ffmpeg.exe"
     suffix=".exe"
+    upx_url="https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-win64.zip"
+    upx_name="upx.exe"
     ;;
   x86_64-unknown-linux-gnu)
     ytdlp_url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
@@ -42,6 +48,8 @@ case "$target" in
     ffmpeg_url="https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
     ffmpeg_name="ffmpeg"
     suffix=""
+    upx_url="https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz"
+    upx_name="upx"
     ;;
   *)
     echo "Unsupported target triple: $target" >&2
@@ -109,6 +117,32 @@ if [ -z "$ffmpeg_path" ]; then
   echo "ffmpeg binary $ffmpeg_name not found inside archive" >&2
   exit 1
 fi
+
+# ---------- upx (compress ffmpeg in place) ----------
+# BtbN's LGPL ffmpeg ships ~164 MB statically linked. UPX --best --lzma
+# cuts it to ~50-60 MB at the cost of a small startup decompress hit
+# (irrelevant: ffmpeg is launched on demand, not on app boot).
+upx_archive="$WORK_DIR/$(basename "$upx_url")"
+upx_extract="$WORK_DIR/upx"
+mkdir -p "$upx_extract"
+echo "[upx] $upx_url"
+dl "$upx_url" "$upx_archive"
+case "$upx_archive" in
+  *.zip)    unzip -q "$upx_archive" -d "$upx_extract" ;;
+  *.tar.xz) tar -xJf "$upx_archive" -C "$upx_extract" ;;
+  *)        echo "Unknown upx archive format: $upx_archive" >&2; exit 1 ;;
+esac
+upx_bin="$(find "$upx_extract" -type f -name "$upx_name" | head -n 1)"
+if [ -z "$upx_bin" ]; then
+  echo "upx binary not found inside archive" >&2
+  exit 1
+fi
+chmod +x "$upx_bin" || true
+before_bytes="$(stat -c %s "$ffmpeg_path" 2>/dev/null || stat -f %z "$ffmpeg_path")"
+echo "[upx] compressing ffmpeg ($((before_bytes / 1024 / 1024)) MB) with --best --lzma ..."
+"$upx_bin" --best --lzma --quiet "$ffmpeg_path"
+after_bytes="$(stat -c %s "$ffmpeg_path" 2>/dev/null || stat -f %z "$ffmpeg_path")"
+echo "[upx] $((before_bytes / 1024 / 1024)) MB -> $((after_bytes / 1024 / 1024)) MB"
 
 cp -f "$ffmpeg_path" "$BIN_DIR/ffmpeg-${target}${suffix}"
 chmod +x "$BIN_DIR/ffmpeg-${target}${suffix}" || true
