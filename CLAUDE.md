@@ -110,14 +110,12 @@ src/
 
 ## Memories and the `/end-session` skill
 
-Two parallel memory locations:
+All Claude Code artifacts — memories, skills, settings, hooks — are **user-local** and intentionally not versioned. The whole `.claude/` directory is gitignored.
 
-- **Source of truth (auto-loaded)**: `~/.claude/projects/<project-hash>/memory/` — Claude Code reads `MEMORY.md` and the linked files at session start.
-- **Versioned copy in repo**: `.claude/memory/` — same files, kept in sync so they're visible on GitHub and survive a fresh clone.
+- **Memory**: lives in `~/.claude/projects/<project-hash>/memory/`, auto-loaded at session start. `MEMORY.md` is the index; the rest are the entries it links to. Built up by Leon over the session — backlog, workflow preferences, performance constraints, references.
+- **Skill**: `/end-session` lives at `~/.claude/skills/end-session/SKILL.md`. Walks the routine wrap-up — survey what changed, update memories, append `CHANGELOG.md` entries, commit + push. Invoke whenever wrapping a working session or as a mid-session checkpoint.
 
-The `/end-session` skill itself lives **outside the repo** at `~/.claude/skills/end-session/SKILL.md` (user-global). The repo intentionally only versions `.claude/memory/`; `.claude/skills/` and `.claude/settings*.json` are gitignored. The skill handles the routine wrap-up — survey what changed, update memories on both sides, append CHANGELOG entries, commit + push. Invoke whenever wrapping a working session, or as a mid-session checkpoint.
-
-**Fresh-clone bootstrap**: copy the repo's `.claude/memory/*.md` into `~/.claude/projects/<your-project-hash>/memory/` before the first session — Claude won't auto-load from the repo path. Re-author the `/end-session` skill in your own `~/.claude/skills/` if you want it (the skill body is short and the wiring is documented in this file).
+A fresh clone on another machine starts with no memory and no skill. That's by design — they're personal context, not project artifacts. `CHANGELOG.md` and this `CLAUDE.md` carry the parts that future contributors actually need.
 
 ## Gotchas
 

@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CHANGELOG.md` (this file) and an `/end-session` Claude Code skill that updates memories, syncs them into the repo, and pushes.
 - 6 Rust unit tests covering yt-dlp JSON deserialization and progress-line parsing.
 
+### Changed
+
+- `.gitignore` now excludes the entire `.claude/` directory. Claude Code artifacts (memories, skills, settings, hooks) are user-local — none of it lives in the repo. The earlier `.claude/memory/` mirror was removed.
+
 ### Notes
 
 - `--no-playlist` is hardcoded in both the probe and runner. Playlist support is a planned follow-up; the current `VideoInfo` deserializer doesn't model `entries[]`.
