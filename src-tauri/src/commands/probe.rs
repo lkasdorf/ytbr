@@ -8,6 +8,9 @@ use crate::ytdlp::format::{ProbeResult, VideoInfo};
 
 #[tauri::command]
 pub async fn probe_url(app: tauri::AppHandle, url: String) -> Result<ProbeResult, AppError> {
+    // TODO: drop --no-playlist when playlist support lands. yt-dlp -J emits
+    // a different shape for playlists (entries[]) that the current
+    // VideoInfo struct doesn't model.
     let output = app
         .shell()
         .sidecar("yt-dlp")

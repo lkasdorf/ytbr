@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 Leon Kasdorf
+
+import { useMemo } from "react";
+import {
+  CheckCircle2,
+  CircleDashed,
+  Loader2,
+  StopCircle,
+  Trash2,
+  XCircle,
+} from "lucide-react";
+import { cancelJob, clearCompletedJobs, type JobState, type JobStatus } from "@/lib/tauri-bridge";
+import { isActive, useJobsStore } from "@/stores/jobs";
+import { formatBytes } from "@/lib/format-utils";
+import { cn } from "@/lib/utils";
+
+export function QueueView() {
+  const jobs = useJobsStore((s) => s.jobs);
+  const ids = useJobsStore((s) => s.ids);
+
+  // Newest first.
+  const ordered = useMemo(() => [...ids].reverse().map((id) => jobs[id]).filter(Boolean), [ids, jobs]);
+
+  const hasTerminal = ordered.some(
+    (j) => j.status === "completed" || j.status === "failed" || j.status === "cancelled",
+  );
+
+  if (ordered.length === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
+        <p className="text-sm text-muted-foreground">
+          No downloads yet. Probe a URL and click the download icon next to a format.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {hasTerminal && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              void clearCompletedJobs();
+              useJobsStore.getState().clearTerminal();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
+          >
+            <Trash2 className="size-3.5" />
+            Clear completed
+          </button>
+        </div>
+      )}
+      {ordered.map((job) => (
+        <JobCard key={job.id} job={job} />
+      ))}
+    </div>
+  );
+}
+
+function JobCard({ job }: { job: JobState }) {
+  const p = job.progress;
+  const percent = p?.percent ?? 0;
+  const showBar = isActive(job.status) || job.status === "completed";
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 text-card-foreground">
+      <div className="flex items-start gap-3">
+        <StatusIcon status={job.status} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="truncate text-sm font-medium" title={job.spec.url}>
+              {job.spec.url}
+            </p>
+            <StatusBadge status={job.status} />
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            <span>format </span>
+            <code className="font-mono">{job.spec.formatId ?? "default"}</code>
+            <span> · → </span>
+            <span className="font-mono">{job.spec.outputDir}</span>
+          </p>
+
+          {showBar && (
+            <div className="mt-3">
+              <ProgressBar percent={percent} indeterminate={p?.totalBytes == null && job.status === "downloading"} />
+              <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+                <span>{formatBytesPair(p?.downloadedBytes, p?.totalBytes)}</span>
+                <span>
+                  {job.status === "downloading" && p
+                    ? `${formatSpeed(p.speedBps)} · ETA ${etaDisplay(p.etaSecs)}`
+                    : job.status === "completed"
+                      ? "done"
+                      : ""}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {job.status === "failed" && job.error && (
+            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md border border-destructive/40 bg-destructive/10 p-2 font-mono text-xs">
+              {job.error}
+            </pre>
+          )}
+        </div>
+
+        {isActive(job.status) && (
+          <button
+            onClick={() => void cancelJob(job.id)}
+            className="shrink-0 rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive hover:text-destructive-foreground"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProgressBar({ percent, indeterminate }: { percent: number; indeterminate?: boolean }) {
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className={cn(
+          "h-full rounded-full bg-primary transition-[width] duration-200 ease-out",
+          indeterminate && "animate-pulse",
+        )}
+        style={{ width: indeterminate ? "30%" : `${Math.min(100, Math.max(0, percent)).toFixed(1)}%` }}
+      />
+    </div>
+  );
+}
+
+function StatusIcon({ status }: { status: JobStatus }) {
+  const cls = "mt-0.5 size-4 shrink-0";
+  switch (status) {
+    case "queued":      return <CircleDashed className={cn(cls, "text-muted-foreground")} />;
+    case "downloading": return <Loader2 className={cn(cls, "animate-spin text-primary")} />;
+    case "completed":   return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
+    case "failed":      return <XCircle className={cn(cls, "text-destructive")} />;
+    case "cancelled":   return <StopCircle className={cn(cls, "text-muted-foreground")} />;
+  }
+}
+
+function StatusBadge({ status }: { status: JobStatus }) {
+  const styles: Record<JobStatus, string> = {
+    queued:      "bg-muted text-muted-foreground",
+    downloading: "bg-primary/15 text-primary",
+    completed:   "bg-emerald-500/15 text-emerald-500",
+    failed:      "bg-destructive/15 text-destructive",
+    cancelled:   "bg-muted text-muted-foreground",
+  };
+  return (
+    <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide", styles[status])}>
+      {status}
+    </span>
+  );
+}
+
+function formatBytesPair(downloaded: number | null | undefined, total: number | null | undefined): string {
+  const d = formatBytes(downloaded);
+  const t = total != null ? formatBytes(total) : "?";
+  return `${d} / ${t}`;
+}
+
+function etaDisplay(secs: number | null | undefined): string {
+  if (secs == null) return "—";
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function formatSpeed(bytesPerSec: number | null | undefined): string {
+  if (bytesPerSec == null) return "—";
+  return `${formatBytes(bytesPerSec)}/s`;
+}

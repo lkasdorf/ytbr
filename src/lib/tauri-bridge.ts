@@ -3,8 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-// Wire shapes — must match Rust serde structs in src-tauri/src/ytdlp/format.rs
-// (rename_all = "camelCase").
+// Wire shapes — must match Rust serde structs (rename_all = "camelCase").
 
 export interface Format {
   formatId: string;
@@ -27,10 +26,62 @@ export interface ProbeResult {
   formats: Format[];
 }
 
+export type JobStatus =
+  | "queued"
+  | "downloading"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface JobSpec {
+  url: string;
+  formatId: string | null;
+  outputDir: string;
+  outputTemplate?: string;
+}
+
+export interface JobProgress {
+  percent: number;
+  speedBps: number | null;
+  etaSecs: number | null;
+  downloadedBytes: number | null;
+  totalBytes: number | null;
+}
+
+export interface JobState {
+  id: string;
+  spec: JobSpec;
+  status: JobStatus;
+  progress: JobProgress | null;
+  error: string | null;
+}
+
+// ---------- commands ----------
+
 export function probeUrl(url: string): Promise<ProbeResult> {
   return invoke<ProbeResult>("probe_url", { url });
 }
 
 export function ytdlpVersion(): Promise<string> {
   return invoke<string>("ytdlp_version");
+}
+
+export function enqueueJob(spec: JobSpec): Promise<string> {
+  return invoke<string>("enqueue_job", { spec });
+}
+
+export function cancelJob(id: string): Promise<void> {
+  return invoke<void>("cancel_job", { id });
+}
+
+export function listJobs(): Promise<JobState[]> {
+  return invoke<JobState[]>("list_jobs");
+}
+
+export function clearCompletedJobs(): Promise<void> {
+  return invoke<void>("clear_completed_jobs");
+}
+
+export function pickOutputDir(): Promise<string | null> {
+  return invoke<string | null>("pick_output_dir");
 }

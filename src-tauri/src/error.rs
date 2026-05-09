@@ -13,6 +13,12 @@ pub enum AppError {
 
     #[error("failed to parse yt-dlp output: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("job not found: {0}")]
+    JobNotFound(String),
+
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
 }
 
 // Tauri commands need errors to be Serialize. Marshal as a plain string —

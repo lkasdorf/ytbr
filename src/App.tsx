@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertCircle,
   Download,
@@ -9,10 +9,21 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { probeUrl, type ProbeResult } from "@/lib/tauri-bridge";
-import { formatDuration } from "@/lib/format-utils";
+import {
+  enqueueJob,
+  listJobs,
+  probeUrl,
+  type Format,
+  type ProbeResult,
+} from "@/lib/tauri-bridge";
+import { classifyFormat, formatDuration } from "@/lib/format-utils";
+import { startJobListeners } from "@/lib/tauri-events";
+import { isActive, useJobsStore } from "@/stores/jobs";
+import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
 import { FormatTable } from "@/features/format-picker/FormatTable";
+import { OutputDirPicker } from "@/features/settings/OutputDirPicker";
+import { QueueView } from "@/features/queue/QueueView";
 
 type Route = "download" | "queue" | "settings";
 
@@ -31,6 +42,15 @@ const NAV: NavItem[] = [
 function App() {
   const [route, setRoute] = useState<Route>("download");
 
+  useEffect(() => {
+    void startJobListeners();
+    void listJobs().then((list) => useJobsStore.getState().hydrate(list));
+  }, []);
+
+  const activeCount = useJobsStore((s) =>
+    Object.values(s.jobs).filter((j) => isActive(j.status)).length,
+  );
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -41,6 +61,7 @@ function App() {
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = route === item.id;
+            const badge = item.id === "queue" && activeCount > 0 ? activeCount : null;
             return (
               <button
                 key={item.id}
@@ -53,7 +74,12 @@ function App() {
                 )}
               >
                 <Icon className="size-4" />
-                {item.label}
+                <span className="flex-1 text-left">{item.label}</span>
+                {badge != null && (
+                  <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground tabular-nums">
+                    {badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -66,9 +92,7 @@ function App() {
         </header>
         <div className="flex-1 overflow-auto p-6">
           {route === "download" && <DownloadView />}
-          {route === "queue" && (
-            <Placeholder text="Job queue with progress and status arrives in iteration 2." />
-          )}
+          {route === "queue" && <QueueView />}
           {route === "settings" && (
             <Placeholder text="Default profile, cookies, ffmpeg path arrive in iteration 2." />
           )}
@@ -88,26 +112,56 @@ function Placeholder({ text }: { text: string }) {
 
 type ProbeState =
   | { status: "idle" }
-  | { status: "loading" }
-  | { status: "ok"; result: ProbeResult }
-  | { status: "error"; message: string };
+  | { status: "loading"; url: string }
+  | { status: "ok"; url: string; result: ProbeResult }
+  | { status: "error"; url: string; message: string };
 
 function DownloadView() {
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
+  const outputDir = useSettingsStore((s) => s.outputDir);
 
-  async function run(url: string) {
-    setProbe({ status: "loading" });
+  async function onProbe(url: string) {
+    setProbe({ status: "loading", url });
     try {
       const result = await probeUrl(url);
-      setProbe({ status: "ok", result });
+      setProbe({ status: "ok", url, result });
     } catch (err) {
-      setProbe({ status: "error", message: String(err) });
+      setProbe({ status: "error", url, message: String(err) });
+    }
+  }
+
+  async function handleDownload(format: Format) {
+    if (!outputDir || probe.status !== "ok") return;
+    // YouTube serves anything above 360p as a video-only stream that
+    // needs to be muxed with a separate audio stream. yt-dlp won't do
+    // this implicitly when an explicit format id is given, so we ask
+    // for "<id>+bestaudio" and fall back to the best combined format
+    // if the merge can't happen for some reason.
+    const kind = classifyFormat(format.vcodec, format.acodec);
+    const formatId =
+      kind === "video" ? `${format.formatId}+bestaudio/best` : format.formatId;
+    try {
+      const id = await enqueueJob({
+        url: probe.url,
+        formatId,
+        outputDir,
+      });
+      useJobsStore.getState().upsert({
+        id,
+        spec: { url: probe.url, formatId, outputDir },
+        status: "queued",
+        progress: null,
+        error: null,
+      });
+    } catch (err) {
+      console.error("enqueue failed", err);
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <UrlInput loading={probe.status === "loading"} onProbe={run} />
+      <UrlInput loading={probe.status === "loading"} onProbe={onProbe} />
+      <OutputDirPicker />
 
       {probe.status === "idle" && (
         <Placeholder text="Paste a URL above to list available formats." />
@@ -120,12 +174,28 @@ function DownloadView() {
         </div>
       )}
 
-      {probe.status === "ok" && <ProbeResultView result={probe.result} />}
+      {probe.status === "ok" && (
+        <ProbeResultView
+          result={probe.result}
+          onDownload={handleDownload}
+          downloadDisabledReason={
+            outputDir ? undefined : "Choose an output folder before downloading"
+          }
+        />
+      )}
     </div>
   );
 }
 
-function ProbeResultView({ result }: { result: ProbeResult }) {
+function ProbeResultView({
+  result,
+  onDownload,
+  downloadDisabledReason,
+}: {
+  result: ProbeResult;
+  onDownload: (format: Format) => void;
+  downloadDisabledReason?: string;
+}) {
   return (
     <>
       <div className="flex gap-4 rounded-lg border border-border bg-card p-4">
@@ -146,7 +216,11 @@ function ProbeResultView({ result }: { result: ProbeResult }) {
         </div>
       </div>
 
-      <FormatTable formats={result.formats} />
+      <FormatTable
+        formats={result.formats}
+        onDownload={onDownload}
+        downloadDisabledReason={downloadDisabledReason}
+      />
     </>
   );
 }

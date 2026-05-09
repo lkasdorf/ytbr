@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Leon Kasdorf
 
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download as DownloadIcon } from "lucide-react";
 import type { Format } from "@/lib/tauri-bridge";
 import {
   classifyFormat,
@@ -29,6 +29,8 @@ type SortDir = "asc" | "desc";
 
 interface Props {
   formats: Format[];
+  onDownload?: (format: Format) => void;
+  downloadDisabledReason?: string;
 }
 
 const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
@@ -49,7 +51,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "audio",       label: "Audio only" },
 ];
 
-export function FormatTable({ formats }: Props) {
+export function FormatTable({ formats, onDownload, downloadDisabledReason }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("filesize");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -70,6 +72,9 @@ export function FormatTable({ formats }: Props) {
       setSortDir(numericKey(key) ? "desc" : "asc");
     }
   }
+
+  const downloadDisabled = downloadDisabledReason != null;
+  const totalCols = COLUMNS.length + (onDownload ? 1 : 0);
 
   return (
     <div className="flex flex-col gap-3">
@@ -130,13 +135,14 @@ export function FormatTable({ formats }: Props) {
                   </button>
                 </th>
               ))}
+              {onDownload && <th className="w-12 px-3 py-2"></th>}
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
                 <td
-                  colSpan={COLUMNS.length}
+                  colSpan={totalCols}
                   className="px-3 py-6 text-center text-sm text-muted-foreground"
                 >
                   No formats match this filter.
@@ -160,6 +166,23 @@ export function FormatTable({ formats }: Props) {
                   <td className="px-3 py-2 text-right tabular-nums">
                     {formatBitrate(f.bitrateKbps)}
                   </td>
+                  {onDownload && (
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        onClick={() => onDownload(f)}
+                        disabled={downloadDisabled}
+                        title={downloadDisabledReason ?? "Download this format"}
+                        className={cn(
+                          "rounded-md p-1.5 transition-colors",
+                          downloadDisabled
+                            ? "cursor-not-allowed text-muted-foreground/40"
+                            : "text-muted-foreground hover:bg-primary hover:text-primary-foreground",
+                        )}
+                      >
+                        <DownloadIcon className="size-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -176,12 +199,12 @@ function numericKey(key: SortKey): boolean {
 
 function cmp(a: Format, b: Format, key: SortKey): number {
   switch (key) {
-    case "formatId":
-      // Numeric when both look like ints, otherwise lexical.
+    case "formatId": {
       const an = Number(a.formatId);
       const bn = Number(b.formatId);
       if (Number.isFinite(an) && Number.isFinite(bn)) return an - bn;
       return a.formatId.localeCompare(b.formatId);
+    }
     case "container":
       return a.container.localeCompare(b.container);
     case "resolution":
@@ -204,7 +227,6 @@ function num(v: number | null): number {
 }
 
 function codecRank(a: string, b: string): number {
-  // "none" sorts to the bottom in asc order (treat as empty).
   const aEmpty = a === "none" || a === "";
   const bEmpty = b === "none" || b === "";
   if (aEmpty && !bEmpty) return -1;
@@ -212,5 +234,4 @@ function codecRank(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-// Re-export the discriminator type so consumers can pre-filter if needed.
 export type { FormatKind };
