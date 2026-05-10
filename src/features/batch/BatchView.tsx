@@ -253,7 +253,7 @@ export function BatchView() {
               )}
             >
               <ListPlus className="size-3.5" />
-              Add playlist…
+              Add playlist or channel…
             </button>
             <button
               type="button"
@@ -293,7 +293,7 @@ export function BatchView() {
                   setPlaylist((p) => ({ ...p, open: false, error: null, url: "" }));
               }}
               autoFocus
-              placeholder="Paste a playlist URL"
+              placeholder="Paste a playlist or channel URL (e.g. .../@channel/videos)"
               className={cn(
                 "flex-1 rounded-md border border-border bg-background px-2 py-1 font-mono text-xs",
                 "placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none",

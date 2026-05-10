@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- BatchView's "Add playlist…" trigger and the playlist-URL input copy now mention channel URLs explicitly. `expand_playlist` already worked for `https://youtube.com/@channel/videos`-style URLs (yt-dlp's flat-expansion treats them as playlists); the doc comment now records that bare `@channel` URLs flat-expand into the channel's *sub-playlists* (Videos, Shorts, Live), which the runner can't download as-is because of `--no-playlist`. Append `/videos` (or `/streams`, `/shorts`) for predictable behavior.
+
 ### Added
 
 - "Audio format" chips in Settings (`default` / `mp3` / `opus` / `flac` / `wav`). Drives yt-dlp `--extract-audio --audio-format <fmt>`. The chips only have effect when the resulting download is audio-only — wired into both the Download tab (preset kind threaded through `PresetButtons.onPick` and `classifyFormat` for format-table rows) and the Batch tab (only `audio-best` choice qualifies). `default` is a no-op so the previous m4a-from-YouTube behavior is preserved unchanged. Skipped legacy video recode targets (wmv/flv/3gp/avi) — niche, big UX surface, not worth the burden.

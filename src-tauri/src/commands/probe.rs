@@ -71,6 +71,13 @@ struct FlatEntry {
 /// each entry's formats. Used by the Batch tab to seed many jobs from
 /// a single playlist link. Single-video URLs come back as a one-entry
 /// list with `title: null` — the caller treats them the same way.
+///
+/// Channel URLs: a `https://youtube.com/@channel/videos`-style URL
+/// expands cleanly into the channel's video list. A bare
+/// `https://youtube.com/@channel` URL flat-expands into the channel's
+/// *sub-playlists* (Videos, Shorts, Live), which the runner can't
+/// download as-is because it always passes `--no-playlist`. Append
+/// `/videos` (or `/streams`, `/shorts`) for predictable behavior.
 #[tauri::command]
 pub async fn expand_playlist(
     app: tauri::AppHandle,
