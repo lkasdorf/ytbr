@@ -2,12 +2,12 @@
 // Copyright (c) 2026 Leon Kasdorf
 
 import { useMemo, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, FileText, Layers } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, Layers, ListPlus, Loader2 } from "lucide-react";
 import {
   DEFAULT_BATCH_SELECTOR,
   PRESETS,
 } from "@/features/format-picker/PresetButtons";
-import { enqueueJob, type JobSpec } from "@/lib/tauri-bridge";
+import { enqueueJob, expandPlaylist, type JobSpec } from "@/lib/tauri-bridge";
 import { useJobsStore } from "@/stores/jobs";
 import { useSettingsStore, type PresetId } from "@/stores/settings";
 import { cn } from "@/lib/utils";
@@ -43,11 +43,28 @@ interface BatchResult {
   failed: { url: string; reason: string }[];
 }
 
+interface PlaylistState {
+  open: boolean;
+  url: string;
+  busy: boolean;
+  error: string | null;
+  // Last successful expansion — surfaced inline ("Added 42 from
+  // 'Some Playlist'") so the user sees what just happened.
+  lastSummary: { title: string | null; count: number } | null;
+}
+
 export function BatchView() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<BatchResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [playlist, setPlaylist] = useState<PlaylistState>({
+    open: false,
+    url: "",
+    busy: false,
+    error: null,
+    lastSummary: null,
+  });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const outputDir = useSettingsStore((s) => s.outputDir);
@@ -72,6 +89,35 @@ export function BatchView() {
     const content = await file.text();
     setText((current) => (current.trim() ? `${current.trim()}\n${content}` : content));
     setResult(null);
+  }
+
+  async function expandAndAppend() {
+    const target = playlist.url.trim();
+    if (!target) return;
+    setPlaylist((p) => ({ ...p, busy: true, error: null }));
+    try {
+      const { title, entries } = await expandPlaylist(target);
+      if (entries.length === 0) {
+        setPlaylist((p) => ({
+          ...p,
+          busy: false,
+          error: "yt-dlp returned no entries for that URL",
+        }));
+        return;
+      }
+      const appended = entries.join("\n");
+      setText((cur) => (cur.trim() ? `${cur.trim()}\n${appended}` : appended));
+      setPlaylist({
+        open: false,
+        url: "",
+        busy: false,
+        error: null,
+        lastSummary: { title, count: entries.length },
+      });
+      setResult(null);
+    } catch (err) {
+      setPlaylist((p) => ({ ...p, busy: false, error: String(err) }));
+    }
   }
 
   async function onEnqueueAll() {
@@ -182,17 +228,38 @@ export function BatchView() {
                 ? "1 URL"
                 : `${urls.length} URLs`}
           </span>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2 py-1 font-medium text-secondary-foreground",
-              "transition-colors hover:bg-secondary/80",
-            )}
-          >
-            <FileText className="size-3.5" />
-            Import .txt
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setPlaylist((p) => ({
+                  ...p,
+                  open: !p.open,
+                  error: null,
+                  url: p.open ? p.url : "",
+                }))
+              }
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2 py-1 font-medium text-secondary-foreground",
+                "transition-colors hover:bg-secondary/80",
+                playlist.open && "border-primary bg-primary/10 text-foreground",
+              )}
+            >
+              <ListPlus className="size-3.5" />
+              Add playlist…
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2 py-1 font-medium text-secondary-foreground",
+                "transition-colors hover:bg-secondary/80",
+              )}
+            >
+              <FileText className="size-3.5" />
+              Import .txt
+            </button>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -205,6 +272,73 @@ export function BatchView() {
             }}
           />
         </footer>
+        {playlist.open && (
+          <div className="flex items-center gap-2 border-t border-border bg-muted/40 px-3 py-2">
+            <input
+              type="url"
+              value={playlist.url}
+              onChange={(e) =>
+                setPlaylist((p) => ({ ...p, url: e.target.value, error: null }))
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void expandAndAppend();
+                if (e.key === "Escape")
+                  setPlaylist((p) => ({ ...p, open: false, error: null, url: "" }));
+              }}
+              autoFocus
+              placeholder="Paste a playlist URL"
+              className={cn(
+                "flex-1 rounded-md border border-border bg-background px-2 py-1 font-mono text-xs",
+                "placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none",
+              )}
+              aria-label="Playlist URL"
+            />
+            <button
+              type="button"
+              disabled={playlist.busy || !playlist.url.trim()}
+              onClick={() => void expandAndAppend()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground",
+                "transition-colors hover:bg-primary/90",
+                (playlist.busy || !playlist.url.trim()) &&
+                  "cursor-not-allowed opacity-50",
+              )}
+            >
+              {playlist.busy && <Loader2 className="size-3 animate-spin" />}
+              {playlist.busy ? "Expanding…" : "Expand"}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setPlaylist((p) => ({ ...p, open: false, error: null, url: "" }))
+              }
+              className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        {playlist.error && (
+          <div className="border-t border-destructive/40 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
+            {playlist.error}
+          </div>
+        )}
+        {playlist.lastSummary && !playlist.open && !playlist.error && (
+          <div className="border-t border-border bg-primary/5 px-3 py-2 text-[11px] text-muted-foreground">
+            <span className="text-foreground">
+              Added {playlist.lastSummary.count}{" "}
+              {playlist.lastSummary.count === 1 ? "URL" : "URLs"}
+            </span>
+            {playlist.lastSummary.title && (
+              <>
+                {" "}from <span className="font-medium text-foreground">
+                  {playlist.lastSummary.title}
+                </span>
+              </>
+            )}
+            .
+          </div>
+        )}
       </div>
 
       <fieldset className="rounded-lg border border-border bg-card p-3">

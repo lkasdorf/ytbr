@@ -77,6 +77,17 @@ export function probeUrl(url: string): Promise<ProbeResult> {
   return invoke<ProbeResult>("probe_url", { url });
 }
 
+export interface PlaylistEntries {
+  /// Playlist title, or `null` for single-video URLs.
+  title: string | null;
+  /// Watch URLs for each entry. Always at least one element on success.
+  entries: string[];
+}
+
+export function expandPlaylist(url: string): Promise<PlaylistEntries> {
+  return invoke<PlaylistEntries>("expand_playlist", { url });
+}
+
 export function ytdlpVersion(): Promise<string> {
   return invoke<string>("ytdlp_version");
 }

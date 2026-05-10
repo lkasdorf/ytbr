@@ -24,6 +24,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::system::ytdlp_version,
             commands::probe::probe_url,
+            commands::probe::expand_playlist,
             commands::download::enqueue_job,
             commands::download::cancel_job,
             commands::download::pause_job,
