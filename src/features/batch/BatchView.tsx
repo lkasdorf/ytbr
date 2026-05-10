@@ -56,8 +56,10 @@ export function BatchView() {
 
   const urls = useMemo(() => parseUrls(text), [text]);
 
-  const selectedSelector =
-    CHOICES.find((c) => c.id === choice)?.selector ?? DEFAULT_BATCH_SELECTOR;
+  const selectedChoice =
+    CHOICES.find((c) => c.id === choice) ?? CHOICES[0];
+  const selectedSelector = selectedChoice.selector;
+  const selectedLabel = selectedChoice.label;
 
   async function importFile(file: File) {
     if (!file.name.toLowerCase().endsWith(".txt")) {
@@ -82,6 +84,7 @@ export function BatchView() {
     const settings = useSettingsStore.getState();
     const baseSpec: Omit<JobSpec, "url"> = {
       formatId: selectedSelector,
+      formatLabel: selectedLabel,
       outputDir,
       outputTemplate: settings.outputTemplate,
       cookiesFromBrowser: settings.cookiesFromBrowser,

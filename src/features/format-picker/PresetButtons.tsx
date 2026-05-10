@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 import { type PresetId, useSettingsStore } from "@/stores/settings";
 
 interface Props {
-  onPick: (formatSelector: string) => void;
+  // The label is the user-facing name from the preset definition
+  // ("1080p", "Best Audio") — passed through so QueueView can show
+  // it instead of the long yt-dlp selector that ships to the backend.
+  onPick: (formatSelector: string, formatLabel: string) => void;
   disabled?: boolean;
   disabledReason?: string;
 }
@@ -90,7 +93,7 @@ export function PresetButtons({ onPick, disabled, disabledReason }: Props) {
                     ? `Default preset · yt-dlp -f "${p.selector}"`
                     : `yt-dlp -f "${p.selector}"`
               }
-              onClick={() => onPick(p.selector)}
+              onClick={() => onPick(p.selector, p.label)}
               className={cn(
                 "group relative flex flex-col items-start gap-1 rounded-lg border bg-card p-3 text-left transition-colors",
                 disabled

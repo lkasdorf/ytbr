@@ -36,7 +36,11 @@ export type JobStatus =
 
 export interface JobSpec {
   url: string;
+  /// Raw yt-dlp `-f` argument. May be a single format id, a composite
+  /// selector ("137+bestaudio/best"), or a preset expression.
   formatId: string | null;
+  /// Pretty label for QueueView. `null` falls back to `formatId`.
+  formatLabel?: string | null;
   outputDir: string;
   outputTemplate?: string;
   /// yt-dlp `--cookies-from-browser` value, or `null` for no cookies.

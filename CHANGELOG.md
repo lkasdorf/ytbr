@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- QueueView shows a pretty format label instead of the raw yt-dlp selector. `JobSpec` gains an optional `formatLabel` field (`format_label` Rust-side, defaults to `None` so v0.1.0 / v0.2.0 jobs persisted to memory still render). For preset clicks the label is the preset name (`"1080p"`, `"Best Audio"`); for direct format-row picks it is the bare format id (`"137"`) so users see the same id they clicked on rather than the expanded `137+bestaudio/best` selector that ships to yt-dlp; for Batch the active choice's label (`"yt-dlp default"` or a preset name). The actual selector is preserved as a tooltip on the label so the long form is one hover away when debugging.
+
 ### Added
 
 - `scripts/version-sync.mjs` keeps the three places that hold the app version (`package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`) in lockstep. Run with no args to verify they match (`pnpm version:check`); pass a SemVer to bump all three together (`pnpm version:set 0.3.0`). Edits are regex-based so existing formatting is preserved verbatim, and the Cargo.toml regex is anchored to the `[package]` section so dependency `version = "..."` lines are never touched. Removes the three-explicit-Edit pattern that v0.1.0 and v0.2.0 cuts used.

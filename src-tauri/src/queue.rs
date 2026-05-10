@@ -30,7 +30,16 @@ pub enum JobStatus {
 #[serde(rename_all = "camelCase")]
 pub struct JobSpec {
     pub url: String,
+    /// yt-dlp `-f` argument. May be a single format id ("140"), a
+    /// composite selector ("137+bestaudio/best") or a full preset
+    /// expression. Despite the name, callers should treat this as
+    /// the raw selector — the human-friendly label is `format_label`.
     pub format_id: Option<String>,
+    /// Pretty label for the queue UI. `None` means "fall back to
+    /// `format_id` or 'default'". Set by the frontend so JobCard can
+    /// show "1080p" instead of the long selector that ships to yt-dlp.
+    #[serde(default)]
+    pub format_label: Option<String>,
     pub output_dir: PathBuf,
     #[serde(default = "default_template")]
     pub output_template: String,

@@ -170,7 +170,12 @@ function JobCard({ job }: { job: JobState }) {
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             <span>format </span>
-            <code className="font-mono">{job.spec.formatId ?? "default"}</code>
+            <code
+              className="font-mono"
+              title={job.spec.formatId ?? undefined}
+            >
+              {job.spec.formatLabel ?? job.spec.formatId ?? "default"}
+            </code>
             <span> · → </span>
             <span className="font-mono">{job.spec.outputDir}</span>
           </p>

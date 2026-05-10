@@ -140,7 +140,7 @@ function DownloadView() {
     }
   }
 
-  async function enqueue(formatId: string) {
+  async function enqueue(formatId: string, formatLabel: string) {
     if (!outputDir || probe.status !== "ok") return;
     // Snapshot the settings at enqueue time. Mid-flight setting
     // changes never disturb running jobs.
@@ -148,6 +148,7 @@ function DownloadView() {
     const spec = {
       url: probe.url,
       formatId,
+      formatLabel,
       outputDir,
       outputTemplate: settings.outputTemplate,
       cookiesFromBrowser: settings.cookiesFromBrowser,
@@ -181,7 +182,7 @@ function DownloadView() {
     const kind = classifyFormat(format.vcodec, format.acodec);
     const selector =
       kind === "video" ? `${format.formatId}+bestaudio/best` : format.formatId;
-    void enqueue(selector);
+    void enqueue(selector, format.formatId);
   }
 
   return (
@@ -204,7 +205,7 @@ function DownloadView() {
         <ProbeResultView
           result={probe.result}
           onDownloadFormat={handleFormatRow}
-          onDownloadPreset={(selector) => void enqueue(selector)}
+          onDownloadPreset={(selector, label) => void enqueue(selector, label)}
           downloadDisabledReason={
             outputDir ? undefined : "Choose an output folder before downloading"
           }
@@ -222,7 +223,7 @@ function ProbeResultView({
 }: {
   result: ProbeResult;
   onDownloadFormat: (format: Format) => void;
-  onDownloadPreset: (selector: string) => void;
+  onDownloadPreset: (selector: string, label: string) => void;
   downloadDisabledReason?: string;
 }) {
   const disabled = downloadDisabledReason != null;
