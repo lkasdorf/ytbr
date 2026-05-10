@@ -200,9 +200,9 @@ fn archive_file_path(app: &AppHandle) -> Option<PathBuf> {
 // triple-suffixed name. In `tauri dev` runs the binary lives in
 // target/debug/, while the sidecar files stay in src-tauri/binaries/;
 // walk back up a few levels to find them.
-fn ffmpeg_sidecar_path() -> Option<PathBuf> {
+fn sidecar_path(prefix: &str) -> Option<PathBuf> {
     let suffix = if cfg!(windows) { ".exe" } else { "" };
-    let name = format!("ffmpeg-{TARGET_TRIPLE}{suffix}");
+    let name = format!("{prefix}-{TARGET_TRIPLE}{suffix}");
 
     let exe = std::env::current_exe().ok()?;
     let exe_dir = exe.parent()?.to_path_buf();
@@ -223,6 +223,17 @@ fn ffmpeg_sidecar_path() -> Option<PathBuf> {
         }
     }
     None
+}
+
+fn ffmpeg_sidecar_path() -> Option<PathBuf> {
+    sidecar_path("ffmpeg")
+}
+
+/// Same resolution rules as the ffmpeg sidecar — exposed for the yt-dlp
+/// self-updater (`commands::updater`) which needs to overwrite the
+/// binary in place rather than just spawn it.
+pub fn ytdlp_sidecar_path() -> Option<PathBuf> {
+    sidecar_path("yt-dlp")
 }
 
 #[derive(Serialize, Clone)]

@@ -310,6 +310,18 @@ impl QueueManager {
             .collect()
     }
 
+    /// True iff any tracked job is in a non-terminal state (queued,
+    /// downloading, or paused). Used by the yt-dlp self-updater to
+    /// refuse swapping the sidecar while it might be in flight.
+    pub fn has_active_jobs(&self) -> bool {
+        self.inner.jobs.lock().unwrap().values().any(|entry| {
+            matches!(
+                entry.state.status,
+                JobStatus::Queued | JobStatus::Downloading | JobStatus::Paused
+            )
+        })
+    }
+
     pub fn clear_completed(&self) {
         let mut jobs = self.inner.jobs.lock().unwrap();
         jobs.retain(|_, entry| {

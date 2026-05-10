@@ -30,4 +30,6 @@ tauri-plugin-notification = "2"
 tauri-plugin-clipboard-manager = "2"
 uuid = { version = "1.23.1", features = ["v4"] }
 tokio = { version = "1.52.3", features = ["sync"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+sha2 = "0.10"
 

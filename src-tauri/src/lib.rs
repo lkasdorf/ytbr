@@ -37,6 +37,7 @@ pub fn run() {
             commands::download::clear_completed_jobs,
             commands::settings::pick_output_dir,
             commands::settings::set_parallel_limit,
+            commands::updater::update_ytdlp,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

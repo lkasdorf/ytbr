@@ -96,6 +96,16 @@ export function ffmpegVersion(): Promise<string> {
   return invoke<string>("ffmpeg_version");
 }
 
+export interface UpdateOutcome {
+  installed: string;
+  from: string | null;
+  replaced: boolean;
+}
+
+export function updateYtdlp(): Promise<UpdateOutcome> {
+  return invoke<UpdateOutcome>("update_ytdlp");
+}
+
 export function revealInFolder(path: string): Promise<void> {
   return invoke<void>("reveal_in_folder", { path });
 }

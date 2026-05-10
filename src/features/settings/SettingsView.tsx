@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
+import { useEffect, useState } from "react";
 import {
   Bell,
   Cookie,
+  Download,
   Film,
   Folder,
+  Loader2,
   Package,
   Palette,
   RotateCcw,
@@ -14,6 +17,11 @@ import {
   Terminal,
 } from "lucide-react";
 import { OutputDirPicker } from "./OutputDirPicker";
+import {
+  updateYtdlp,
+  ytdlpVersion,
+  type UpdateOutcome,
+} from "@/lib/tauri-bridge";
 import {
   COOKIE_BROWSERS,
   DEFAULT_OUTPUT_TEMPLATE,
@@ -312,7 +320,90 @@ export function SettingsView() {
           />
         </div>
       </Section>
+
+      <YtdlpUpdaterSection />
     </div>
+  );
+}
+
+function YtdlpUpdaterSection() {
+  const [version, setVersion] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [outcome, setOutcome] = useState<UpdateOutcome | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void ytdlpVersion().then(
+      (v) => !cancelled && setVersion(v),
+      () => !cancelled && setVersion(null),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [outcome]);
+
+  async function check() {
+    setBusy(true);
+    setError(null);
+    setOutcome(null);
+    try {
+      const result = await updateYtdlp();
+      setOutcome(result);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section
+      icon={Download}
+      title="yt-dlp updater"
+      desc="Pulls the latest yt-dlp release from GitHub, verifies its SHA-256, and replaces the bundled sidecar in place. Refuses to run while jobs are queued, downloading, or paused."
+      right={
+        <code className="font-mono text-xs text-muted-foreground" title="current yt-dlp version">
+          {version ?? "—"}
+        </code>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => void check()}
+          disabled={busy}
+          className={cn(
+            "flex w-fit items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors",
+            "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
+          )}
+        >
+          {busy && <Loader2 className="size-3.5 animate-spin" />}
+          {busy ? "Checking…" : "Check & install update"}
+        </button>
+
+        {outcome != null && (
+          <p
+            className={cn(
+              "rounded-md border px-3 py-2 text-xs",
+              outcome.replaced
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                : "border-border bg-muted text-muted-foreground",
+            )}
+          >
+            {outcome.replaced
+              ? `Updated ${outcome.from ?? "unknown"} → ${outcome.installed}.`
+              : `Already on the latest release (${outcome.installed}).`}
+          </p>
+        )}
+
+        {error != null && (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 font-mono text-xs text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+    </Section>
   );
 }
 
