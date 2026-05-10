@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   CircleDashed,
   FolderOpen,
+  ListVideo,
   Loader2,
   Pause,
   Play,
@@ -105,9 +106,15 @@ export function QueueView() {
 
   if (ordered.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
-        <p className="text-sm text-muted-foreground">
-          No downloads yet. Probe a URL and click the download icon next to a format.
+      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-6 py-12 text-card-foreground">
+        <ListVideo
+          className="size-10 text-muted-foreground/40"
+          strokeWidth={1.5}
+        />
+        <p className="text-sm font-medium text-foreground">Queue is empty</p>
+        <p className="max-w-xs text-center text-xs text-muted-foreground">
+          Probe a URL on the Download tab and click the download icon next to a
+          format, or paste a list on the Batch tab.
         </p>
       </div>
     );
@@ -161,7 +168,20 @@ function JobCard({ job }: { job: JobState }) {
   const showBar = isActive(job.status) || job.status === "completed";
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 text-card-foreground">
+    <div
+      className={cn(
+        "rounded-lg border border-l-[3px] border-border bg-card p-4 text-card-foreground transition-colors",
+        // Status-keyed left accent. Same trick the FormatTable uses
+        // for the active filter chip — single-axis chromatic cue, no
+        // change to layout. Cancelled stays neutral on purpose since
+        // the user initiated it.
+        job.status === "downloading" && "border-l-primary",
+        job.status === "completed" && "border-l-emerald-500",
+        job.status === "failed" && "border-l-destructive",
+        job.status === "paused" && "border-l-amber-500",
+        job.status === "cancelled" && "border-l-muted-foreground/40",
+      )}
+    >
       <div className="flex items-start gap-3">
         <StatusIcon status={job.status} />
         <div className="min-w-0 flex-1">
@@ -185,8 +205,12 @@ function JobCard({ job }: { job: JobState }) {
 
           {showBar && (
             <div className="mt-3">
-              <ProgressBar percent={percent} indeterminate={p?.totalBytes == null && job.status === "downloading"} />
-              <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+              <ProgressBar
+                percent={percent}
+                indeterminate={p?.totalBytes == null && job.status === "downloading"}
+                status={job.status}
+              />
+              <div className="mt-1.5 flex items-center justify-between font-mono text-xs text-muted-foreground tabular-nums">
                 <span>{formatBytesPair(p?.downloadedBytes, p?.totalBytes)}</span>
                 <span>
                   {job.status === "downloading" && p
@@ -270,15 +294,54 @@ function IconButton({
   );
 }
 
-function ProgressBar({ percent, indeterminate }: { percent: number; indeterminate?: boolean }) {
+function ProgressBar({
+  percent,
+  indeterminate,
+  status,
+}: {
+  percent: number;
+  indeterminate?: boolean;
+  status?: JobStatus;
+}) {
+  // Indeterminate: a 25%-wide block sweeping left-to-right. The earlier
+  // animate-pulse just faded opacity, which read as "broken" rather
+  // than "downloading something whose total size isn't known yet".
+  if (indeterminate) {
+    return (
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="absolute inset-y-0 left-0 w-1/4 rounded-full bg-primary"
+          style={{
+            animation: "ytbr-indeterminate 1.4s ease-in-out infinite",
+          }}
+        />
+      </div>
+    );
+  }
+
+  const isDownloading = status === "downloading";
+  const isComplete = status === "completed";
+  const isPaused = status === "paused";
+  const fillColor = isComplete
+    ? "bg-emerald-500"
+    : isPaused
+      ? "bg-amber-500"
+      : "bg-primary";
+
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
       <div
         className={cn(
-          "h-full rounded-full bg-primary transition-[width] duration-200 ease-out",
-          indeterminate && "animate-pulse",
+          "h-full rounded-full transition-[width,background-color] duration-200 ease-out",
+          fillColor,
+          // Animated tape-stripe overlay only while bytes are flowing.
+          // Paused / completed / queued bars stay solid so the queue
+          // reads "five active, one done" at a glance.
+          isDownloading && "ytbr-stripes",
         )}
-        style={{ width: indeterminate ? "30%" : `${Math.min(100, Math.max(0, percent)).toFixed(1)}%` }}
+        style={{
+          width: `${Math.min(100, Math.max(0, percent)).toFixed(1)}%`,
+        }}
       />
     </div>
   );

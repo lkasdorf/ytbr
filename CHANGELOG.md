@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Visual identity pass — the app now reads as a tool rather than a default-shadcn admin panel:
+  - `--primary` swapped from achromatic slate to a chartreuse `oklch(0.74 0.16 130)` (light) / `oklch(0.85 0.18 130)` (dark). Every accent in the app — active sidebar item, Probe button, "Insert" suggestion, "Open in Batch" link, progress bars, "Download & install" CTA — instantly carries brand color.
+  - JetBrains Mono bundled via `@fontsource/jetbrains-mono` (offline-capable, no Google Fonts CDN). Registered as `--font-mono` so every existing `font-mono` callsite (format ids, codecs, output dirs, byte/speed/eta numbers, the version pill) inherits a real mono.
+  - Sidebar wordmark now renders as `font-mono uppercase tracking-[0.25em]` "ytbr" — terminal-character treatment that matches the tool's actual purpose.
+  - Sidebar active route gets a 2px primary left bar and a primary-tinted icon.
+  - Main header right-aligns route-aware info: `<n> active · <n> queued · <n> done` on Queue, the active output dir on Download. Was empty space before.
+  - JobCards have a 3px left-edge accent keyed to status (downloading=primary, completed=emerald-500, failed=destructive, paused=amber-500, cancelled=neutral). A queue of mixed jobs is now scannable at a glance.
+  - ProgressBar redesigned: animated tape-stripe overlay (1.1s linear) only while bytes are flowing; solid bar when paused/queued/completed; a 25%-wide block sweeping left-to-right replaces `animate-pulse` for the indeterminate state. Color shifts to emerald-500 on completion and amber-500 when paused.
+  - Empty states (Download tab idle, Queue empty) now render as oversized lucide icon + title + body inside a dashed border — readable as "intentional empty state" rather than "placeholder copy".
 - BatchView's "Add playlist…" trigger and the playlist-URL input copy now mention channel URLs explicitly. `expand_playlist` already worked for `https://youtube.com/@channel/videos`-style URLs (yt-dlp's flat-expansion treats them as playlists); the doc comment now records that bare `@channel` URLs flat-expand into the channel's *sub-playlists* (Videos, Shorts, Live), which the runner can't download as-is because of `--no-playlist`. Append `/videos` (or `/streams`, `/shorts`) for predictable behavior.
 
 ### Added

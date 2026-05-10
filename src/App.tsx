@@ -7,6 +7,7 @@ import {
   Download,
   Layers,
   ListVideo,
+  Search,
   Settings as SettingsIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -74,12 +75,26 @@ function App() {
   const activeCount = useJobsStore((s) =>
     Object.values(s.jobs).filter((j) => isActive(j.status)).length,
   );
+  const queuedCount = useJobsStore((s) =>
+    Object.values(s.jobs).filter((j) => j.status === "queued").length,
+  );
+  const doneCount = useJobsStore((s) =>
+    Object.values(s.jobs).filter(
+      (j) =>
+        j.status === "completed" ||
+        j.status === "failed" ||
+        j.status === "cancelled",
+    ).length,
+  );
+  const headerOutputDir = useSettingsStore((s) => s.outputDir);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
         <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
-          <span className="text-lg font-semibold tracking-tight">YTBR</span>
+          <span className="font-mono text-base font-bold uppercase tracking-[0.25em] text-foreground">
+            ytbr
+          </span>
           <button
             type="button"
             onClick={() => setAboutOpen(true)}
@@ -100,16 +115,22 @@ function App() {
                 key={item.id}
                 onClick={() => setRoute(item.id)}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
                 )}
               >
-                <Icon className="size-4" />
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-primary"
+                  />
+                )}
+                <Icon className={cn("size-4", active && "text-primary")} />
                 <span className="flex-1 text-left">{item.label}</span>
                 {badge != null && (
-                  <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground tabular-nums">
+                  <span className="rounded-full bg-primary px-1.5 font-mono text-[10px] font-semibold text-primary-foreground tabular-nums">
                     {badge}
                   </span>
                 )}
@@ -120,8 +141,15 @@ function App() {
       </aside>
 
       <main className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 shrink-0 items-center border-b border-border px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-6">
           <h1 className="text-base font-medium capitalize">{route}</h1>
+          <RouteHeaderInfo
+            route={route}
+            activeCount={activeCount}
+            queuedCount={queuedCount}
+            doneCount={doneCount}
+            outputDir={headerOutputDir}
+          />
         </header>
         <div className="flex-1 overflow-auto p-6">
           {route === "download" && <DownloadView onSwitchToBatch={switchToBatch} />}
@@ -141,12 +169,62 @@ function App() {
   );
 }
 
-function Placeholder({ text }: { text: string }) {
+function Placeholder({
+  icon: Icon,
+  title,
+  text,
+}: {
+  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  title?: string;
+  text: string;
+}) {
   return (
-    <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
-      <p className="text-sm text-muted-foreground">{text}</p>
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-6 py-12 text-card-foreground">
+      {Icon && (
+        <Icon className="size-10 text-muted-foreground/40" strokeWidth={1.5} />
+      )}
+      {title && <p className="text-sm font-medium text-foreground">{title}</p>}
+      <p className="max-w-xs text-center text-xs text-muted-foreground">{text}</p>
     </div>
   );
+}
+
+function RouteHeaderInfo({
+  route,
+  activeCount,
+  queuedCount,
+  doneCount,
+  outputDir,
+}: {
+  route: Route;
+  activeCount: number;
+  queuedCount: number;
+  doneCount: number;
+  outputDir: string | null;
+}) {
+  if (route === "queue") {
+    const parts: string[] = [];
+    if (activeCount > 0) parts.push(`${activeCount} active`);
+    if (queuedCount > 0) parts.push(`${queuedCount} queued`);
+    if (doneCount > 0) parts.push(`${doneCount} done`);
+    if (parts.length === 0) return null;
+    return (
+      <span className="font-mono text-xs text-muted-foreground tabular-nums">
+        {parts.join(" · ")}
+      </span>
+    );
+  }
+  if (route === "download" && outputDir) {
+    return (
+      <span
+        className="max-w-md truncate font-mono text-xs text-muted-foreground"
+        title={outputDir}
+      >
+        → {outputDir}
+      </span>
+    );
+  }
+  return null;
 }
 
 type ProbeState =
@@ -245,7 +323,11 @@ function DownloadView({
       <OutputDirPicker />
 
       {probe.status === "idle" && (
-        <Placeholder text="Paste a URL above to list available formats." />
+        <Placeholder
+          icon={Search}
+          title="Ready when you are"
+          text="Paste a URL above and press Probe to list available formats."
+        />
       )}
 
       {probe.status === "error" && (
