@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- About dialog. Click the version pill in the sidebar header to open a modal with the app version (`__APP_VERSION__`), `yt-dlp --version`, and the first line of `ffmpeg -version`, plus links that open the GitHub repo and `THIRD_PARTY_LICENSES.md` in the OS default browser via `tauri-plugin-opener`'s `openUrl` (URL scope is already in `opener:default`, no capability change). Versions are fetched lazily on dialog mount via two new commands: `ffmpeg_version` (sibling of the existing `ytdlp_version`) plus a small JS bridge wrapper. Esc and backdrop-click close the modal.
 - "Open in folder" button on each terminal job (`completed`, `failed`, `cancelled`) in QueueView. Opens the job's `outputDir` in the OS file manager via a new `reveal_in_folder` Rust command that delegates to `tauri-plugin-opener`'s `open_path`. Going through Rust avoids widening the JS-side `opener:allow-open-path` scope to cover every possible user-chosen output directory — the plugin's Rust API has no scope check.
 - Theme switcher in Settings. Three modes — System (default, follows the OS `prefers-color-scheme` and updates live when it flips), Light, Dark — persisted in the existing `ytbr.settings.v1` localStorage entry alongside the other UI preferences. The `.dark` token block in `index.css` shipped with v0.1.0 but was never reachable; a tiny `useThemeEffect` hook in `src/lib/theme.ts` now toggles the class on `<html>` based on the resolved mode.
 

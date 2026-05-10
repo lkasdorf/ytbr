@@ -92,6 +92,10 @@ export function ytdlpVersion(): Promise<string> {
   return invoke<string>("ytdlp_version");
 }
 
+export function ffmpegVersion(): Promise<string> {
+  return invoke<string>("ffmpeg_version");
+}
+
 export function revealInFolder(path: string): Promise<void> {
   return invoke<void>("reveal_in_folder", { path });
 }

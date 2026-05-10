@@ -21,6 +21,7 @@ import { classifyFormat, formatDuration } from "@/lib/format-utils";
 import { startJobListeners } from "@/lib/tauri-events";
 import { useSettingsSync } from "@/lib/settings-sync";
 import { useThemeEffect } from "@/lib/theme";
+import { AboutDialog } from "@/features/about/AboutDialog";
 import { isActive, useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
@@ -48,6 +49,7 @@ const NAV: NavItem[] = [
 
 function App() {
   const [route, setRoute] = useState<Route>("download");
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     void startJobListeners();
@@ -66,9 +68,15 @@ function App() {
       <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
         <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
           <span className="text-lg font-semibold tracking-tight">YTBR</span>
-          <span className="font-mono text-[10px] text-sidebar-foreground/50" title="App version">
+          <button
+            type="button"
+            onClick={() => setAboutOpen(true)}
+            title="About YTBR"
+            aria-label="About YTBR"
+            className="rounded font-mono text-[10px] text-sidebar-foreground/50 transition-colors hover:text-sidebar-foreground focus:outline-none focus:ring-1 focus:ring-sidebar-ring"
+          >
             v{__APP_VERSION__}
-          </span>
+          </button>
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-2">
           {NAV.map((item) => {
@@ -110,6 +118,8 @@ function App() {
           {route === "settings" && <SettingsView />}
         </div>
       </main>
+
+      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
     </div>
   );
 }

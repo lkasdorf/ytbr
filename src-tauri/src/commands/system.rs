@@ -32,3 +32,32 @@ pub async fn ytdlp_version(app: tauri::AppHandle) -> Result<String, String> {
         Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
     }
 }
+
+/// First line of `ffmpeg -version`, e.g. "ffmpeg version N-... Copyright ...".
+/// The full multi-line output dumps every codec/build flag — too noisy for
+/// an About dialog. Falls back to stderr because some ffmpeg builds print
+/// the banner there.
+#[tauri::command]
+pub async fn ffmpeg_version(app: tauri::AppHandle) -> Result<String, String> {
+    let output = app
+        .shell()
+        .sidecar("ffmpeg")
+        .map_err(|e| format!("sidecar lookup failed: {e}"))?
+        .args(["-version"])
+        .output()
+        .await
+        .map_err(|e| format!("sidecar execution failed: {e}"))?;
+
+    let text = if !output.stdout.is_empty() {
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    } else {
+        String::from_utf8_lossy(&output.stderr).into_owned()
+    };
+
+    let first = text.lines().next().unwrap_or("").trim().to_string();
+    if first.is_empty() {
+        Err("ffmpeg printed no version banner".into())
+    } else {
+        Ok(first)
+    }
+}
