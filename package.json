@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "version:check": "node scripts/version-sync.mjs",
-    "version:set": "node scripts/version-sync.mjs"
+    "version:set": "node scripts/version-sync.mjs",
+    "licenses:gen": "node scripts/gen-licenses.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
