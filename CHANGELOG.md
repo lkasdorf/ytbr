@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Native `<select>` dropdowns (Cookies-from-browser in Settings, Sort in Queue) were unreadable in dark mode — `bg-input` is alpha-transparent in dark mode, so the OS-rendered popup landed on a white system surface and rendered light foreground text on white. Fixed by adding `[&>option]:bg-card [&>option]:text-foreground` so `<option>` elements style independently from the `<select>` body.
+
 ## [0.4.0] - 2026-05-10
 
 Iteration 3. Seven user-facing additions land in one cut: a Theme

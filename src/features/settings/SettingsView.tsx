@@ -184,6 +184,10 @@ export function SettingsView() {
             className={cn(
               "flex-1 rounded-md border border-border bg-input px-3 py-1.5 text-sm",
               "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+              // Native option list inherits from <option>, not from <select>'s
+              // Tailwind classes — and `bg-input` is alpha-transparent in dark
+              // mode, which makes the OS-rendered popup white-on-white.
+              "[&>option]:bg-card [&>option]:text-foreground",
             )}
             aria-label="Cookies from browser"
           >

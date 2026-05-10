@@ -124,6 +124,7 @@ export function QueueView() {
             className={cn(
               "rounded-md border border-border bg-input px-2 py-1 text-xs",
               "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+              "[&>option]:bg-card [&>option]:text-foreground",
             )}
             aria-label="Sort queue"
           >
