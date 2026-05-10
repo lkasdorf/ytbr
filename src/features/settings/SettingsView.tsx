@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Leon Kasdorf
 
 import {
+  Bell,
   Cookie,
   Film,
   Folder,
@@ -61,6 +62,7 @@ export function SettingsView() {
   const embedMetadata = useSettingsStore((s) => s.embedMetadata);
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
   const theme = useSettingsStore((s) => s.theme);
+  const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -76,6 +78,7 @@ export function SettingsView() {
     (s) => s.setUseDownloadArchive,
   );
   const setTheme = useSettingsStore((s) => s.setTheme);
+  const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -108,6 +111,19 @@ export function SettingsView() {
             />
           ))}
         </div>
+      </Section>
+
+      <Section
+        icon={Bell}
+        title="Notifications"
+        desc="Show an OS notification when a job finishes or fails. The first notification will trigger the system permission prompt."
+      >
+        <ToggleRow
+          label="Notify on job finish/fail"
+          desc="Cancellations stay silent — you initiated those. Toast title is the final status, body is the URL."
+          checked={notifyOnFinish}
+          onChange={setNotifyOnFinish}
+        />
       </Section>
 
       <Section

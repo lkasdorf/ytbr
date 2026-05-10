@@ -51,6 +51,7 @@ interface SettingsStore {
   embedMetadata: boolean;
   useDownloadArchive: boolean;
   theme: ThemeMode;
+  notifyOnFinish: boolean;
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -63,6 +64,7 @@ interface SettingsStore {
   setEmbedMetadata: (v: boolean) => void;
   setUseDownloadArchive: (v: boolean) => void;
   setTheme: (theme: ThemeMode) => void;
+  setNotifyOnFinish: (v: boolean) => void;
 }
 
 function clampParallel(n: number): number {
@@ -87,6 +89,7 @@ export const useSettingsStore = create<SettingsStore>()(
       embedMetadata: false,
       useDownloadArchive: false,
       theme: "system",
+      notifyOnFinish: true,
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -103,6 +106,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setEmbedMetadata: (v) => set({ embedMetadata: v }),
       setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),
       setTheme: (theme) => set({ theme }),
+      setNotifyOnFinish: (v) => set({ notifyOnFinish: v }),
     }),
     { name: "ytbr.settings.v1" },
   ),
