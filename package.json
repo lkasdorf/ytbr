@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "version:check": "node scripts/version-sync.mjs",
+    "version:set": "node scripts/version-sync.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
