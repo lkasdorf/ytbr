@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `scripts/version-sync.mjs` keeps the three places that hold the app version (`package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`) in lockstep. Run with no args to verify they match (`pnpm version:check`); pass a SemVer to bump all three together (`pnpm version:set 0.3.0`). Edits are regex-based so existing formatting is preserved verbatim, and the Cargo.toml regex is anchored to the `[package]` section so dependency `version = "..."` lines are never touched. Removes the three-explicit-Edit pattern that v0.1.0 and v0.2.0 cuts used.
 
+### Removed
+
+- Unused `@tauri-apps/plugin-dialog` JS dependency. The dialog flow runs entirely through the Rust plugin (`tauri-plugin-dialog` crate, registered in `lib.rs`) via the `pick_output_dir` Tauri command — the JS wrapper was never imported. Trims one transitive subtree from `node_modules` with no behavior change.
+
 ## [0.2.0] - 2026-05-10
 
 Iteration 2: full Settings surface and the last spec-mandated queue
