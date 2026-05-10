@@ -13,6 +13,8 @@ use crate::queue::QueueManager;
 use crate::ytdlp::runner::ytdlp_sidecar_path;
 
 const RELEASES_API: &str = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
+const APP_RELEASES_API: &str = "https://api.github.com/repos/lkasdorf/ytbr/releases/latest";
+const APP_RELEASES_PAGE: &str = "https://github.com/lkasdorf/ytbr/releases/latest";
 const USER_AGENT: &str = concat!("ytbr-updater/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, Deserialize)]
@@ -198,5 +200,56 @@ pub async fn update_ytdlp(
         installed: tag,
         from: current,
         replaced: true,
+    })
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppUpdateCheck {
+    pub current: String,
+    pub latest: String,
+    pub is_newer: bool,
+    pub release_url: String,
+}
+
+/// Lightweight "is there a newer release?" probe. No download, no
+/// signature, no auto-install — just a heads-up so the user can click
+/// through to the GitHub release page. The fully-fledged
+/// tauri-plugin-updater path would need a signing keypair and a
+/// signed `latest.json`; out of scope for now.
+#[tauri::command]
+pub async fn check_app_update() -> Result<AppUpdateCheck, String> {
+    let current = env!("CARGO_PKG_VERSION").to_string();
+
+    let client = reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .timeout(Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("http client init failed: {e}"))?;
+
+    let release: LatestRelease = client
+        .get(APP_RELEASES_API)
+        .send()
+        .await
+        .map_err(|e| format!("github api request failed: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("github api status: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("github api json: {e}"))?;
+
+    // GitHub tags are vX.Y.Z; CARGO_PKG_VERSION is X.Y.Z. Strip the
+    // leading 'v' before comparing so the two formats line up.
+    let latest_clean = release
+        .tag_name
+        .strip_prefix('v')
+        .unwrap_or(&release.tag_name)
+        .to_string();
+
+    Ok(AppUpdateCheck {
+        is_newer: latest_clean != current,
+        current,
+        latest: latest_clean,
+        release_url: APP_RELEASES_PAGE.to_string(),
     })
 }

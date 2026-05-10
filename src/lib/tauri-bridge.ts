@@ -106,6 +106,17 @@ export function updateYtdlp(): Promise<UpdateOutcome> {
   return invoke<UpdateOutcome>("update_ytdlp");
 }
 
+export interface AppUpdateCheck {
+  current: string;
+  latest: string;
+  isNewer: boolean;
+  releaseUrl: string;
+}
+
+export function checkAppUpdate(): Promise<AppUpdateCheck> {
+  return invoke<AppUpdateCheck>("check_app_update");
+}
+
 export function revealInFolder(path: string): Promise<void> {
   return invoke<void>("reveal_in_folder", { path });
 }

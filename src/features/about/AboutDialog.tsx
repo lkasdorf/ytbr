@@ -3,8 +3,13 @@
 
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ExternalLink, X } from "lucide-react";
-import { ffmpegVersion, ytdlpVersion } from "@/lib/tauri-bridge";
+import { ExternalLink, Loader2, X } from "lucide-react";
+import {
+  checkAppUpdate,
+  ffmpegVersion,
+  ytdlpVersion,
+  type AppUpdateCheck,
+} from "@/lib/tauri-bridge";
 import { cn } from "@/lib/utils";
 
 const REPO_URL = "https://github.com/lkasdorf/ytbr";
@@ -96,6 +101,8 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
             </Row>
           </dl>
 
+          <UpdateCheckRow />
+
           <div className="mt-5 flex flex-col gap-2 border-t border-border pt-4">
             <LinkRow
               href={REPO_URL}
@@ -114,6 +121,73 @@ export function AboutDialog({ onClose }: { onClose: () => void }) {
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function UpdateCheckRow() {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<AppUpdateCheck | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      setResult(await checkAppUpdate());
+    } catch (e: unknown) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-5 flex flex-col gap-2 border-t border-border pt-4">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void run()}
+          disabled={busy}
+          className={cn(
+            "flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground",
+            "transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-60",
+          )}
+        >
+          {busy && <Loader2 className="size-3.5 animate-spin" />}
+          {busy ? "Checking…" : "Check for app updates"}
+        </button>
+        {result != null && !result.isNewer && (
+          <span className="text-xs text-muted-foreground">
+            Up to date (v{result.current}).
+          </span>
+        )}
+      </div>
+      {result != null && result.isNewer && (
+        <button
+          type="button"
+          onClick={() => void openUrl(result.releaseUrl)}
+          className={cn(
+            "flex items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-left",
+            "transition-colors hover:border-primary hover:bg-primary/10",
+          )}
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-medium text-foreground">
+              v{result.latest} available
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              You're on v{result.current}. Click to view the release.
+            </div>
+          </div>
+          <ExternalLink className="size-3.5 shrink-0 text-primary" />
+        </button>
+      )}
+      {error != null && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
