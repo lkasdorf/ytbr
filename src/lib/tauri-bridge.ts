@@ -56,6 +56,11 @@ export interface JobSpec {
   /// yt-dlp `--concurrent-fragments N` for HLS/DASH fragment downloads.
   /// Omitted or 1 means single-fragment (yt-dlp default). Range 1–8.
   concurrentFragments?: number | null;
+  /// Drives yt-dlp `--extract-audio --audio-format <fmt>`. The frontend
+  /// only sets this for audio-only downloads — applying it to a video
+  /// selector would strip the video track. `null` or "default" means
+  /// no recode (yt-dlp picks whatever the source publishes).
+  audioFormat?: string | null;
 }
 
 export interface JobProgress {

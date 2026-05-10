@@ -32,6 +32,19 @@ export type PresetId = "audio-best" | "video-720" | "video-1080" | "video-4k";
 
 export type ThemeMode = "system" | "light" | "dark";
 
+// "default" means yt-dlp's own selection (no recode). The other options
+// drive yt-dlp `--extract-audio --audio-format <fmt>` and only kick in
+// for audio-only downloads — see App.tsx / BatchView.tsx.
+export type AudioFormat = "default" | "mp3" | "opus" | "flac" | "wav";
+
+export const AUDIO_FORMATS: readonly AudioFormat[] = [
+  "default",
+  "mp3",
+  "opus",
+  "flac",
+  "wav",
+];
+
 export const DEFAULT_OUTPUT_TEMPLATE = "%(title)s.%(ext)s";
 export const DEFAULT_PARALLEL_LIMIT = 2;
 export const MIN_PARALLEL_LIMIT = 1;
@@ -57,6 +70,7 @@ interface SettingsStore {
   notifyOnFinish: boolean;
   watchClipboard: boolean;
   concurrentFragments: number;
+  audioFormat: AudioFormat;
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -72,6 +86,7 @@ interface SettingsStore {
   setNotifyOnFinish: (v: boolean) => void;
   setWatchClipboard: (v: boolean) => void;
   setConcurrentFragments: (n: number) => void;
+  setAudioFormat: (fmt: AudioFormat) => void;
 }
 
 function clampParallel(n: number): number {
@@ -107,6 +122,7 @@ export const useSettingsStore = create<SettingsStore>()(
       notifyOnFinish: true,
       watchClipboard: true,
       concurrentFragments: DEFAULT_CONCURRENT_FRAGMENTS,
+      audioFormat: "default",
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -127,6 +143,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setWatchClipboard: (v) => set({ watchClipboard: v }),
       setConcurrentFragments: (n) =>
         set({ concurrentFragments: clampConcurrentFragments(n) }),
+      setAudioFormat: (fmt) => set({ audioFormat: fmt }),
     }),
     { name: "ytbr.settings.v1" },
   ),

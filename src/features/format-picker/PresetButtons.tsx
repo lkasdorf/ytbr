@@ -5,11 +5,20 @@ import { Film, Music, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type PresetId, useSettingsStore } from "@/stores/settings";
 
+export type PresetKind = "audio" | "video";
+
 interface Props {
   // The label is the user-facing name from the preset definition
   // ("1080p", "Best Audio") — passed through so QueueView can show
   // it instead of the long yt-dlp selector that ships to the backend.
-  onPick: (formatSelector: string, formatLabel: string) => void;
+  // The kind drives whether the `audioFormat` setting applies (audio
+  // selectors only — `--extract-audio` on a video selector would
+  // strip the video track).
+  onPick: (
+    formatSelector: string,
+    formatLabel: string,
+    kind: PresetKind,
+  ) => void;
   disabled?: boolean;
   disabledReason?: string;
 }
@@ -20,6 +29,7 @@ interface Preset {
   hint: string;
   selector: string;
   icon: React.ComponentType<{ className?: string }>;
+  kind: PresetKind;
 }
 
 // yt-dlp format selectors. The fallback chain ("a/b/c") keeps the
@@ -33,6 +43,7 @@ export const PRESETS: Preset[] = [
     hint: "m4a, audio only",
     selector: "bestaudio[ext=m4a]/bestaudio",
     icon: Music,
+    kind: "audio",
   },
   {
     id: "video-720",
@@ -41,6 +52,7 @@ export const PRESETS: Preset[] = [
     selector:
       "bv*[height<=720][ext=mp4]+ba[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]",
     icon: Film,
+    kind: "video",
   },
   {
     id: "video-1080",
@@ -49,6 +61,7 @@ export const PRESETS: Preset[] = [
     selector:
       "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/best[height<=1080][ext=mp4]/best[height<=1080]",
     icon: Film,
+    kind: "video",
   },
   {
     id: "video-4k",
@@ -57,6 +70,7 @@ export const PRESETS: Preset[] = [
     selector:
       "bv*[height<=2160][ext=mp4]+ba[ext=m4a]/best[height<=2160][ext=mp4]/best[height<=2160]",
     icon: Film,
+    kind: "video",
   },
 ];
 
@@ -93,7 +107,7 @@ export function PresetButtons({ onPick, disabled, disabledReason }: Props) {
                     ? `Default preset · yt-dlp -f "${p.selector}"`
                     : `yt-dlp -f "${p.selector}"`
               }
-              onClick={() => onPick(p.selector, p.label)}
+              onClick={() => onPick(p.selector, p.label, p.kind)}
               className={cn(
                 "group relative flex flex-col items-start gap-1 rounded-lg border bg-card p-3 text-left transition-colors",
                 disabled

@@ -101,6 +101,16 @@ pub async fn run(
             args.push(n.to_string());
         }
     }
+    // "default" carries no recode intent — only emit the flags when an
+    // explicit codec is requested. The frontend takes care of only
+    // sending this for audio-only downloads (see App.tsx).
+    if let Some(fmt) = spec.audio_format.as_deref() {
+        if !fmt.is_empty() && fmt != "default" {
+            args.push("--extract-audio".into());
+            args.push("--audio-format".into());
+            args.push(fmt.to_string());
+        }
+    }
 
     if let Some(fmt) = &spec.format_id {
         args.push("-f".into());

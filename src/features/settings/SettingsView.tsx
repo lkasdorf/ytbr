@@ -9,6 +9,7 @@ import {
   Film,
   Folder,
   Loader2,
+  Music,
   Package,
   Palette,
   RotateCcw,
@@ -23,6 +24,7 @@ import {
   type UpdateOutcome,
 } from "@/lib/tauri-bridge";
 import {
+  AUDIO_FORMATS,
   COOKIE_BROWSERS,
   DEFAULT_CONCURRENT_FRAGMENTS,
   DEFAULT_OUTPUT_TEMPLATE,
@@ -31,6 +33,7 @@ import {
   MAX_PARALLEL_LIMIT,
   MIN_CONCURRENT_FRAGMENTS,
   MIN_PARALLEL_LIMIT,
+  type AudioFormat,
   type PresetId,
   type ThemeMode,
   useSettingsStore,
@@ -76,6 +79,7 @@ export function SettingsView() {
   const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
   const concurrentFragments = useSettingsStore((s) => s.concurrentFragments);
+  const audioFormat = useSettingsStore((s) => s.audioFormat);
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -94,6 +98,7 @@ export function SettingsView() {
   const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
   const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
   const setConcurrentFragments = useSettingsStore((s) => s.setConcurrentFragments);
+  const setAudioFormat = useSettingsStore((s) => s.setAudioFormat);
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -314,6 +319,23 @@ export function SettingsView() {
               hint={p.hint}
               active={defaultPreset === p.id}
               onClick={() => setDefaultPreset(p.id)}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        icon={Music}
+        title="Audio format"
+        desc="Only kicks in for audio-only downloads (Best Audio preset, or an audio-only row from the format table). Drives yt-dlp `--extract-audio --audio-format`. `default` means no recode (m4a from YouTube)."
+      >
+        <div className="flex flex-wrap gap-2">
+          {AUDIO_FORMATS.map((fmt) => (
+            <PresetChip
+              key={fmt}
+              label={audioFormatLabel(fmt)}
+              active={audioFormat === fmt}
+              onClick={() => setAudioFormat(fmt)}
             />
           ))}
         </div>
@@ -546,4 +568,8 @@ function PresetChip({
 
 function capitalize(s: string): string {
   return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
+}
+
+function audioFormatLabel(fmt: AudioFormat): string {
+  return fmt === "default" ? "Default (no recode)" : fmt;
 }

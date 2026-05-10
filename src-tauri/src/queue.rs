@@ -67,6 +67,12 @@ pub struct JobSpec {
     /// by the frontend slider.
     #[serde(default)]
     pub concurrent_fragments: Option<u8>,
+    /// yt-dlp `--audio-format`. When `Some` and not "default", the
+    /// runner additionally emits `--extract-audio`. The frontend only
+    /// sets this for audio-only downloads — applying to a video
+    /// selector would strip the video track.
+    #[serde(default)]
+    pub audio_format: Option<String>,
 }
 
 fn default_template() -> String {

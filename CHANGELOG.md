@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- "Audio format" chips in Settings (`default` / `mp3` / `opus` / `flac` / `wav`). Drives yt-dlp `--extract-audio --audio-format <fmt>`. The chips only have effect when the resulting download is audio-only — wired into both the Download tab (preset kind threaded through `PresetButtons.onPick` and `classifyFormat` for format-table rows) and the Batch tab (only `audio-best` choice qualifies). `default` is a no-op so the previous m4a-from-YouTube behavior is preserved unchanged. Skipped legacy video recode targets (wmv/flv/3gp/avi) — niche, big UX surface, not worth the burden.
 - "Concurrent fragments per download" slider in Settings (1–8, default 1). Wires yt-dlp's `--concurrent-fragments` through `JobSpec.concurrentFragments` to the runner, which omits the flag entirely at value 1 (yt-dlp's own default — passing it explicitly only adds noise to the spawn command line). Real speed-up for HLS/DASH-fragmented sources (most live-stream archives, some CDN deliveries); no effect on plain MP4 sources.
 
 ### Fixed

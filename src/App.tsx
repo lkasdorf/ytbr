@@ -154,11 +154,19 @@ function DownloadView() {
     }
   }
 
-  async function enqueue(formatId: string, formatLabel: string) {
+  async function enqueue(
+    formatId: string,
+    formatLabel: string,
+    kind: "audio" | "video",
+  ) {
     if (!outputDir || probe.status !== "ok") return;
     // Snapshot the settings at enqueue time. Mid-flight setting
     // changes never disturb running jobs.
     const settings = useSettingsStore.getState();
+    const audioFormat =
+      kind === "audio" && settings.audioFormat !== "default"
+        ? settings.audioFormat
+        : null;
     const spec = {
       url: probe.url,
       formatId,
@@ -172,6 +180,7 @@ function DownloadView() {
       embedMetadata: settings.embedMetadata,
       downloadArchive: settings.useDownloadArchive,
       concurrentFragments: settings.concurrentFragments,
+      audioFormat,
     };
     try {
       const id = await enqueueJob(spec);
@@ -197,7 +206,10 @@ function DownloadView() {
     const kind = classifyFormat(format.vcodec, format.acodec);
     const selector =
       kind === "video" ? `${format.formatId}+bestaudio/best` : format.formatId;
-    void enqueue(selector, format.formatId);
+    // The audioFormat setting only applies to pure audio rows. video,
+    // video+audio, and "none" (rare) all carry video content we don't
+    // want to strip via --extract-audio.
+    void enqueue(selector, format.formatId, kind === "audio" ? "audio" : "video");
   }
 
   return (
@@ -226,7 +238,9 @@ function DownloadView() {
         <ProbeResultView
           result={probe.result}
           onDownloadFormat={handleFormatRow}
-          onDownloadPreset={(selector, label) => void enqueue(selector, label)}
+          onDownloadPreset={(selector, label, kind) =>
+            void enqueue(selector, label, kind)
+          }
           downloadDisabledReason={
             outputDir ? undefined : "Choose an output folder before downloading"
           }
@@ -244,7 +258,11 @@ function ProbeResultView({
 }: {
   result: ProbeResult;
   onDownloadFormat: (format: Format) => void;
-  onDownloadPreset: (selector: string, label: string) => void;
+  onDownloadPreset: (
+    selector: string,
+    label: string,
+    kind: "audio" | "video",
+  ) => void;
   downloadDisabledReason?: string;
 }) {
   const disabled = downloadDisabledReason != null;

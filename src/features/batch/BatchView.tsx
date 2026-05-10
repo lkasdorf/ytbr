@@ -140,6 +140,12 @@ export function BatchView() {
       embedMetadata: settings.embedMetadata,
       downloadArchive: settings.useDownloadArchive,
       concurrentFragments: settings.concurrentFragments,
+      // The Batch tab only knows the user's preset id; only the
+      // "audio-best" choice is audio-only, the rest are video.
+      audioFormat:
+        choice === "audio-best" && settings.audioFormat !== "default"
+          ? settings.audioFormat
+          : null,
     };
 
     let succeeded = 0;
