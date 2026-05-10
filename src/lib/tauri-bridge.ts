@@ -42,6 +42,12 @@ export interface JobSpec {
   cookiesFromBrowser?: string | null;
   /// Path that overrides the bundled ffmpeg sidecar. `null` uses the bundle.
   ffmpegLocation?: string | null;
+  /// Per-format yt-dlp toggles. All default to `false` server-side.
+  writeSubs?: boolean;
+  embedThumbnail?: boolean;
+  embedMetadata?: boolean;
+  /// Enables `--download-archive` against the app config dir's archive.txt.
+  downloadArchive?: boolean;
 }
 
 export interface JobProgress {

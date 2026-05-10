@@ -148,6 +148,10 @@ function DownloadView() {
       outputTemplate: settings.outputTemplate,
       cookiesFromBrowser: settings.cookiesFromBrowser,
       ffmpegLocation: settings.ffmpegPath,
+      writeSubs: settings.writeSubs,
+      embedThumbnail: settings.embedThumbnail,
+      embedMetadata: settings.embedMetadata,
+      downloadArchive: settings.useDownloadArchive,
     };
     try {
       const id = await enqueueJob(spec);

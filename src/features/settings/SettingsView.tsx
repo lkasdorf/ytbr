@@ -5,6 +5,7 @@ import {
   Cookie,
   Film,
   Folder,
+  Package,
   RotateCcw,
   Sliders,
   Star,
@@ -41,6 +42,10 @@ export function SettingsView() {
   const ffmpegPath = useSettingsStore((s) => s.ffmpegPath);
   const outputTemplate = useSettingsStore((s) => s.outputTemplate);
   const defaultPreset = useSettingsStore((s) => s.defaultPreset);
+  const writeSubs = useSettingsStore((s) => s.writeSubs);
+  const embedThumbnail = useSettingsStore((s) => s.embedThumbnail);
+  const embedMetadata = useSettingsStore((s) => s.embedMetadata);
+  const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -49,6 +54,12 @@ export function SettingsView() {
   const setFfmpegPath = useSettingsStore((s) => s.setFfmpegPath);
   const setOutputTemplate = useSettingsStore((s) => s.setOutputTemplate);
   const setDefaultPreset = useSettingsStore((s) => s.setDefaultPreset);
+  const setWriteSubs = useSettingsStore((s) => s.setWriteSubs);
+  const setEmbedThumbnail = useSettingsStore((s) => s.setEmbedThumbnail);
+  const setEmbedMetadata = useSettingsStore((s) => s.setEmbedMetadata);
+  const setUseDownloadArchive = useSettingsStore(
+    (s) => s.setUseDownloadArchive,
+  );
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -208,7 +219,67 @@ export function SettingsView() {
           ))}
         </div>
       </Section>
+
+      <Section
+        icon={Package}
+        title="Download options"
+        desc="Applied to every download. Subtitles and thumbnails are only attached if the source publishes them."
+      >
+        <div className="flex flex-col gap-3">
+          <ToggleRow
+            label="Write subtitles"
+            desc="Saves a separate `.vtt` / `.srt` file alongside the video. yt-dlp `--write-subs`."
+            checked={writeSubs}
+            onChange={setWriteSubs}
+          />
+          <ToggleRow
+            label="Embed thumbnail"
+            desc="Bakes the cover art into the file (mp4, m4a, mkv supported). yt-dlp `--embed-thumbnail`."
+            checked={embedThumbnail}
+            onChange={setEmbedThumbnail}
+          />
+          <ToggleRow
+            label="Embed metadata"
+            desc="Bakes title, uploader, upload date, etc. into the file's container tags. yt-dlp `--embed-metadata`."
+            checked={embedMetadata}
+            onChange={setEmbedMetadata}
+          />
+          <ToggleRow
+            label="Use download archive"
+            desc="Skips re-downloading anything yt-dlp already pulled. Archive lives in the app config directory and is shared across all output folders."
+            checked={useDownloadArchive}
+            onChange={setUseDownloadArchive}
+          />
+        </div>
+      </Section>
     </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  desc,
+  checked,
+  onChange,
+}: {
+  label: string;
+  desc: React.ReactNode;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 size-4 cursor-pointer accent-primary"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-card-foreground">{label}</div>
+        <p className="mt-0.5 text-xs text-muted-foreground">{desc}</p>
+      </div>
+    </label>
   );
 }
 

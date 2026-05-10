@@ -42,6 +42,12 @@ interface SettingsStore {
   ffmpegPath: string | null;
   outputTemplate: string;
   defaultPreset: PresetId | null;
+  // Per-format options (yt-dlp flags). Defaults all off — opt-in is
+  // safer for first-time downloads.
+  writeSubs: boolean;
+  embedThumbnail: boolean;
+  embedMetadata: boolean;
+  useDownloadArchive: boolean;
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -49,6 +55,10 @@ interface SettingsStore {
   setFfmpegPath: (path: string | null) => void;
   setOutputTemplate: (template: string) => void;
   setDefaultPreset: (id: PresetId | null) => void;
+  setWriteSubs: (v: boolean) => void;
+  setEmbedThumbnail: (v: boolean) => void;
+  setEmbedMetadata: (v: boolean) => void;
+  setUseDownloadArchive: (v: boolean) => void;
 }
 
 function clampParallel(n: number): number {
@@ -68,6 +78,10 @@ export const useSettingsStore = create<SettingsStore>()(
       ffmpegPath: null,
       outputTemplate: DEFAULT_OUTPUT_TEMPLATE,
       defaultPreset: null,
+      writeSubs: false,
+      embedThumbnail: false,
+      embedMetadata: false,
+      useDownloadArchive: false,
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -79,6 +93,10 @@ export const useSettingsStore = create<SettingsStore>()(
             template.trim() === "" ? DEFAULT_OUTPUT_TEMPLATE : template,
         }),
       setDefaultPreset: (id) => set({ defaultPreset: id }),
+      setWriteSubs: (v) => set({ writeSubs: v }),
+      setEmbedThumbnail: (v) => set({ embedThumbnail: v }),
+      setEmbedMetadata: (v) => set({ embedMetadata: v }),
+      setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),
     }),
     { name: "ytbr.settings.v1" },
   ),

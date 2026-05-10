@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::oneshot;
@@ -74,6 +74,22 @@ pub async fn run(
     {
         args.push("--cookies-from-browser".into());
         args.push(browser.to_string());
+    }
+
+    if spec.write_subs {
+        args.push("--write-subs".into());
+    }
+    if spec.embed_thumbnail {
+        args.push("--embed-thumbnail".into());
+    }
+    if spec.embed_metadata {
+        args.push("--embed-metadata".into());
+    }
+    if spec.download_archive {
+        if let Some(archive) = archive_file_path(app) {
+            args.push("--download-archive".into());
+            args.push(archive.to_string_lossy().into_owned());
+        }
     }
 
     if let Some(fmt) = &spec.format_id {
@@ -160,6 +176,17 @@ pub async fn run(
 
 fn trim_line(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).trim().to_string()
+}
+
+// Centralized download-archive path under the OS app-config dir.
+// Shared across every output folder so duplicates are deduplicated
+// across sessions even when the user changes output dirs. Silently
+// returns `None` if the config dir can't be created — the runner just
+// drops the `--download-archive` flag and yt-dlp behaves as before.
+fn archive_file_path(app: &AppHandle) -> Option<PathBuf> {
+    let dir = app.path().app_config_dir().ok()?;
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir.join("archive.txt"))
 }
 
 // In bundled installs the sidecar lives next to the main exe with the

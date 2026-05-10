@@ -42,8 +42,17 @@ pub struct JobSpec {
     /// `None` falls back to `ffmpeg_sidecar_path()` in the runner.
     #[serde(default)]
     pub ffmpeg_location: Option<String>,
-    // Iter 2 fields still pending: write_subs, write_thumbnail,
-    // embed_metadata, use_archive, extra_args.
+    /// Per-format options. yt-dlp `--write-subs` / `--embed-thumbnail`
+    /// / `--embed-metadata` / `--download-archive`. Defaults are all
+    /// off so a v0.1.0 install picks no behavior change up.
+    #[serde(default)]
+    pub write_subs: bool,
+    #[serde(default)]
+    pub embed_thumbnail: bool,
+    #[serde(default)]
+    pub embed_metadata: bool,
+    #[serde(default)]
+    pub download_archive: bool,
 }
 
 fn default_template() -> String {
