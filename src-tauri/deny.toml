@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Leon Kasdorf
+#
+# cargo-deny config for the YTBR backend. Today we only enforce the
+# license gate; advisory and ban policies are reserved for later.
+#
+# Run locally:
+#   cargo install cargo-deny
+#   cargo deny --manifest-path src-tauri/Cargo.toml check licenses
+#
+# CI invokes this via EmbarkStudios/cargo-deny-action@v2 in
+# .github/workflows/ci.yml.
+
+[graph]
+all-features = false
+
+[licenses]
+version = 2
+# YTBR is Apache-2.0; we only ship under licenses that are permissive and
+# compatible with that. cargo-deny picks the most permissive option from
+# any OR-licensed crate, so listing both halves of common dual-licenses
+# (Apache-2.0 / MIT) is not strictly required, but it documents intent.
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "MIT-0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "MPL-2.0",
+  "Zlib",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "Unlicense",
+  "CC0-1.0",
+]
+confidence-threshold = 0.8
+
+[advisories]
+version = 2
+yanked = "warn"
+
+[bans]
+multiple-versions = "allow"
+wildcards = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

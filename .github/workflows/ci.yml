@@ -1,0 +1,138 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Leon Kasdorf
+#
+# CI for YTBR — runs on every push to main and on every PR.
+#
+# What it covers per OS (Windows + Ubuntu):
+#   - frontend: TypeScript strict + Vite production build
+#   - backend:  cargo check + cargo test --lib
+#   - sidecars: yt-dlp + LGPL ffmpeg fetched via the same scripts
+#               developers run locally (so we exercise the full pipeline,
+#               UPX compression included)
+# Repo-wide once:
+#   - cargo-deny licenses (Linux only — the license set is platform-agnostic)
+#   - pnpm version:check (asserts the three manifests stay in lockstep)
+#
+# Notes:
+#   - We do not run `pnpm tauri build` here (full installer takes ~10-15 min
+#     per OS). That belongs to a separate release workflow when the time
+#     comes; this lane is the fast-feedback gate.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      # The webkit2gtk-4.1 + libxdo set is what tauri-action lists as the
+      # Linux 2.x build prerequisite — see tauri.app docs.
+      - name: Install Linux Tauri build deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Fetch sidecar binaries (yt-dlp + LGPL ffmpeg, UPX-compressed)
+        if: matrix.os == 'ubuntu-latest'
+        run: ./scripts/fetch-binaries.sh ${{ matrix.target }}
+
+      - name: Fetch sidecar binaries (yt-dlp + LGPL ffmpeg, UPX-compressed)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./scripts/fetch-binaries.ps1 -Target ${{ matrix.target }}
+
+      - name: Frontend build (TypeScript strict + Vite)
+        run: pnpm build
+
+      - name: Cargo check
+        run: cargo check --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }}
+
+      - name: Cargo unit tests
+        run: cargo test --lib --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }}
+
+  licenses:
+    name: License gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: pnpm install (lockfile-only — no postinstall scripts needed)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Version sync (package.json / Cargo.toml / tauri.conf.json)
+        run: pnpm version:check
+
+      - name: cargo-deny check licenses
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: src-tauri/Cargo.toml
+          command: check licenses

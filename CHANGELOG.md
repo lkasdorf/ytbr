@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `.github/workflows/ci.yml` runs on every push to `main` and every pull request. Two jobs: `check` (matrix: ubuntu-latest + windows-latest) executes the full local build pipeline — `pnpm install --frozen-lockfile`, `fetch-binaries.{sh,ps1}` for the yt-dlp + LGPL ffmpeg sidecars (UPX-compressed exactly as locally), `pnpm build` (TypeScript strict + Vite), `cargo check` and `cargo test --lib`. `licenses` (Ubuntu-only) runs `pnpm version:check` to assert the three manifests stay in lockstep, plus `cargo-deny check licenses` against `src-tauri/deny.toml`. The full `pnpm tauri build` is intentionally not run on every PR — that belongs to a release workflow.
+- `src-tauri/deny.toml` defines the cargo-deny allow-list. Every distinct license string seen in the current 492-crate dependency graph maps to one of the listed permissive SPDX identifiers (Apache-2.0 / MIT / BSD-2/3-Clause / ISC / MPL-2.0 / Zlib / Unicode-3.0 / Unlicense / CC0-1.0 / MIT-0 / Apache-2.0 WITH LLVM-exception). The OR-licensed `LGPL-2.1-or-later` crates always offer MIT or Apache-2.0 as alternatives so cargo-deny picks the permissive side.
+
 ### Changed
 
 - QueueView shows a pretty format label instead of the raw yt-dlp selector. `JobSpec` gains an optional `formatLabel` field (`format_label` Rust-side, defaults to `None` so v0.1.0 / v0.2.0 jobs persisted to memory still render). For preset clicks the label is the preset name (`"1080p"`, `"Best Audio"`); for direct format-row picks it is the bare format id (`"137"`) so users see the same id they clicked on rather than the expanded `137+bestaudio/best` selector that ships to yt-dlp; for Batch the active choice's label (`"yt-dlp default"` or a preset name). The actual selector is preserved as a tooltip on the label so the long form is one hover away when debugging.
