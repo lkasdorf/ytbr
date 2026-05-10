@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Failed jobs now surface yt-dlp's own `ERROR: …` stderr line instead of
+  the generic "yt-dlp exited with code 1", and the
+  `Could not copy <Browser> cookie database` case (yt-dlp issue #7271)
+  is translated into an actionable hint pointing at the
+  "Cookies from browser" Settings toggle. The raw upstream line still
+  shows in the logs panel.
+
 ## [0.5.0] - 2026-05-10
 
 Iter 3+ closes and the app gets a real visual identity. Three feature

@@ -149,8 +149,15 @@ pub async fn run(
         });
     }
 
-    // Drain the event stream until the process terminates.
+    // Drain the event stream until the process terminates. We track two
+    // separate failure sources: `last_error` is a shell-level error from
+    // the Tauri plugin (couldn't spawn, IO closed, ...) while
+    // `last_stderr_error` is yt-dlp's own `ERROR: …` text on stderr.
+    // The latter is far more actionable, so we prefer it on non-zero
+    // exits and run it through `humanize_yt_dlp_error` to translate
+    // common upstream messages into hints the user can act on.
     let mut last_error: Option<String> = None;
+    let mut last_stderr_error: Option<String> = None;
     while let Some(event) = rx.recv().await {
         match event {
             CommandEvent::Stdout(bytes) => {
@@ -164,6 +171,9 @@ pub async fn run(
             CommandEvent::Stderr(bytes) => {
                 let line = trim_line(&bytes);
                 if !line.is_empty() {
+                    if line.starts_with("ERROR:") {
+                        last_stderr_error = Some(line.clone());
+                    }
                     emit_log(app, id, &line, "stderr");
                 }
             }
@@ -177,13 +187,19 @@ pub async fn run(
                 return Ok(match payload.code {
                     Some(0) => RunOutcome::Completed,
                     Some(code) => {
-                        let detail = last_error
-                            .clone()
+                        let detail = last_stderr_error
+                            .as_deref()
+                            .map(humanize_yt_dlp_error)
+                            .or_else(|| last_error.clone())
                             .unwrap_or_else(|| format!("yt-dlp exited with code {code}"));
                         RunOutcome::Failed(detail)
                     }
                     None => RunOutcome::Failed(
-                        last_error.unwrap_or_else(|| "yt-dlp terminated without exit code".into()),
+                        last_stderr_error
+                            .as_deref()
+                            .map(humanize_yt_dlp_error)
+                            .or(last_error)
+                            .unwrap_or_else(|| "yt-dlp terminated without exit code".into()),
                     ),
                 });
             }
@@ -195,9 +211,39 @@ pub async fn run(
         Ok(RunOutcome::Cancelled)
     } else {
         Ok(RunOutcome::Failed(
-            last_error.unwrap_or_else(|| "yt-dlp event stream closed unexpectedly".into()),
+            last_stderr_error
+                .as_deref()
+                .map(humanize_yt_dlp_error)
+                .or(last_error)
+                .unwrap_or_else(|| "yt-dlp event stream closed unexpectedly".into()),
         ))
     }
+}
+
+// Translate yt-dlp's `ERROR: …` stderr lines into actionable text where
+// we recognize the pattern. The raw line is still emitted to the logs
+// panel, so the upstream issue link / wording is preserved for users
+// who need it.
+fn humanize_yt_dlp_error(raw: &str) -> String {
+    let trimmed = raw.trim_start_matches("ERROR:").trim();
+
+    // yt-dlp issue #7271: "Could not copy <Browser> cookie database"
+    // fires when the browser holds an exclusive lock on the cookie
+    // store (Chrome/Edge while running, Firefox during sqlite WAL,
+    // ...) or — on Chrome ≥127 — when App-Bound Encryption blocks
+    // decryption from a non-browser process. Both cases share the
+    // same user-side fix.
+    if let Some(rest) = trimmed.strip_prefix("Could not copy ") {
+        if let Some(end) = rest.find(" cookie database") {
+            let browser = &rest[..end];
+            return format!(
+                "{browser} cookie database is locked — yt-dlp can't read it while {browser} is running. \
+                 Close {browser} and retry, or set 'Cookies from browser' to 'none' in Settings."
+            );
+        }
+    }
+
+    trimmed.to_string()
 }
 
 fn trim_line(bytes: &[u8]) -> String {
@@ -284,4 +330,32 @@ fn emit_log(app: &AppHandle, id: &str, line: &str, stream: &str) {
         stream: &'a str,
     }
     let _ = app.emit("job-log-line", LogPayload { id, line, stream });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::humanize_yt_dlp_error;
+
+    #[test]
+    fn humanizes_chrome_cookie_lock() {
+        let raw = "ERROR: Could not copy Chrome cookie database. \
+                   See https://github.com/yt-dlp/yt-dlp/issues/7271 for more info";
+        let msg = humanize_yt_dlp_error(raw);
+        assert!(msg.contains("Chrome cookie database is locked"));
+        assert!(msg.contains("Close Chrome"));
+        assert!(msg.contains("'Cookies from browser' to 'none'"));
+    }
+
+    #[test]
+    fn humanizes_other_browsers() {
+        let msg = humanize_yt_dlp_error("ERROR: Could not copy Firefox cookie database");
+        assert!(msg.contains("Firefox cookie database is locked"));
+        assert!(msg.contains("Close Firefox"));
+    }
+
+    #[test]
+    fn unknown_errors_pass_through_without_prefix() {
+        let msg = humanize_yt_dlp_error("ERROR: Unsupported URL: about:blank");
+        assert_eq!(msg, "Unsupported URL: about:blank");
+    }
 }
