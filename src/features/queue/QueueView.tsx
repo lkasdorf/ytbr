@@ -6,11 +6,20 @@ import {
   CheckCircle2,
   CircleDashed,
   Loader2,
+  Pause,
+  Play,
   StopCircle,
   Trash2,
   XCircle,
 } from "lucide-react";
-import { cancelJob, clearCompletedJobs, type JobState, type JobStatus } from "@/lib/tauri-bridge";
+import {
+  cancelJob,
+  clearCompletedJobs,
+  pauseJob,
+  resumeJob,
+  type JobState,
+  type JobStatus,
+} from "@/lib/tauri-bridge";
 import { isActive, useJobsStore } from "@/stores/jobs";
 import { formatBytes } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
@@ -39,10 +48,11 @@ const SORT_OPTIONS: readonly SortOption[] = [
 // failures (likely to need attention), then completed, then cancelled.
 const STATUS_RANK: Record<JobStatus, number> = {
   downloading: 0,
-  queued: 1,
-  failed: 2,
-  completed: 3,
-  cancelled: 4,
+  paused: 1,
+  queued: 2,
+  failed: 3,
+  completed: 4,
+  cancelled: 5,
 };
 
 export function QueueView() {
@@ -173,9 +183,11 @@ function JobCard({ job }: { job: JobState }) {
                 <span>
                   {job.status === "downloading" && p
                     ? `${formatSpeed(p.speedBps)} · ETA ${etaDisplay(p.etaSecs)}`
-                    : job.status === "completed"
-                      ? "done"
-                      : ""}
+                    : job.status === "paused"
+                      ? "paused"
+                      : job.status === "completed"
+                        ? "done"
+                        : ""}
                 </span>
               </div>
             </div>
@@ -189,15 +201,52 @@ function JobCard({ job }: { job: JobState }) {
         </div>
 
         {isActive(job.status) && (
-          <button
-            onClick={() => void cancelJob(job.id)}
-            className="shrink-0 rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive hover:text-destructive-foreground"
-          >
-            Cancel
-          </button>
+          <div className="flex shrink-0 flex-col gap-1.5">
+            {job.status === "downloading" && (
+              <IconButton
+                title="Pause"
+                onClick={() => void pauseJob(job.id)}
+                icon={Pause}
+              />
+            )}
+            {job.status === "paused" && (
+              <IconButton
+                title="Resume"
+                onClick={() => void resumeJob(job.id)}
+                icon={Play}
+              />
+            )}
+            <button
+              onClick={() => void cancelJob(job.id)}
+              className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive hover:text-destructive-foreground"
+            >
+              Cancel
+            </button>
+          </div>
         )}
       </div>
     </div>
+  );
+}
+
+function IconButton({
+  title,
+  onClick,
+  icon: Icon,
+}: {
+  title: string;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="flex items-center justify-center rounded-md border border-border bg-secondary px-2.5 py-1 text-secondary-foreground transition-colors hover:bg-secondary/80"
+    >
+      <Icon className="size-3.5" />
+    </button>
   );
 }
 
@@ -220,6 +269,7 @@ function StatusIcon({ status }: { status: JobStatus }) {
   switch (status) {
     case "queued":      return <CircleDashed className={cn(cls, "text-muted-foreground")} />;
     case "downloading": return <Loader2 className={cn(cls, "animate-spin text-primary")} />;
+    case "paused":      return <Pause className={cn(cls, "text-amber-500")} />;
     case "completed":   return <CheckCircle2 className={cn(cls, "text-emerald-500")} />;
     case "failed":      return <XCircle className={cn(cls, "text-destructive")} />;
     case "cancelled":   return <StopCircle className={cn(cls, "text-muted-foreground")} />;
@@ -230,6 +280,7 @@ function StatusBadge({ status }: { status: JobStatus }) {
   const styles: Record<JobStatus, string> = {
     queued:      "bg-muted text-muted-foreground",
     downloading: "bg-primary/15 text-primary",
+    paused:      "bg-amber-500/15 text-amber-500",
     completed:   "bg-emerald-500/15 text-emerald-500",
     failed:      "bg-destructive/15 text-destructive",
     cancelled:   "bg-muted text-muted-foreground",

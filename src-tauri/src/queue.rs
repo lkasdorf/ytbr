@@ -20,7 +20,7 @@ pub type JobId = String;
 pub enum JobStatus {
     Queued,
     Downloading,
-    // Paused — wired up in iteration 2
+    Paused,
     Completed,
     Failed,
     Cancelled,
@@ -72,6 +72,11 @@ pub struct JobState {
 struct JobEntry {
     state: JobState,
     cancel_tx: Option<oneshot::Sender<()>>,
+    /// OS pid of the spawned yt-dlp child, set by the runner once the
+    /// process actually starts. `None` means "not running yet" — pause
+    /// is rejected in that window. Wrapped in an Arc so the runner
+    /// task can write to it independently of `jobs` lock contention.
+    pid: Arc<Mutex<Option<u32>>>,
 }
 
 pub struct QueueManager {
@@ -173,6 +178,7 @@ impl QueueManager {
         };
 
         let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
+        let pid = Arc::new(Mutex::new(None::<u32>));
         {
             let mut jobs = self.inner.jobs.lock().unwrap();
             jobs.insert(
@@ -180,6 +186,7 @@ impl QueueManager {
                 JobEntry {
                     state: state.clone(),
                     cancel_tx: Some(cancel_tx),
+                    pid: pid.clone(),
                 },
             );
         }
@@ -187,6 +194,7 @@ impl QueueManager {
 
         let inner = self.inner.clone();
         let task_id = id.clone();
+        let pid_for_runner = pid.clone();
         tauri::async_runtime::spawn(async move {
             let permit = match inner.semaphore.clone().acquire_owned().await {
                 Ok(p) => p,
@@ -195,7 +203,8 @@ impl QueueManager {
 
             inner.transition(&app, &task_id, JobStatus::Downloading, None);
 
-            let outcome = runner::run(&app, &task_id, &spec, cancel_rx).await;
+            let outcome =
+                runner::run(&app, &task_id, &spec, cancel_rx, pid_for_runner).await;
 
             match outcome {
                 Ok(RunOutcome::Completed) => {
@@ -227,6 +236,59 @@ impl QueueManager {
             let _ = tx.send(());
         }
         Ok(())
+    }
+
+    pub fn pause(&self, app: &AppHandle, id: &str) -> Result<(), AppError> {
+        let pid = self.pid_for_status_change(id, JobStatus::Downloading)?;
+        if !crate::ytdlp::process_pause::suspend(pid) {
+            return Err(AppError::InvalidInput(format!(
+                "OS-level suspend failed for pid {pid}"
+            )));
+        }
+        self.inner
+            .transition(app, id, JobStatus::Paused, None);
+        Ok(())
+    }
+
+    pub fn resume(&self, app: &AppHandle, id: &str) -> Result<(), AppError> {
+        let pid = self.pid_for_status_change(id, JobStatus::Paused)?;
+        if !crate::ytdlp::process_pause::resume(pid) {
+            return Err(AppError::InvalidInput(format!(
+                "OS-level resume failed for pid {pid}"
+            )));
+        }
+        self.inner
+            .transition(app, id, JobStatus::Downloading, None);
+        Ok(())
+    }
+
+    /// Look up the running pid for a job, but only when its current
+    /// status is the expected one (typically Downloading for pause,
+    /// Paused for resume). This both rejects stale calls and avoids
+    /// the brief window between enqueue and spawn where there is no
+    /// pid yet.
+    fn pid_for_status_change(
+        &self,
+        id: &str,
+        expected: JobStatus,
+    ) -> Result<u32, AppError> {
+        // Clone the inner Arc so we can drop the outer jobs map lock
+        // before touching the per-job pid mutex.
+        let pid_arc = {
+            let jobs = self.inner.jobs.lock().unwrap();
+            let entry = jobs
+                .get(id)
+                .ok_or_else(|| AppError::JobNotFound(id.to_string()))?;
+            if entry.state.status != expected {
+                return Err(AppError::InvalidInput(format!(
+                    "job is {:?}, expected {:?}",
+                    entry.state.status, expected,
+                )));
+            }
+            entry.pid.clone()
+        };
+        let pid = *pid_arc.lock().unwrap();
+        pid.ok_or_else(|| AppError::InvalidInput("job has not spawned yet".into()))
     }
 
     pub fn list(&self) -> Vec<JobState> {

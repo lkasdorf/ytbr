@@ -69,5 +69,7 @@ export const useJobsStore = create<JobsStore>((set) => ({
 }));
 
 export function isActive(status: JobStatus): boolean {
-  return status === "queued" || status === "downloading";
+  // Paused counts as active: the OS process still exists, the queue
+  // permit is still held, and the job belongs in the running set.
+  return status === "queued" || status === "downloading" || status === "paused";
 }

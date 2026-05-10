@@ -29,6 +29,7 @@ export interface ProbeResult {
 export type JobStatus =
   | "queued"
   | "downloading"
+  | "paused"
   | "completed"
   | "failed"
   | "cancelled";
@@ -82,6 +83,14 @@ export function enqueueJob(spec: JobSpec): Promise<string> {
 
 export function cancelJob(id: string): Promise<void> {
   return invoke<void>("cancel_job", { id });
+}
+
+export function pauseJob(id: string): Promise<void> {
+  return invoke<void>("pause_job", { id });
+}
+
+export function resumeJob(id: string): Promise<void> {
+  return invoke<void>("resume_job", { id });
 }
 
 export function listJobs(): Promise<JobState[]> {

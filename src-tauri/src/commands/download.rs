@@ -24,6 +24,24 @@ pub async fn cancel_job(
 }
 
 #[tauri::command]
+pub async fn pause_job(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+    id: String,
+) -> Result<(), AppError> {
+    queue.pause(&app, &id)
+}
+
+#[tauri::command]
+pub async fn resume_job(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+    id: String,
+) -> Result<(), AppError> {
+    queue.resume(&app, &id)
+}
+
+#[tauri::command]
 pub async fn list_jobs(queue: State<'_, QueueManager>) -> Result<Vec<JobState>, AppError> {
     Ok(queue.list())
 }

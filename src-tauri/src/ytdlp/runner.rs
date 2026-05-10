@@ -32,6 +32,7 @@ pub async fn run(
     id: &str,
     spec: &JobSpec,
     cancel_rx: oneshot::Receiver<()>,
+    pid_slot: Arc<Mutex<Option<u32>>>,
 ) -> Result<RunOutcome, AppError> {
     let output_template = spec
         .output_dir
@@ -105,6 +106,12 @@ pub async fn run(
         .args(args)
         .spawn()
         .map_err(|e| AppError::Sidecar(e.to_string()))?;
+
+    // Publish the spawned pid so QueueManager::pause / resume can
+    // signal the right OS process. Cleared at the end of the function
+    // so a pause click on a freshly-finished job fails fast instead of
+    // poking a recycled pid.
+    *pid_slot.lock().unwrap() = Some(child.pid());
 
     let child: Arc<Mutex<Option<CommandChild>>> = Arc::new(Mutex::new(Some(child)));
     let was_cancelled = Arc::new(AtomicBool::new(false));

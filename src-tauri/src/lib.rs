@@ -26,6 +26,8 @@ pub fn run() {
             commands::probe::probe_url,
             commands::download::enqueue_job,
             commands::download::cancel_job,
+            commands::download::pause_job,
+            commands::download::resume_job,
             commands::download::list_jobs,
             commands::download::clear_completed_jobs,
             commands::settings::pick_output_dir,
