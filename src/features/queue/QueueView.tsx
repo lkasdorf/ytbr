@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import {
   CheckCircle2,
   CircleDashed,
+  FolderOpen,
   Loader2,
   Pause,
   Play,
@@ -17,6 +18,7 @@ import {
   clearCompletedJobs,
   pauseJob,
   resumeJob,
+  revealInFolder,
   type JobState,
   type JobStatus,
 } from "@/lib/tauri-bridge";
@@ -229,6 +231,16 @@ function JobCard({ job }: { job: JobState }) {
             >
               Cancel
             </button>
+          </div>
+        )}
+
+        {!isActive(job.status) && (
+          <div className="flex shrink-0 flex-col gap-1.5">
+            <IconButton
+              title="Open in folder"
+              onClick={() => void revealInFolder(job.spec.outputDir)}
+              icon={FolderOpen}
+            />
           </div>
         )}
       </div>

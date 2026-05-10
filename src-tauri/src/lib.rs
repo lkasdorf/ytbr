@@ -23,6 +23,7 @@ pub fn run() {
         .manage(QueueManager::new(DEFAULT_PARALLEL_LIMIT))
         .invoke_handler(tauri::generate_handler![
             commands::system::ytdlp_version,
+            commands::system::reveal_in_folder,
             commands::probe::probe_url,
             commands::probe::expand_playlist,
             commands::download::enqueue_job,

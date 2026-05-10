@@ -92,6 +92,10 @@ export function ytdlpVersion(): Promise<string> {
   return invoke<string>("ytdlp_version");
 }
 
+export function revealInFolder(path: string): Promise<void> {
+  return invoke<void>("reveal_in_folder", { path });
+}
+
 export function enqueueJob(spec: JobSpec): Promise<string> {
   return invoke<string>("enqueue_job", { spec });
 }

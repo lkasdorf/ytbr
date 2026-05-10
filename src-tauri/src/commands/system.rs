@@ -1,7 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::ShellExt;
+
+/// Open a path in the OS file manager. Called from Rust so we don't
+/// have to widen the JS-side `opener:allow-open-path` scope to cover
+/// every possible user-chosen output directory; the Rust plugin call
+/// has no such scope check.
+#[tauri::command]
+pub async fn reveal_in_folder(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    app.opener()
+        .open_path(&path, None::<&str>)
+        .map_err(|e| format!("open_path failed: {e}"))
+}
 
 #[tauri::command]
 pub async fn ytdlp_version(app: tauri::AppHandle) -> Result<String, String> {
