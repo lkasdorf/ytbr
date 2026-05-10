@@ -93,9 +93,14 @@ try {
 
     $SumsUrl  = $Spec.YtDlpSumsUrl
     $SumsFile = Join-Path $WorkDir "SHA2-256SUMS"
+    # SHA2-256SUMS lists yt-dlp (Python source), yt-dlp.exe, yt-dlp_linux
+    # etc. as separate rows. Match the upstream asset name from the URL,
+    # not the local-rename name (which collapses to "yt-dlp" on Linux
+    # and would silently pick the Python source row).
+    $YtDlpAsset = Split-Path -Leaf $Spec.YtDlpUrl
     try {
         Invoke-WebRequest -Uri $SumsUrl -OutFile $SumsFile
-        $expected = (Select-String -Path $SumsFile -Pattern "\s$([regex]::Escape($Spec.YtDlpName))$" |
+        $expected = (Select-String -Path $SumsFile -Pattern "\s$([regex]::Escape($YtDlpAsset))$" |
                      Select-Object -First 1).Line.Split()[0]
         if ($expected) {
             $actual = (Get-FileHash -Algorithm SHA256 -Path $YtDlpOut).Hash.ToLower()
@@ -104,7 +109,7 @@ try {
             }
             Write-Host "[yt-dlp] sha256 ok ($($actual.Substring(0,12))...)"
         } else {
-            Write-Warning "[yt-dlp] SHA2-256SUMS did not contain $($Spec.YtDlpName); skipping verify"
+            Write-Warning "[yt-dlp] SHA2-256SUMS did not contain $YtDlpAsset; skipping verify"
         }
     } catch {
         Write-Warning "[yt-dlp] hash verify skipped: $_"

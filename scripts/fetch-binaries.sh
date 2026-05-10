@@ -93,8 +93,14 @@ dl() {
 echo "[yt-dlp] $ytdlp_url"
 dl "$ytdlp_url" "$WORK_DIR/$ytdlp_name"
 
+# SHA2-256SUMS lists yt-dlp (Python source), yt-dlp.exe, yt-dlp_linux
+# etc. as separate rows. We must match the upstream asset name from
+# the URL, not the local-rename `$ytdlp_name` (which collapses to
+# `yt-dlp` on Linux and would silently pick the Python source row).
+ytdlp_asset="$(basename "$ytdlp_url")"
+
 if dl "$ytdlp_sha_url" "$WORK_DIR/SHA2-256SUMS" 2>/dev/null; then
-  expected="$(awk -v n="$ytdlp_name" '$2==n {print $1; exit}' "$WORK_DIR/SHA2-256SUMS")"
+  expected="$(awk -v n="$ytdlp_asset" '$2==n {print $1; exit}' "$WORK_DIR/SHA2-256SUMS")"
   if [ -n "$expected" ]; then
     actual="$(sha256sum "$WORK_DIR/$ytdlp_name" | awk '{print $1}')"
     if [ "$actual" != "$expected" ]; then
@@ -103,7 +109,7 @@ if dl "$ytdlp_sha_url" "$WORK_DIR/SHA2-256SUMS" 2>/dev/null; then
     fi
     echo "[yt-dlp] sha256 ok (${actual:0:12}...)"
   else
-    echo "[yt-dlp] SHA2-256SUMS did not contain $ytdlp_name; skipping verify" >&2
+    echo "[yt-dlp] SHA2-256SUMS did not contain $ytdlp_asset; skipping verify" >&2
   fi
 else
   echo "[yt-dlp] SHA2-256SUMS download failed; skipping verify" >&2

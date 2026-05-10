@@ -23,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `fetch-binaries.{sh,ps1}` — pin the yt-dlp release tag once via the GitHub API and reuse it for both binary and `SHA2-256SUMS` URLs. Previously both URLs went through `releases/latest/download/...`; if yt-dlp published a new release between those two HTTP calls (which happens because they ship dated tags every couple of weeks), the redirect resolved to two different tags and the hash check rejected the binary. First CI run on Linux failed exactly that way (`hash mismatch: expected 3bda... got c2b0...`). BtbN/FFmpeg-Builds keeps a literal `latest` tag and never published per-asset `.sha256` siblings — its conditional verify path was already a no-op, so we leave that side alone.
+- `fetch-binaries.{sh,ps1}` Linux verify path: SHA2-256SUMS lists `yt-dlp` (Python source), `yt-dlp.exe` and `yt-dlp_linux` as separate rows, but the script looked up by the local rename name (`yt-dlp` on Linux), which silently picked the Python source row and rejected the actual binary. Match the upstream asset name from the URL instead, so Linux gets the `yt-dlp_linux` SHA. Latent bug — Windows happened to do the right thing because `yt-dlp.exe` is both the local name and the asset name. Surfaced once CI ran the Linux side.
+- `fetch-binaries.{sh,ps1}` also pin the yt-dlp release tag once via the GitHub API and reuse it for both binary and SHA URLs. Robustness against the rare case where yt-dlp publishes a new release between the binary fetch and the SHA fetch (both `releases/latest/download/...` redirects would re-resolve to different tags). BtbN/FFmpeg-Builds uses a literal `latest` tag and never published per-asset `.sha256` siblings — its conditional verify path was already a silent no-op, so we leave that side alone.
 
 ### Removed
 
