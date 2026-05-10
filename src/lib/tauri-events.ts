@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Leon Kasdorf
 
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useJobsStore } from "@/stores/jobs";
+import { useJobsStore, type LogStream } from "@/stores/jobs";
 import type { JobProgress, JobStatus } from "@/lib/tauri-bridge";
 
 let started = false;
@@ -15,6 +15,11 @@ interface StatusPayload {
   id: string;
   status: JobStatus;
   error?: string | null;
+}
+interface LogPayload {
+  id: string;
+  line: string;
+  stream: LogStream;
 }
 
 // Wires the global Tauri event listeners for job updates. Idempotent —
@@ -34,6 +39,13 @@ export async function startJobListeners(): Promise<void> {
     await listen<StatusPayload>("job-status", (e) => {
       const { id, status, error } = e.payload;
       useJobsStore.getState().patchStatus(id, status, error ?? null);
+    }),
+  );
+
+  unlisten.push(
+    await listen<LogPayload>("job-log-line", (e) => {
+      const { id, line, stream } = e.payload;
+      useJobsStore.getState().appendLog(id, { line, stream });
     }),
   );
 }

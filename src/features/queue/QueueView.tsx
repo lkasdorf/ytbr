@@ -20,7 +20,7 @@ import {
   type JobState,
   type JobStatus,
 } from "@/lib/tauri-bridge";
-import { isActive, useJobsStore } from "@/stores/jobs";
+import { isActive, useJobsStore, type LogLine } from "@/stores/jobs";
 import { formatBytes } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 
@@ -203,6 +203,8 @@ function JobCard({ job }: { job: JobState }) {
               {job.error}
             </pre>
           )}
+
+          <LogsPanel id={job.id} />
         </div>
 
         {isActive(job.status) && (
@@ -294,6 +296,44 @@ function StatusBadge({ status }: { status: JobStatus }) {
     <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide", styles[status])}>
       {status}
     </span>
+  );
+}
+
+function LogsPanel({ id }: { id: string }) {
+  // Select only this job's log slice so LogsPanel re-renders only when
+  // its own log buffer changes — sibling jobs streaming at the same
+  // time stay quiet. Returns undefined for jobs that have not produced
+  // a log line yet (most queued / fresh jobs); empty buffer means we
+  // hide the disclosure entirely to keep the card compact.
+  const lines = useJobsStore((s) => s.logs[id]);
+  if (!lines || lines.length === 0) return null;
+  const last: LogLine = lines[lines.length - 1];
+
+  return (
+    <details className="group mt-3 rounded-md border border-border/60 bg-muted/30">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted/60">
+        <span className="flex items-center gap-1.5">
+          <span className="text-foreground/70">Logs</span>
+          <span className="rounded-sm bg-muted px-1 font-mono text-[10px]">
+            {lines.length}
+          </span>
+        </span>
+        <span className="truncate font-mono text-[10px] text-muted-foreground/80 group-open:hidden">
+          {last.line}
+        </span>
+        <span className="text-muted-foreground/60 group-open:rotate-90 transition-transform">▸</span>
+      </summary>
+      <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-all border-t border-border/60 bg-background/40 p-2 font-mono text-[11px] leading-snug">
+        {lines.map((l, i) => (
+          <span
+            key={i}
+            className={cn("block", l.stream === "stderr" && "text-destructive/90")}
+          >
+            {l.line}
+          </span>
+        ))}
+      </pre>
+    </details>
   );
 }
 
