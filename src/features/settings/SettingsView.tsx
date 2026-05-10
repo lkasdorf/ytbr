@@ -63,6 +63,7 @@ export function SettingsView() {
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
   const theme = useSettingsStore((s) => s.theme);
   const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
+  const watchClipboard = useSettingsStore((s) => s.watchClipboard);
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -79,6 +80,7 @@ export function SettingsView() {
   );
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
+  const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -115,15 +117,23 @@ export function SettingsView() {
 
       <Section
         icon={Bell}
-        title="Notifications"
-        desc="Show an OS notification when a job finishes or fails. The first notification will trigger the system permission prompt."
+        title="Notifications & clipboard"
+        desc="Background helpers — both off-by-default switches sit here so they're easy to find."
       >
-        <ToggleRow
-          label="Notify on job finish/fail"
-          desc="Cancellations stay silent — you initiated those. Toast title is the final status, body is the URL."
-          checked={notifyOnFinish}
-          onChange={setNotifyOnFinish}
-        />
+        <div className="flex flex-col gap-3">
+          <ToggleRow
+            label="Notify on job finish/fail"
+            desc="OS toast when a job reaches a terminal state. Cancellations stay silent — you initiated those. The first toast triggers the system permission prompt."
+            checked={notifyOnFinish}
+            onChange={setNotifyOnFinish}
+          />
+          <ToggleRow
+            label="Watch clipboard for URLs"
+            desc="When the Download tab gains focus, suggest an http(s) URL from your clipboard via a small dismissable banner. Nothing is pasted automatically."
+            checked={watchClipboard}
+            onChange={setWatchClipboard}
+          />
+        </div>
       </Section>
 
       <Section

@@ -52,6 +52,7 @@ interface SettingsStore {
   useDownloadArchive: boolean;
   theme: ThemeMode;
   notifyOnFinish: boolean;
+  watchClipboard: boolean;
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -65,6 +66,7 @@ interface SettingsStore {
   setUseDownloadArchive: (v: boolean) => void;
   setTheme: (theme: ThemeMode) => void;
   setNotifyOnFinish: (v: boolean) => void;
+  setWatchClipboard: (v: boolean) => void;
 }
 
 function clampParallel(n: number): number {
@@ -90,6 +92,7 @@ export const useSettingsStore = create<SettingsStore>()(
       useDownloadArchive: false,
       theme: "system",
       notifyOnFinish: true,
+      watchClipboard: true,
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -107,6 +110,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),
       setTheme: (theme) => set({ theme }),
       setNotifyOnFinish: (v) => set({ notifyOnFinish: v }),
+      setWatchClipboard: (v) => set({ watchClipboard: v }),
     }),
     { name: "ytbr.settings.v1" },
   ),

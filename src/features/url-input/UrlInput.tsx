@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useState, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
+  value: string;
+  onChange: (url: string) => void;
   loading: boolean;
   onProbe: (url: string) => void;
 }
 
-export function UrlInput({ loading, onProbe }: Props) {
-  const [url, setUrl] = useState("");
-
+export function UrlInput({ value, onChange, loading, onProbe }: Props) {
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const trimmed = url.trim();
+    const trimmed = value.trim();
     if (!trimmed || loading) return;
     onProbe(trimmed);
   }
@@ -29,8 +29,8 @@ export function UrlInput({ loading, onProbe }: Props) {
       <input
         type="url"
         autoFocus
-        value={url}
-        onChange={(e) => setUrl(e.currentTarget.value)}
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
         placeholder="Paste a video URL…"
         spellCheck={false}
         autoComplete="off"
@@ -41,7 +41,7 @@ export function UrlInput({ loading, onProbe }: Props) {
       />
       <button
         type="submit"
-        disabled={loading || url.trim().length === 0}
+        disabled={loading || value.trim().length === 0}
         className={cn(
           "shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors",
           "hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",

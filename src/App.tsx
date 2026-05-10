@@ -25,6 +25,7 @@ import { AboutDialog } from "@/features/about/AboutDialog";
 import { isActive, useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
+import { ClipboardSuggestion } from "@/features/url-input/ClipboardSuggestion";
 import { FormatTable } from "@/features/format-picker/FormatTable";
 import { PresetButtons } from "@/features/format-picker/PresetButtons";
 import { OutputDirPicker } from "@/features/settings/OutputDirPicker";
@@ -140,6 +141,7 @@ type ProbeState =
 
 function DownloadView() {
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
+  const [url, setUrl] = useState("");
   const outputDir = useSettingsStore((s) => s.outputDir);
 
   async function onProbe(url: string) {
@@ -199,7 +201,13 @@ function DownloadView() {
 
   return (
     <div className="flex flex-col gap-4">
-      <UrlInput loading={probe.status === "loading"} onProbe={onProbe} />
+      <ClipboardSuggestion currentUrl={url} onInsert={setUrl} />
+      <UrlInput
+        value={url}
+        onChange={setUrl}
+        loading={probe.status === "loading"}
+        onProbe={onProbe}
+      />
       <OutputDirPicker />
 
       {probe.status === "idle" && (
