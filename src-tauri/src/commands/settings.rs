@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
+use tauri::State;
 use tauri_plugin_dialog::DialogExt;
 use tokio::sync::oneshot;
+
+use crate::queue::QueueManager;
 
 #[tauri::command]
 pub async fn pick_output_dir(app: tauri::AppHandle) -> Option<String> {
@@ -15,4 +18,12 @@ pub async fn pick_output_dir(app: tauri::AppHandle) -> Option<String> {
         .flatten()
         .and_then(|p| p.into_path().ok())
         .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Update the parallel-download limit at runtime. Returns the limit
+/// after clamping (1..=MAX_PARALLEL_LIMIT). The frontend pushes its
+/// persisted value on mount and on every change.
+#[tauri::command]
+pub fn set_parallel_limit(queue: State<'_, QueueManager>, limit: usize) -> usize {
+    queue.set_parallel_limit(limit)
 }

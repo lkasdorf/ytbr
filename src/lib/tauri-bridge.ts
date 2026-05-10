@@ -85,3 +85,9 @@ export function clearCompletedJobs(): Promise<void> {
 export function pickOutputDir(): Promise<string | null> {
   return invoke<string | null>("pick_output_dir");
 }
+
+// Push the parallel-download limit to the Rust queue. Returns the
+// clamped limit the backend accepted (1..=MAX_PARALLEL_LIMIT).
+export function setParallelLimit(limit: number): Promise<number> {
+  return invoke<number>("set_parallel_limit", { limit });
+}

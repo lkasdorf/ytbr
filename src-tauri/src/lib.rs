@@ -8,9 +8,11 @@ mod ytdlp;
 
 use queue::QueueManager;
 
-// MVP runs one download at a time. Iteration 2 makes this configurable
-// via settings; bumping it just changes the semaphore permit count.
-const PARALLEL_LIMIT: usize = 1;
+/// Parallel-download limit at boot. The frontend pushes its persisted
+/// value (`useSettingsStore.parallelLimit`) right after mount, so this
+/// is only the value used until the first sync lands. Mirrors
+/// `DEFAULT_PARALLEL_LIMIT` in `src/stores/settings.ts`.
+const DEFAULT_PARALLEL_LIMIT: usize = 2;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -18,7 +20,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(QueueManager::new(PARALLEL_LIMIT))
+        .manage(QueueManager::new(DEFAULT_PARALLEL_LIMIT))
         .invoke_handler(tauri::generate_handler![
             commands::system::ytdlp_version,
             commands::probe::probe_url,
@@ -27,6 +29,7 @@ pub fn run() {
             commands::download::list_jobs,
             commands::download::clear_completed_jobs,
             commands::settings::pick_output_dir,
+            commands::settings::set_parallel_limit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

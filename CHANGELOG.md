@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Settings page (`src/features/settings/SettingsView.tsx`) with sections for output folder, parallel-download limit, cookies-from-browser, ffmpeg path override, yt-dlp output template, and default preset. All values persist via the existing `ytbr.settings.v1` localStorage key (zustand-persist merges new fields onto defaults at hydration, so the v0.1.0 install carries over without a migration). UI-only in this commit — only the output folder is wired into the download path; parallel limit, cookies, ffmpeg override, output template, and default preset land in subsequent iterations.
+- Parallel-download limit is now live: the Settings slider (1..8, default 2) is pushed to a new `set_parallel_limit` Tauri command on mount and on each change. The Rust `QueueManager` adjusts the live tokio `Semaphore` — growing is instant via `add_permits`, shrinking absorbs excess permits in a background task using `permit.forget()` so in-flight jobs are not disturbed and new jobs see the new limit. `lib.rs::DEFAULT_PARALLEL_LIMIT` is now `2` to match the spec's default.
+
+### Changed
+
+- `lib.rs` no longer hardcodes a parallel limit of 1. Boot still uses a constant (`DEFAULT_PARALLEL_LIMIT = 2`) until the frontend's first `setParallelLimit` sync lands; after that the persisted UI value wins.
 
 ## [0.1.0] - 2026-05-10
 

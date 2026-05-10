@@ -65,16 +65,72 @@ pub struct QueueManager {
 struct QueueInner {
     jobs: Mutex<HashMap<JobId, JobEntry>>,
     semaphore: Arc<Semaphore>,
+    /// Current target permit count. Source of truth alongside the
+    /// semaphore — guarded together so concurrent set_parallel_limit
+    /// calls don't compute a wrong delta.
+    limit: Mutex<usize>,
+}
+
+/// Hard upper bound for parallel downloads. Mirrors `MAX_PARALLEL_LIMIT`
+/// in `src/stores/settings.ts`. Bump both together if the UI slider
+/// grows past 8.
+pub const MAX_PARALLEL_LIMIT: usize = 8;
+
+fn clamp_limit(n: usize) -> usize {
+    n.clamp(1, MAX_PARALLEL_LIMIT)
 }
 
 impl QueueManager {
     pub fn new(parallel_limit: usize) -> Self {
+        let limit = clamp_limit(parallel_limit);
         Self {
             inner: Arc::new(QueueInner {
                 jobs: Mutex::new(HashMap::new()),
-                semaphore: Arc::new(Semaphore::new(parallel_limit.max(1))),
+                semaphore: Arc::new(Semaphore::new(limit)),
+                limit: Mutex::new(limit),
             }),
         }
+    }
+
+    /// Adjust the parallel-download limit at runtime.
+    ///
+    /// Growing is instant: extra permits are released onto the
+    /// semaphore and any queued jobs unblock immediately.
+    ///
+    /// Shrinking has to wait for currently-running jobs to drop their
+    /// permits, so it's done in a background task that absorbs
+    /// `old - new` permits via `permit.forget()`. While the task
+    /// runs the effective limit transitions smoothly: new jobs see
+    /// the new limit (because the absorbed permits never return to
+    /// the pool) without disturbing in-flight downloads.
+    ///
+    /// Returns the clamped, accepted limit.
+    pub fn set_parallel_limit(&self, requested: usize) -> usize {
+        let new_limit = clamp_limit(requested);
+        let mut current = self.inner.limit.lock().unwrap();
+        let old_limit = *current;
+
+        if new_limit == old_limit {
+            return new_limit;
+        }
+
+        if new_limit > old_limit {
+            self.inner.semaphore.add_permits(new_limit - old_limit);
+        } else {
+            let to_absorb = old_limit - new_limit;
+            let semaphore = self.inner.semaphore.clone();
+            tauri::async_runtime::spawn(async move {
+                for _ in 0..to_absorb {
+                    match semaphore.acquire().await {
+                        Ok(permit) => permit.forget(),
+                        Err(_) => break, // semaphore closed (shutdown)
+                    }
+                }
+            });
+        }
+
+        *current = new_limit;
+        new_limit
     }
 
     pub fn enqueue(&self, app: AppHandle, spec: JobSpec) -> Result<JobId, AppError> {

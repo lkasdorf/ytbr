@@ -18,6 +18,7 @@ import {
 } from "@/lib/tauri-bridge";
 import { classifyFormat, formatDuration } from "@/lib/format-utils";
 import { startJobListeners } from "@/lib/tauri-events";
+import { useSettingsSync } from "@/lib/settings-sync";
 import { isActive, useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
@@ -48,6 +49,8 @@ function App() {
     void startJobListeners();
     void listJobs().then((list) => useJobsStore.getState().hydrate(list));
   }, []);
+
+  useSettingsSync();
 
   const activeCount = useJobsStore((s) =>
     Object.values(s.jobs).filter((j) => isActive(j.status)).length,
