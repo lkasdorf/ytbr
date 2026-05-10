@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-10
+
+Iteration 2: full Settings surface and the last spec-mandated queue
+features. v0.1.0 settings keep working — zustand-persist merges new
+fields onto defaults at hydration, no migration step required.
+
 ### Added
 
 - Settings page (`src/features/settings/SettingsView.tsx`) with sections for output folder, parallel-download limit, cookies-from-browser, ffmpeg path override, yt-dlp output template, and default preset. All values persist via the existing `ytbr.settings.v1` localStorage key (zustand-persist merges new fields onto defaults at hydration, so the v0.1.0 install carries over without a migration). UI-only in this commit — only the output folder is wired into the download path; parallel limit, cookies, ffmpeg override, output template, and default preset land in subsequent iterations.
@@ -59,5 +65,6 @@ output directory.
 - `OneDrive` sync touches file metadata frequently enough that `tauri dev`'s Rust file watcher mistakes it for an edit and rebuilds mid-run; always pass `--no-watch` while developing.
 - Some antivirus engines flag UPX-compressed binaries as suspicious (heuristic, not signature-based). YTBR's installer is unsigned today; once code-signing is in place, AV vendors stop short-circuiting on UPX heuristics. Fallback option if a specific AV blocks the bundled ffmpeg: comment out the upx step in `fetch-binaries.{ps1,sh}` for that release.
 
-[Unreleased]: https://github.com/lkasdorf/ytbr/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/lkasdorf/ytbr/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/lkasdorf/ytbr/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/lkasdorf/ytbr/releases/tag/v0.1.0

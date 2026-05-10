@@ -1,6 +1,6 @@
 [package]
 name = "ytbr"
-version = "0.1.0"
+version = "0.2.0"
 description = "Cross-platform yt-dlp desktop frontend"
 authors = ["Leon Kasdorf"]
 license = "Apache-2.0"
