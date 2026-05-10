@@ -32,9 +32,34 @@ fi
 # Bump UPX_VERSION when upstream ships a fix you need.
 UPX_VERSION="5.0.2"
 
+# yt-dlp ships a new dated tag every few weeks. The `latest/download`
+# redirect points at whichever tag is current *right now*, so a release
+# happening between our binary fetch and our SHA2-256SUMS fetch makes
+# the redirect resolve to two different tags — and the hash check
+# silently rejects a perfectly fine binary. Resolve "latest" to a
+# concrete tag once and pin every subsequent URL to it.
+ytdlp_tag="$(
+  curl -fsSL --retry 3 --retry-delay 2 \
+    "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest" \
+    | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+    | head -n 1
+)"
+if [ -z "$ytdlp_tag" ]; then
+  echo "Failed to resolve yt-dlp latest tag from GitHub API" >&2
+  exit 1
+fi
+echo "[yt-dlp] tag: $ytdlp_tag"
+
+# BtbN/FFmpeg-Builds uses a literal `latest` tag they keep republishing,
+# and they ship a single per-release `checksums.sha256` (not per-file
+# `.sha256` siblings), so the existing script never verified ffmpeg's
+# hash anyway. We accept that and just trust the latest/download
+# redirect for ffmpeg — each fetch is internally consistent.
+
 case "$target" in
   x86_64-pc-windows-msvc)
-    ytdlp_url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+    ytdlp_url="https://github.com/yt-dlp/yt-dlp/releases/download/${ytdlp_tag}/yt-dlp.exe"
+    ytdlp_sha_url="https://github.com/yt-dlp/yt-dlp/releases/download/${ytdlp_tag}/SHA2-256SUMS"
     ytdlp_name="yt-dlp.exe"
     ffmpeg_url="https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
     ffmpeg_name="ffmpeg.exe"
@@ -43,7 +68,8 @@ case "$target" in
     upx_name="upx.exe"
     ;;
   x86_64-unknown-linux-gnu)
-    ytdlp_url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
+    ytdlp_url="https://github.com/yt-dlp/yt-dlp/releases/download/${ytdlp_tag}/yt-dlp_linux"
+    ytdlp_sha_url="https://github.com/yt-dlp/yt-dlp/releases/download/${ytdlp_tag}/SHA2-256SUMS"
     ytdlp_name="yt-dlp"
     ffmpeg_url="https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
     ffmpeg_name="ffmpeg"
@@ -67,7 +93,7 @@ dl() {
 echo "[yt-dlp] $ytdlp_url"
 dl "$ytdlp_url" "$WORK_DIR/$ytdlp_name"
 
-if dl "https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS" "$WORK_DIR/SHA2-256SUMS" 2>/dev/null; then
+if dl "$ytdlp_sha_url" "$WORK_DIR/SHA2-256SUMS" 2>/dev/null; then
   expected="$(awk -v n="$ytdlp_name" '$2==n {print $1; exit}' "$WORK_DIR/SHA2-256SUMS")"
   if [ -n "$expected" ]; then
     actual="$(sha256sum "$WORK_DIR/$ytdlp_name" | awk '{print $1}')"

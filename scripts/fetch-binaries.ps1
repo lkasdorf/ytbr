@@ -36,27 +36,47 @@ if (-not $Target) { $Target = Resolve-HostTriple }
 # Bump $UpxVersion when upstream ships a fix you need.
 $UpxVersion = "5.0.2"
 
+# yt-dlp ships a new dated tag every few weeks. The `latest/download`
+# redirect points at whichever tag is current right now, so a release
+# happening between our binary fetch and our SHA2-256SUMS fetch makes
+# the redirect resolve to two different tags — and the hash check
+# silently rejects a perfectly fine binary. Resolve "latest" to a
+# concrete tag once and pin every subsequent URL to it.
+$YtDlpTag = (Invoke-RestMethod -Uri "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest").tag_name
+if (-not $YtDlpTag) {
+    throw "Failed to resolve yt-dlp latest tag from GitHub API"
+}
+Write-Host "[yt-dlp] tag: $YtDlpTag"
+
+# BtbN/FFmpeg-Builds uses a literal `latest` tag they keep republishing,
+# and they ship a single per-release `checksums.sha256` (not per-file
+# `.sha256` siblings), so the existing script never actually verified
+# ffmpeg's hash. We accept that and just trust the latest/download
+# redirect for ffmpeg — each fetch is internally consistent.
+
 $Spec = switch ($Target) {
     "x86_64-pc-windows-msvc" {
         @{
-            YtDlpUrl   = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
-            YtDlpName  = "yt-dlp.exe"
-            FfmpegUrl  = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
-            FfmpegName = "ffmpeg.exe"
-            Suffix     = ".exe"
-            UpxUrl     = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-win64.zip"
-            UpxExe     = "upx.exe"
+            YtDlpUrl     = "https://github.com/yt-dlp/yt-dlp/releases/download/$YtDlpTag/yt-dlp.exe"
+            YtDlpSumsUrl = "https://github.com/yt-dlp/yt-dlp/releases/download/$YtDlpTag/SHA2-256SUMS"
+            YtDlpName    = "yt-dlp.exe"
+            FfmpegUrl    = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
+            FfmpegName   = "ffmpeg.exe"
+            Suffix       = ".exe"
+            UpxUrl       = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-win64.zip"
+            UpxExe       = "upx.exe"
         }
     }
     "x86_64-unknown-linux-gnu" {
         @{
-            YtDlpUrl   = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
-            YtDlpName  = "yt-dlp"
-            FfmpegUrl  = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
-            FfmpegName = "ffmpeg"
-            Suffix     = ""
-            UpxUrl     = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-amd64_linux.tar.xz"
-            UpxExe     = "upx"
+            YtDlpUrl     = "https://github.com/yt-dlp/yt-dlp/releases/download/$YtDlpTag/yt-dlp_linux"
+            YtDlpSumsUrl = "https://github.com/yt-dlp/yt-dlp/releases/download/$YtDlpTag/SHA2-256SUMS"
+            YtDlpName    = "yt-dlp"
+            FfmpegUrl    = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
+            FfmpegName   = "ffmpeg"
+            Suffix       = ""
+            UpxUrl       = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-amd64_linux.tar.xz"
+            UpxExe       = "upx"
         }
     }
     default { throw "Unsupported target triple: $Target" }
@@ -71,7 +91,7 @@ try {
     Write-Host "[yt-dlp] $($Spec.YtDlpUrl)"
     Invoke-WebRequest -Uri $Spec.YtDlpUrl -OutFile $YtDlpOut
 
-    $SumsUrl  = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS"
+    $SumsUrl  = $Spec.YtDlpSumsUrl
     $SumsFile = Join-Path $WorkDir "SHA2-256SUMS"
     try {
         Invoke-WebRequest -Uri $SumsUrl -OutFile $SumsFile
