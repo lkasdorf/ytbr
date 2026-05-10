@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { Film, Music } from "lucide-react";
+import { Film, Music, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { type PresetId, useSettingsStore } from "@/stores/settings";
 
 interface Props {
   onPick: (formatSelector: string) => void;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 interface Preset {
+  id: PresetId;
   label: string;
   hint: string;
   selector: string;
@@ -23,12 +25,14 @@ interface Preset {
 // left-to-right and uses the first that resolves.
 const PRESETS: Preset[] = [
   {
+    id: "audio-best",
     label: "Best Audio",
     hint: "m4a, audio only",
     selector: "bestaudio[ext=m4a]/bestaudio",
     icon: Music,
   },
   {
+    id: "video-720",
     label: "720p",
     hint: "mp4, video + audio",
     selector:
@@ -36,6 +40,7 @@ const PRESETS: Preset[] = [
     icon: Film,
   },
   {
+    id: "video-1080",
     label: "1080p",
     hint: "mp4, video + audio",
     selector:
@@ -43,6 +48,7 @@ const PRESETS: Preset[] = [
     icon: Film,
   },
   {
+    id: "video-4k",
     label: "4K",
     hint: "mp4, video + audio",
     selector:
@@ -52,6 +58,8 @@ const PRESETS: Preset[] = [
 ];
 
 export function PresetButtons({ onPick, disabled, disabledReason }: Props) {
+  const defaultPreset = useSettingsStore((s) => s.defaultPreset);
+
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between">
@@ -65,19 +73,34 @@ export function PresetButtons({ onPick, disabled, disabledReason }: Props) {
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {PRESETS.map((p) => {
           const Icon = p.icon;
+          const isDefault = p.id === defaultPreset;
           return (
             <button
-              key={p.label}
+              key={p.id}
               disabled={disabled}
-              title={disabled ? disabledReason : `yt-dlp -f "${p.selector}"`}
+              title={
+                disabled
+                  ? disabledReason
+                  : isDefault
+                    ? `Default preset · yt-dlp -f "${p.selector}"`
+                    : `yt-dlp -f "${p.selector}"`
+              }
               onClick={() => onPick(p.selector)}
               className={cn(
-                "group flex flex-col items-start gap-1 rounded-lg border border-border bg-card p-3 text-left transition-colors",
+                "group relative flex flex-col items-start gap-1 rounded-lg border bg-card p-3 text-left transition-colors",
                 disabled
-                  ? "cursor-not-allowed opacity-50"
-                  : "hover:border-primary hover:bg-primary/5",
+                  ? "cursor-not-allowed border-border opacity-50"
+                  : isDefault
+                    ? "border-primary/60 bg-primary/5 hover:border-primary"
+                    : "border-border hover:border-primary hover:bg-primary/5",
               )}
             >
+              {isDefault && (
+                <Star
+                  className="absolute right-2 top-2 size-3.5 fill-primary text-primary"
+                  aria-label="Default preset"
+                />
+              )}
               <div className="flex items-center gap-2">
                 <Icon className="size-4 text-muted-foreground group-hover:text-primary" />
                 <span className="text-sm font-medium">{p.label}</span>
