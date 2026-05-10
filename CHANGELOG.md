@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- "Concurrent fragments per download" slider in Settings (1–8, default 1). Wires yt-dlp's `--concurrent-fragments` through `JobSpec.concurrentFragments` to the runner, which omits the flag entirely at value 1 (yt-dlp's own default — passing it explicitly only adds noise to the spawn command line). Real speed-up for HLS/DASH-fragmented sources (most live-stream archives, some CDN deliveries); no effect on plain MP4 sources.
+
 ### Fixed
 
 - Native `<select>` dropdowns (Cookies-from-browser in Settings, Sort in Queue) were unreadable in dark mode — `bg-input` is alpha-transparent in dark mode, so the OS-rendered popup landed on a white system surface and rendered light foreground text on white. Fixed by adding `[&>option]:bg-card [&>option]:text-foreground` so `<option>` elements style independently from the `<select>` body.

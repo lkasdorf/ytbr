@@ -139,6 +139,7 @@ export function BatchView() {
       embedThumbnail: settings.embedThumbnail,
       embedMetadata: settings.embedMetadata,
       downloadArchive: settings.useDownloadArchive,
+      concurrentFragments: settings.concurrentFragments,
     };
 
     let succeeded = 0;

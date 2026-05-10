@@ -92,6 +92,15 @@ pub async fn run(
             args.push(archive.to_string_lossy().into_owned());
         }
     }
+    // Skip the flag entirely when 0 or 1 — yt-dlp's default is 1 and
+    // passing it explicitly does nothing useful but adds noise to the
+    // command line shown in logs.
+    if let Some(n) = spec.concurrent_fragments {
+        if n > 1 {
+            args.push("--concurrent-fragments".into());
+            args.push(n.to_string());
+        }
+    }
 
     if let Some(fmt) = &spec.format_id {
         args.push("-f".into());

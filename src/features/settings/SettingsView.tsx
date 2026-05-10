@@ -24,9 +24,12 @@ import {
 } from "@/lib/tauri-bridge";
 import {
   COOKIE_BROWSERS,
+  DEFAULT_CONCURRENT_FRAGMENTS,
   DEFAULT_OUTPUT_TEMPLATE,
   DEFAULT_PARALLEL_LIMIT,
+  MAX_CONCURRENT_FRAGMENTS,
   MAX_PARALLEL_LIMIT,
+  MIN_CONCURRENT_FRAGMENTS,
   MIN_PARALLEL_LIMIT,
   type PresetId,
   type ThemeMode,
@@ -72,6 +75,7 @@ export function SettingsView() {
   const theme = useSettingsStore((s) => s.theme);
   const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
+  const concurrentFragments = useSettingsStore((s) => s.concurrentFragments);
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -89,6 +93,7 @@ export function SettingsView() {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
   const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
+  const setConcurrentFragments = useSettingsStore((s) => s.setConcurrentFragments);
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -163,6 +168,28 @@ export function SettingsView() {
           onChange={(e) => setParallelLimit(Number(e.target.value))}
           className="w-full accent-primary"
           aria-label="Parallel downloads"
+        />
+      </Section>
+
+      <Section
+        icon={Sliders}
+        title="Concurrent fragments per download"
+        desc={`yt-dlp's --concurrent-fragments. Speeds up HLS/DASH-fragmented sources (most live-stream archives, some CDN deliveries). Has no effect on plain MP4 sources. Default ${DEFAULT_CONCURRENT_FRAGMENTS}, max ${MAX_CONCURRENT_FRAGMENTS}.`}
+        right={
+          <span className="font-mono text-sm tabular-nums">
+            {concurrentFragments}
+          </span>
+        }
+      >
+        <input
+          type="range"
+          min={MIN_CONCURRENT_FRAGMENTS}
+          max={MAX_CONCURRENT_FRAGMENTS}
+          step={1}
+          value={concurrentFragments}
+          onChange={(e) => setConcurrentFragments(Number(e.target.value))}
+          className="w-full accent-primary"
+          aria-label="Concurrent fragments"
         />
       </Section>
 

@@ -62,6 +62,11 @@ pub struct JobSpec {
     pub embed_metadata: bool,
     #[serde(default)]
     pub download_archive: bool,
+    /// yt-dlp `--concurrent-fragments N`. `None` or `Some(1)` keeps
+    /// yt-dlp's default single-fragment behavior. Range 1–8 enforced
+    /// by the frontend slider.
+    #[serde(default)]
+    pub concurrent_fragments: Option<u8>,
 }
 
 fn default_template() -> String {

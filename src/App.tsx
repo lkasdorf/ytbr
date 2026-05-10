@@ -171,6 +171,7 @@ function DownloadView() {
       embedThumbnail: settings.embedThumbnail,
       embedMetadata: settings.embedMetadata,
       downloadArchive: settings.useDownloadArchive,
+      concurrentFragments: settings.concurrentFragments,
     };
     try {
       const id = await enqueueJob(spec);

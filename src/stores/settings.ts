@@ -36,6 +36,9 @@ export const DEFAULT_OUTPUT_TEMPLATE = "%(title)s.%(ext)s";
 export const DEFAULT_PARALLEL_LIMIT = 2;
 export const MIN_PARALLEL_LIMIT = 1;
 export const MAX_PARALLEL_LIMIT = 8;
+export const DEFAULT_CONCURRENT_FRAGMENTS = 1;
+export const MIN_CONCURRENT_FRAGMENTS = 1;
+export const MAX_CONCURRENT_FRAGMENTS = 8;
 
 interface SettingsStore {
   outputDir: string | null;
@@ -53,6 +56,7 @@ interface SettingsStore {
   theme: ThemeMode;
   notifyOnFinish: boolean;
   watchClipboard: boolean;
+  concurrentFragments: number;
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -67,11 +71,20 @@ interface SettingsStore {
   setTheme: (theme: ThemeMode) => void;
   setNotifyOnFinish: (v: boolean) => void;
   setWatchClipboard: (v: boolean) => void;
+  setConcurrentFragments: (n: number) => void;
 }
 
 function clampParallel(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_PARALLEL_LIMIT;
   return Math.max(MIN_PARALLEL_LIMIT, Math.min(MAX_PARALLEL_LIMIT, Math.floor(n)));
+}
+
+function clampConcurrentFragments(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_CONCURRENT_FRAGMENTS;
+  return Math.max(
+    MIN_CONCURRENT_FRAGMENTS,
+    Math.min(MAX_CONCURRENT_FRAGMENTS, Math.floor(n)),
+  );
 }
 
 // Persisted in localStorage via zustand-persist. Existing keys survive new
@@ -93,6 +106,7 @@ export const useSettingsStore = create<SettingsStore>()(
       theme: "system",
       notifyOnFinish: true,
       watchClipboard: true,
+      concurrentFragments: DEFAULT_CONCURRENT_FRAGMENTS,
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -111,6 +125,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setTheme: (theme) => set({ theme }),
       setNotifyOnFinish: (v) => set({ notifyOnFinish: v }),
       setWatchClipboard: (v) => set({ watchClipboard: v }),
+      setConcurrentFragments: (n) =>
+        set({ concurrentFragments: clampConcurrentFragments(n) }),
     }),
     { name: "ytbr.settings.v1" },
   ),
