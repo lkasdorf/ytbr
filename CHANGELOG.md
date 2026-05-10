@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-10
+
+Iteration 3. Seven user-facing additions land in one cut: a Theme
+switcher (the `.dark` token block has been in `index.css` since v0.1.0
+but was never reachable — a tiny `useThemeEffect` hook now flips the
+class on `<html>`), an "Open in folder" button on terminal jobs, an
+About dialog reachable from the version pill, native OS notifications
+on job finish/fail (lazy-permission, opt-out), a clipboard URL watcher
+that suggests `http(s)://…` clipboard contents above the URL input,
+a yt-dlp self-updater that pulls the latest GitHub release with
+SHA-256 verification and atomic-replace, and a minimal "Check for app
+updates" button in the About dialog. Two new permissive licenses
+(`BSL-1.0`, `CDLA-Permissive-2.0`) joined the `deny.toml` allow-list,
+arrived as transitive deps of `tauri-plugin-clipboard-manager` and
+`reqwest`. The signed-bundle path via `tauri-plugin-updater` stays
+out of scope until there's a code-signing key.
+
 ### Added
 
 - "Check for app updates" button in the About dialog. New `check_app_update` command hits `https://api.github.com/repos/lkasdorf/ytbr/releases/latest`, compares the tag to `CARGO_PKG_VERSION` (the leading `v` is stripped before comparing — GitHub tags it `vX.Y.Z`, Cargo doesn't), and either reports up-to-date or shows a one-click "View release" tile that opens the GitHub release page in the OS browser. Intentionally minimal scope: no auto-install, no signing, no `tauri-plugin-updater`. The signed-bundle path stays out of scope until there's a code-signing key.

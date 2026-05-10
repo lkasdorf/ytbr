@@ -40,23 +40,29 @@ The full LGPL 2.1 text appears at the end of this file.
 
 ---
 
-## Rust crates linked into the YTBR backend (492)
+## Rust crates linked into the YTBR backend (556)
 
 License distribution:
 
-- 222× `MIT OR Apache-2.0`
-- 115× `MIT`
-- 49× `Apache-2.0 OR MIT`
-- 20× `MIT/Apache-2.0`
+- 243× `MIT OR Apache-2.0`
+- 128× `MIT`
+- 52× `Apache-2.0 OR MIT`
+- 26× `MIT/Apache-2.0`
 - 18× `Unicode-3.0`
-- 16× `Zlib OR Apache-2.0 OR MIT`
+- 17× `Zlib OR Apache-2.0 OR MIT`
 - 15× `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`
+- 5× `MIT OR Apache-2.0 OR Zlib`
 - 5× `MPL-2.0`
+- 5× `Unlicense OR MIT`
 - 4× `Apache-2.0/MIT`
-- 4× `Unlicense OR MIT`
-- 2× `Apache-2.0`
-- 2× `BSD-3-Clause`
+- 3× `Apache-2.0`
+- 3× `BSD-3-Clause`
+- 3× `ISC`
+- 2× `Apache-2.0 OR ISC OR MIT`
+- 2× `BSD-2-Clause OR Apache-2.0 OR MIT`
+- 2× `BSD-3-Clause OR Apache-2.0`
 - 2× `BSD-3-Clause OR MIT OR Apache-2.0`
+- 2× `BSL-1.0`
 - 2× `MIT OR Apache-2.0 OR LGPL-2.1-or-later`
 - 2× `Unlicense/MIT`
 - 2× `Zlib`
@@ -64,13 +70,14 @@ License distribution:
 - 1× `(MIT OR Apache-2.0) AND Unicode-3.0`
 - 1× `0BSD OR MIT OR Apache-2.0`
 - 1× `Apache-2.0 / MIT`
+- 1× `Apache-2.0 AND ISC`
 - 1× `Apache-2.0 AND MIT`
+- 1× `Apache-2.0 OR BSL-1.0`
 - 1× `Apache-2.0 WITH LLVM-exception`
 - 1× `BSD-3-Clause AND MIT`
 - 1× `BSD-3-Clause/MIT`
 - 1× `CC0-1.0 OR MIT-0 OR Apache-2.0`
-- 1× `ISC`
-- 1× `MIT OR Apache-2.0 OR Zlib`
+- 1× `CDLA-Permissive-2.0`
 - 1× `MIT OR Zlib OR Apache-2.0`
 
 | Package | Version | License | Source |
@@ -81,6 +88,7 @@ License distribution:
 | `alloc-stdlib` | 0.2.2 | BSD-3-Clause | https://github.com/dropbox/rust-alloc-no-stdlib |
 | `android_system_properties` | 0.1.5 | MIT/Apache-2.0 | https://github.com/nical/android_system_properties |
 | `anyhow` | 1.0.102 | MIT OR Apache-2.0 | https://github.com/dtolnay/anyhow |
+| `arboard` | 3.6.1 | MIT OR Apache-2.0 | https://github.com/1Password/arboard |
 | `async-broadcast` | 0.7.2 | MIT OR Apache-2.0 | https://github.com/smol-rs/async-broadcast |
 | `async-channel` | 2.5.0 | Apache-2.0 OR MIT | https://github.com/smol-rs/async-channel |
 | `async-executor` | 1.14.0 | Apache-2.0 OR MIT | https://github.com/smol-rs/async-executor |
@@ -109,6 +117,7 @@ License distribution:
 | `bumpalo` | 3.20.2 | MIT OR Apache-2.0 | https://github.com/fitzgen/bumpalo |
 | `bytemuck` | 1.25.0 | Zlib OR Apache-2.0 OR MIT | https://github.com/Lokathor/bytemuck |
 | `byteorder` | 1.5.0 | Unlicense OR MIT | https://github.com/BurntSushi/byteorder |
+| `byteorder-lite` | 0.1.0 | Unlicense OR MIT | https://github.com/image-rs/byteorder-lite |
 | `bytes` | 1.11.1 | MIT | https://github.com/tokio-rs/bytes |
 | `cairo-rs` | 0.18.5 | MIT | https://github.com/gtk-rs/gtk-rs-core |
 | `cairo-sys-rs` | 0.18.2 | MIT | https://github.com/gtk-rs/gtk-rs-core |
@@ -119,9 +128,11 @@ License distribution:
 | `cc` | 1.2.62 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs |
 | `cesu8` | 1.1.0 | Apache-2.0/MIT | https://github.com/emk/cesu8-rs |
 | `cfb` | 0.7.3 | MIT | https://github.com/mdsteele/rust-cfb |
+| `cfg_aliases` | 0.2.1 | MIT | https://github.com/katharostech/cfg_aliases |
 | `cfg-expr` | 0.15.8 | MIT OR Apache-2.0 | https://github.com/EmbarkStudios/cfg-expr |
 | `cfg-if` | 1.0.4 | MIT OR Apache-2.0 | https://github.com/rust-lang/cfg-if |
 | `chrono` | 0.4.44 | MIT OR Apache-2.0 | https://github.com/chronotope/chrono |
+| `clipboard-win` | 5.4.1 | BSL-1.0 | https://github.com/DoumanAsh/clipboard-win |
 | `combine` | 4.6.7 | MIT | https://github.com/Marwes/combine |
 | `concurrent-queue` | 2.5.0 | Apache-2.0 OR MIT | https://github.com/smol-rs/concurrent-queue |
 | `cookie` | 0.18.1 | MIT OR Apache-2.0 | https://github.com/SergioBenitez/cookie-rs |
@@ -133,6 +144,7 @@ License distribution:
 | `crc32fast` | 1.5.0 | MIT OR Apache-2.0 | https://github.com/srijs/rust-crc32fast |
 | `crossbeam-channel` | 0.5.15 | MIT OR Apache-2.0 | https://github.com/crossbeam-rs/crossbeam |
 | `crossbeam-utils` | 0.8.21 | MIT OR Apache-2.0 | https://github.com/crossbeam-rs/crossbeam |
+| `crunchy` | 0.2.4 | MIT | https://github.com/eira-fransham/crunchy |
 | `crypto-common` | 0.1.7 | MIT OR Apache-2.0 | https://github.com/RustCrypto/traits |
 | `cssparser` | 0.36.0 | MPL-2.0 | https://github.com/servo/rust-cssparser |
 | `cssparser-macros` | 0.6.1 | MPL-2.0 | https://github.com/servo/rust-cssparser |
@@ -153,6 +165,7 @@ License distribution:
 | `dlopen2` | 0.8.2 | MIT | https://github.com/OpenByteDev/dlopen2 |
 | `dlopen2_derive` | 0.4.3 | MIT | https://github.com/OpenByteDev/dlopen2 |
 | `dom_query` | 0.27.0 | MIT | https://github.com/niklak/dom_query |
+| `downcast-rs` | 1.2.1 | MIT/Apache-2.0 | https://github.com/marcianx/downcast-rs |
 | `dpi` | 0.1.2 | Apache-2.0 AND MIT | https://github.com/rust-windowing/winit |
 | `dtoa` | 1.0.11 | MIT OR Apache-2.0 | https://github.com/dtolnay/dtoa |
 | `dtoa-short` | 0.3.5 | MPL-2.0 | https://github.com/upsuper/dtoa-short |
@@ -169,12 +182,15 @@ License distribution:
 | `equivalent` | 1.0.2 | Apache-2.0 OR MIT | https://github.com/indexmap-rs/equivalent |
 | `erased-serde` | 0.4.10 | MIT OR Apache-2.0 | https://github.com/dtolnay/erased-serde |
 | `errno` | 0.3.14 | MIT OR Apache-2.0 | https://github.com/lambda-fairy/rust-errno |
+| `error-code` | 3.3.2 | BSL-1.0 | https://github.com/DoumanAsh/error-code |
 | `event-listener` | 5.4.1 | Apache-2.0 OR MIT | https://github.com/smol-rs/event-listener |
 | `event-listener-strategy` | 0.5.4 | Apache-2.0 OR MIT | https://github.com/smol-rs/event-listener-strategy |
 | `fastrand` | 2.4.1 | Apache-2.0 OR MIT | https://github.com/smol-rs/fastrand |
+| `fax` | 0.2.7 | MIT | https://github.com/pdf-rs/fax |
 | `fdeflate` | 0.3.7 | MIT OR Apache-2.0 | https://github.com/image-rs/fdeflate |
 | `field-offset` | 0.3.6 | MIT OR Apache-2.0 | https://github.com/Diggsey/rust-field-offset |
 | `find-msvc-tools` | 0.1.9 | MIT OR Apache-2.0 | https://github.com/rust-lang/cc-rs |
+| `fixedbitset` | 0.5.7 | MIT OR Apache-2.0 | https://github.com/petgraph/fixedbitset |
 | `flate2` | 1.1.9 | MIT OR Apache-2.0 | https://github.com/rust-lang/flate2-rs |
 | `fnv` | 1.0.7 | Apache-2.0 / MIT | https://github.com/servo/rust-fnv |
 | `foldhash` | 0.1.5 | Zlib | https://github.com/orlp/foldhash |
@@ -200,6 +216,7 @@ License distribution:
 | `gdkx11` | 0.18.2 | MIT | https://github.com/gtk-rs/gtk3-rs |
 | `gdkx11-sys` | 0.18.2 | MIT | https://github.com/gtk-rs/gtk3-rs |
 | `generic-array` | 0.14.7 | MIT | https://github.com/fizyk20/generic-array.git |
+| `gethostname` | 1.1.0 | Apache-2.0 | https://codeberg.org/swsnr/gethostname.rs.git |
 | `getrandom` | 0.2.17 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
 | `getrandom` | 0.3.4 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
 | `getrandom` | 0.4.2 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom |
@@ -213,6 +230,7 @@ License distribution:
 | `gtk` | 0.18.2 | MIT | https://github.com/gtk-rs/gtk3-rs |
 | `gtk-sys` | 0.18.2 | MIT | https://github.com/gtk-rs/gtk3-rs |
 | `gtk3-macros` | 0.18.2 | MIT | https://github.com/gtk-rs/gtk3-rs |
+| `half` | 2.7.1 | MIT OR Apache-2.0 | https://github.com/VoidStarKat/half-rs |
 | `hashbrown` | 0.12.3 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
 | `hashbrown` | 0.15.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
 | `hashbrown` | 0.17.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
@@ -226,6 +244,7 @@ License distribution:
 | `http-body-util` | 0.1.3 | MIT | https://github.com/hyperium/http-body |
 | `httparse` | 1.10.1 | MIT OR Apache-2.0 | https://github.com/seanmonstar/httparse |
 | `hyper` | 1.9.0 | MIT | https://github.com/hyperium/hyper |
+| `hyper-rustls` | 0.27.9 | Apache-2.0 OR ISC OR MIT | https://github.com/rustls/hyper-rustls |
 | `hyper-util` | 0.1.20 | MIT | https://github.com/hyperium/hyper-util |
 | `iana-time-zone` | 0.1.65 | MIT OR Apache-2.0 | https://github.com/strawlab/iana-time-zone |
 | `iana-time-zone-haiku` | 0.1.2 | MIT OR Apache-2.0 | https://github.com/strawlab/iana-time-zone |
@@ -241,6 +260,7 @@ License distribution:
 | `ident_case` | 1.0.1 | MIT/Apache-2.0 | https://github.com/TedDriggs/ident_case |
 | `idna` | 1.1.0 | MIT OR Apache-2.0 | https://github.com/servo/rust-url/ |
 | `idna_adapter` | 1.2.2 | Apache-2.0 OR MIT | https://github.com/hsivonen/idna_adapter |
+| `image` | 0.25.10 | MIT OR Apache-2.0 | https://github.com/image-rs/image |
 | `indexmap` | 1.9.3 | Apache-2.0 OR MIT | https://github.com/bluss/indexmap |
 | `indexmap` | 2.14.0 | Apache-2.0 OR MIT | https://github.com/indexmap-rs/indexmap |
 | `infer` | 0.19.0 | MIT | https://github.com/bojand/infer |
@@ -269,16 +289,21 @@ License distribution:
 | `litemap` | 0.8.2 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `lock_api` | 0.4.14 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot |
 | `log` | 0.4.29 | MIT OR Apache-2.0 | https://github.com/rust-lang/log |
+| `lru-slab` | 0.1.2 | MIT OR Apache-2.0 OR Zlib | https://github.com/Ralith/lru-slab |
+| `mac-notification-sys` | 0.6.12 | MIT/Apache-2.0 | https://github.com/h4llow3En/mac-notification-sys |
 | `markup5ever` | 0.38.0 | MIT OR Apache-2.0 | https://github.com/servo/html5ever |
 | `memchr` | 2.8.0 | Unlicense OR MIT | https://github.com/BurntSushi/memchr |
 | `memoffset` | 0.9.1 | MIT | https://github.com/Gilnaa/memoffset |
 | `mime` | 0.3.17 | MIT OR Apache-2.0 | https://github.com/hyperium/mime |
 | `miniz_oxide` | 0.8.9 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide |
 | `mio` | 1.2.0 | MIT | https://github.com/tokio-rs/mio |
+| `moxcms` | 0.8.1 | BSD-3-Clause OR Apache-2.0 | https://github.com/awxkee/moxcms.git |
 | `muda` | 0.19.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/muda |
 | `ndk` | 0.9.0 | MIT OR Apache-2.0 | https://github.com/rust-mobile/ndk |
 | `ndk-sys` | 0.6.0+11769913 | MIT OR Apache-2.0 | https://github.com/rust-mobile/ndk |
 | `new_debug_unreachable` | 1.0.6 | MIT | https://github.com/mbrubeck/rust-debug-unreachable |
+| `nom` | 8.0.0 | MIT | https://github.com/rust-bakery/nom |
+| `notify-rust` | 4.17.0 | MIT/Apache-2.0 | https://github.com/hoodie/notify-rust |
 | `num_enum` | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 | https://github.com/illicitonion/num_enum |
 | `num_enum_derive` | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 | https://github.com/illicitonion/num_enum |
 | `num-conv` | 0.2.1 | MIT OR Apache-2.0 | https://github.com/jhpratt/num-conv |
@@ -312,6 +337,7 @@ License distribution:
 | `parking_lot_core` | 0.9.12 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot |
 | `pathdiff` | 0.2.3 | MIT/Apache-2.0 | https://github.com/Manishearth/pathdiff |
 | `percent-encoding` | 2.3.2 | MIT OR Apache-2.0 | https://github.com/servo/rust-url/ |
+| `petgraph` | 0.8.3 | MIT OR Apache-2.0 | https://github.com/petgraph/petgraph |
 | `phf` | 0.13.1 | MIT | https://github.com/rust-phf/rust-phf |
 | `phf_codegen` | 0.13.1 | MIT | https://github.com/rust-phf/rust-phf |
 | `phf_generator` | 0.13.1 | MIT | https://github.com/rust-phf/rust-phf |
@@ -326,6 +352,7 @@ License distribution:
 | `polling` | 3.11.0 | Apache-2.0 OR MIT | https://github.com/smol-rs/polling |
 | `potential_utf` | 0.1.5 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `powerfmt` | 0.2.0 | MIT OR Apache-2.0 | https://github.com/jhpratt/powerfmt |
+| `ppv-lite86` | 0.2.21 | MIT OR Apache-2.0 | https://github.com/cryptocorrosion/cryptocorrosion |
 | `precomputed-hash` | 0.1.1 | MIT | https://github.com/emilio/precomputed-hash |
 | `prettyplease` | 0.2.37 | MIT OR Apache-2.0 | https://github.com/dtolnay/prettyplease |
 | `proc-macro-crate` | 1.3.1 | MIT OR Apache-2.0 | https://github.com/bkchr/proc-macro-crate |
@@ -334,10 +361,19 @@ License distribution:
 | `proc-macro-error` | 1.0.4 | MIT OR Apache-2.0 | https://gitlab.com/CreepySkeleton/proc-macro-error |
 | `proc-macro-error-attr` | 1.0.4 | MIT OR Apache-2.0 | https://gitlab.com/CreepySkeleton/proc-macro-error |
 | `proc-macro2` | 1.0.106 | MIT OR Apache-2.0 | https://github.com/dtolnay/proc-macro2 |
+| `pxfm` | 0.1.29 | BSD-3-Clause OR Apache-2.0 | https://github.com/awxkee/pxfm |
+| `quick-error` | 2.0.1 | MIT/Apache-2.0 | http://github.com/tailhook/quick-error |
+| `quick-xml` | 0.37.5 | MIT | https://github.com/tafia/quick-xml |
 | `quick-xml` | 0.39.4 | MIT | https://github.com/tafia/quick-xml |
+| `quinn` | 0.11.9 | MIT OR Apache-2.0 | https://github.com/quinn-rs/quinn |
+| `quinn-proto` | 0.11.14 | MIT OR Apache-2.0 | https://github.com/quinn-rs/quinn |
+| `quinn-udp` | 0.5.14 | MIT OR Apache-2.0 | https://github.com/quinn-rs/quinn |
 | `quote` | 1.0.45 | MIT OR Apache-2.0 | https://github.com/dtolnay/quote |
 | `r-efi` | 5.3.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | https://github.com/r-efi/r-efi |
 | `r-efi` | 6.0.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | https://github.com/r-efi/r-efi |
+| `rand` | 0.9.4 | MIT OR Apache-2.0 | https://github.com/rust-random/rand |
+| `rand_chacha` | 0.9.0 | MIT OR Apache-2.0 | https://github.com/rust-random/rand |
+| `rand_core` | 0.9.5 | MIT OR Apache-2.0 | https://github.com/rust-random/rand |
 | `raw-window-handle` | 0.6.2 | MIT OR Apache-2.0 OR Zlib | https://github.com/rust-windowing/raw-window-handle |
 | `redox_syscall` | 0.5.18 | MIT | https://gitlab.redox-os.org/redox-os/syscall |
 | `redox_users` | 0.5.2 | MIT | https://gitlab.redox-os.org/redox-os/users |
@@ -346,12 +382,18 @@ License distribution:
 | `regex` | 1.12.3 | MIT OR Apache-2.0 | https://github.com/rust-lang/regex |
 | `regex-automata` | 0.4.14 | MIT OR Apache-2.0 | https://github.com/rust-lang/regex |
 | `regex-syntax` | 0.8.10 | MIT OR Apache-2.0 | https://github.com/rust-lang/regex |
+| `reqwest` | 0.12.28 | MIT OR Apache-2.0 | https://github.com/seanmonstar/reqwest |
 | `reqwest` | 0.13.3 | MIT OR Apache-2.0 | https://github.com/seanmonstar/reqwest |
 | `rfd` | 0.16.0 | MIT | https://github.com/PolyMeilex/rfd |
+| `ring` | 0.17.14 | Apache-2.0 AND ISC | https://github.com/briansmith/ring |
 | `rustc_version` | 0.4.1 | MIT OR Apache-2.0 | https://github.com/djc/rustc-version-rs |
 | `rustc-hash` | 2.1.2 | Apache-2.0 OR MIT | https://github.com/rust-lang/rustc-hash |
 | `rustix` | 1.1.4 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/rustix |
+| `rustls` | 0.23.40 | Apache-2.0 OR ISC OR MIT | https://github.com/rustls/rustls |
+| `rustls-pki-types` | 1.14.1 | MIT OR Apache-2.0 | https://github.com/rustls/pki-types |
+| `rustls-webpki` | 0.103.13 | ISC | https://github.com/rustls/webpki |
 | `rustversion` | 1.0.22 | MIT OR Apache-2.0 | https://github.com/dtolnay/rustversion |
+| `ryu` | 1.0.23 | Apache-2.0 OR BSL-1.0 | https://github.com/dtolnay/ryu |
 | `same-file` | 1.0.6 | Unlicense/MIT | https://github.com/BurntSushi/same-file |
 | `schemars` | 0.8.22 | MIT | https://github.com/GREsau/schemars |
 | `schemars` | 0.9.0 | MIT | https://github.com/GREsau/schemars |
@@ -368,6 +410,7 @@ License distribution:
 | `serde_repr` | 0.1.20 | MIT OR Apache-2.0 | https://github.com/dtolnay/serde-repr |
 | `serde_spanned` | 0.6.9 | MIT OR Apache-2.0 | https://github.com/toml-rs/toml |
 | `serde_spanned` | 1.1.1 | MIT OR Apache-2.0 | https://github.com/toml-rs/toml |
+| `serde_urlencoded` | 0.7.1 | MIT/Apache-2.0 | https://github.com/nox/serde_urlencoded |
 | `serde_with` | 3.19.0 | MIT OR Apache-2.0 | https://github.com/jonasbb/serde_with/ |
 | `serde_with_macros` | 3.19.0 | MIT OR Apache-2.0 | https://github.com/jonasbb/serde_with/ |
 | `serde-untagged` | 0.1.9 | MIT OR Apache-2.0 | https://github.com/dtolnay/serde-untagged |
@@ -392,6 +435,7 @@ License distribution:
 | `string_cache` | 0.9.0 | MIT OR Apache-2.0 | https://github.com/servo/string-cache |
 | `string_cache_codegen` | 0.6.1 | MIT OR Apache-2.0 | https://github.com/servo/string-cache |
 | `strsim` | 0.11.1 | MIT | https://github.com/rapidfuzz/strsim-rs |
+| `subtle` | 2.6.1 | BSD-3-Clause | https://github.com/dalek-cryptography/subtle |
 | `swift-rs` | 1.0.7 | MIT OR Apache-2.0 | https://github.com/Brendonovich/swift-rs |
 | `syn` | 1.0.109 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn |
 | `syn` | 2.0.117 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn |
@@ -406,25 +450,32 @@ License distribution:
 | `tauri-codegen` | 2.6.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
 | `tauri-macros` | 2.6.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
 | `tauri-plugin` | 2.6.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
+| `tauri-plugin-clipboard-manager` | 2.3.2 | Apache-2.0 OR MIT | https://github.com/tauri-apps/plugins-workspace |
 | `tauri-plugin-dialog` | 2.7.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/plugins-workspace |
 | `tauri-plugin-fs` | 2.5.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/plugins-workspace |
+| `tauri-plugin-notification` | 2.3.3 | Apache-2.0 OR MIT | https://github.com/tauri-apps/plugins-workspace |
 | `tauri-plugin-opener` | 2.5.4 | Apache-2.0 OR MIT | https://github.com/tauri-apps/plugins-workspace |
 | `tauri-plugin-shell` | 2.3.5 | Apache-2.0 OR MIT | https://github.com/tauri-apps/plugins-workspace |
 | `tauri-runtime` | 2.11.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
 | `tauri-runtime-wry` | 2.11.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
 | `tauri-utils` | 2.9.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri |
 | `tauri-winres` | 0.3.6 | MIT | https://github.com/tauri-apps/winres |
+| `tauri-winrt-notification` | 0.7.2 | MIT OR Apache-2.0 | https://github.com/tauri-apps/winrt-notification |
 | `tempfile` | 3.27.0 | MIT OR Apache-2.0 | https://github.com/Stebalien/tempfile |
 | `tendril` | 0.5.0 | MIT OR Apache-2.0 | https://github.com/servo/html5ever |
 | `thiserror` | 1.0.69 | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror |
 | `thiserror` | 2.0.18 | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror |
 | `thiserror-impl` | 1.0.69 | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror |
 | `thiserror-impl` | 2.0.18 | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror |
+| `tiff` | 0.11.3 | MIT | https://github.com/image-rs/image-tiff |
 | `time` | 0.3.47 | MIT OR Apache-2.0 | https://github.com/time-rs/time |
 | `time-core` | 0.1.8 | MIT OR Apache-2.0 | https://github.com/time-rs/time |
 | `time-macros` | 0.2.27 | MIT OR Apache-2.0 | https://github.com/time-rs/time |
 | `tinystr` | 0.8.3 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
+| `tinyvec` | 1.11.0 | Zlib OR Apache-2.0 OR MIT | https://github.com/Lokathor/tinyvec |
+| `tinyvec_macros` | 0.1.1 | MIT OR Apache-2.0 OR Zlib | https://github.com/Soveu/tinyvec_macros |
 | `tokio` | 1.52.3 | MIT | https://github.com/tokio-rs/tokio |
+| `tokio-rustls` | 0.26.4 | MIT OR Apache-2.0 | https://github.com/rustls/tokio-rustls |
 | `tokio-util` | 0.7.18 | MIT | https://github.com/tokio-rs/tokio |
 | `toml` | 0.8.2 | MIT OR Apache-2.0 | https://github.com/toml-rs/toml |
 | `toml` | 0.9.12+spec-1.1.0 | MIT OR Apache-2.0 | https://github.com/toml-rs/toml |
@@ -445,6 +496,7 @@ License distribution:
 | `tracing-attributes` | 0.1.31 | MIT | https://github.com/tokio-rs/tracing |
 | `tracing-core` | 0.1.36 | MIT | https://github.com/tokio-rs/tracing |
 | `tray-icon` | 0.23.1 | MIT OR Apache-2.0 | https://github.com/tauri-apps/tray-icon |
+| `tree_magic_mini` | 3.2.2 | MIT | https://github.com/mbrubeck/tree_magic/ |
 | `try-lock` | 0.2.5 | MIT | https://github.com/seanmonstar/try-lock |
 | `typeid` | 1.0.3 | MIT OR Apache-2.0 | https://github.com/dtolnay/typeid |
 | `typenum` | 1.20.0 | MIT OR Apache-2.0 | https://github.com/paholg/typenum |
@@ -457,6 +509,7 @@ License distribution:
 | `unicode-ident` | 1.0.24 | (MIT OR Apache-2.0) AND Unicode-3.0 | https://github.com/dtolnay/unicode-ident |
 | `unicode-segmentation` | 1.13.2 | MIT OR Apache-2.0 | https://github.com/unicode-rs/unicode-segmentation |
 | `unicode-xid` | 0.2.6 | MIT OR Apache-2.0 | https://github.com/unicode-rs/unicode-xid |
+| `untrusted` | 0.9.0 | ISC | https://github.com/briansmith/untrusted |
 | `url` | 2.5.8 | MIT OR Apache-2.0 | https://github.com/servo/rust-url |
 | `urlpattern` | 0.3.0 | MIT | https://github.com/denoland/rust-urlpattern |
 | `utf-8` | 0.7.6 | MIT OR Apache-2.0 | https://github.com/SimonSapin/rust-utf8 |
@@ -480,13 +533,22 @@ License distribution:
 | `wasm-metadata` | 0.244.0 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasm-metadata |
 | `wasm-streams` | 0.5.0 | MIT OR Apache-2.0 | https://github.com/MattiasBuelens/wasm-streams/ |
 | `wasmparser` | 0.244.0 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wasmparser |
+| `wayland-backend` | 0.3.15 | MIT | https://github.com/smithay/wayland-rs |
+| `wayland-client` | 0.31.14 | MIT | https://github.com/smithay/wayland-rs |
+| `wayland-protocols` | 0.32.12 | MIT | https://github.com/smithay/wayland-rs |
+| `wayland-protocols-wlr` | 0.3.12 | MIT | https://github.com/smithay/wayland-rs |
+| `wayland-scanner` | 0.31.10 | MIT | https://github.com/smithay/wayland-rs |
+| `wayland-sys` | 0.31.11 | MIT | https://github.com/smithay/wayland-rs |
 | `web_atoms` | 0.2.4 | MIT OR Apache-2.0 | https://github.com/servo/html5ever |
 | `web-sys` | 0.3.98 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys |
+| `web-time` | 1.1.0 | MIT OR Apache-2.0 | https://github.com/daxpedda/web-time |
 | `webkit2gtk` | 2.0.2 | MIT | https://github.com/tauri-apps/webkit2gtk-rs |
 | `webkit2gtk-sys` | 2.0.2 | MIT | https://github.com/tauri-apps/webkit2gtk-rs |
+| `webpki-roots` | 1.0.7 | CDLA-Permissive-2.0 | https://github.com/rustls/webpki-roots |
 | `webview2-com` | 0.38.2 | MIT | https://github.com/wravery/webview2-rs |
 | `webview2-com-macros` | 0.8.1 | MIT | https://github.com/wravery/webview2-rs |
 | `webview2-com-sys` | 0.38.2 | MIT | https://github.com/wravery/webview2-rs |
+| `weezl` | 0.1.12 | MIT OR Apache-2.0 | https://github.com/image-rs/weezl |
 | `winapi` | 0.3.9 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs |
 | `winapi-i686-pc-windows-gnu` | 0.4.0 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs |
 | `winapi-util` | 0.1.11 | Unlicense OR MIT | https://github.com/BurntSushi/winapi-util |
@@ -530,6 +592,7 @@ License distribution:
 | `windows-strings` | 0.4.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | `windows-strings` | 0.5.1 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | `windows-sys` | 0.45.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
+| `windows-sys` | 0.52.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | `windows-sys` | 0.59.0 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | `windows-sys` | 0.60.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
 | `windows-sys` | 0.61.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs |
@@ -549,40 +612,50 @@ License distribution:
 | `wit-bindgen-rust-macro` | 0.51.0 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wit-bindgen |
 | `wit-component` | 0.244.0 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wit-component |
 | `wit-parser` | 0.244.0 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wasm-tools/tree/main/crates/wit-parser |
+| `wl-clipboard-rs` | 0.9.3 | MIT/Apache-2.0 | https://github.com/YaLTeR/wl-clipboard-rs |
 | `writeable` | 0.6.3 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `wry` | 0.55.1 | Apache-2.0 OR MIT | https://github.com/tauri-apps/wry |
 | `x11` | 2.21.0 | MIT | https://github.com/AltF02/x11-rs.git |
 | `x11-dl` | 2.21.0 | MIT | https://github.com/AltF02/x11-rs.git |
+| `x11rb` | 0.13.2 | MIT OR Apache-2.0 | https://github.com/psychon/x11rb |
+| `x11rb-protocol` | 0.13.2 | MIT OR Apache-2.0 | https://github.com/psychon/x11rb |
 | `yoke` | 0.8.2 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `yoke-derive` | 0.8.2 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `zbus` | 5.15.0 | MIT | https://github.com/z-galaxy/zbus/ |
 | `zbus_macros` | 5.15.0 | MIT | https://github.com/z-galaxy/zbus/ |
 | `zbus_names` | 4.3.2 | MIT | https://github.com/z-galaxy/zbus/ |
+| `zerocopy` | 0.8.48 | BSD-2-Clause OR Apache-2.0 OR MIT | https://github.com/google/zerocopy |
+| `zerocopy-derive` | 0.8.48 | BSD-2-Clause OR Apache-2.0 OR MIT | https://github.com/google/zerocopy |
 | `zerofrom` | 0.1.7 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `zerofrom-derive` | 0.1.7 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
+| `zeroize` | 1.8.2 | Apache-2.0 OR MIT | https://github.com/RustCrypto/utils |
 | `zerotrie` | 0.2.4 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `zerovec` | 0.11.6 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `zerovec-derive` | 0.11.3 | Unicode-3.0 | https://github.com/unicode-org/icu4x |
 | `zmij` | 1.0.21 | MIT | https://github.com/dtolnay/zmij |
+| `zune-core` | 0.5.1 | MIT OR Apache-2.0 OR Zlib | https://github.com/etemesi254/zune-image |
+| `zune-jpeg` | 0.5.15 | MIT OR Apache-2.0 OR Zlib | https://github.com/etemesi254/zune-image/tree/dev/crates/zune-jpeg |
 | `zvariant` | 5.11.0 | MIT | https://github.com/z-galaxy/zbus/ |
 | `zvariant_derive` | 5.11.0 | MIT | https://github.com/z-galaxy/zbus/ |
 | `zvariant_utils` | 3.3.1 | MIT | https://github.com/z-galaxy/zbus/ |
 
 ---
 
-## npm packages bundled into the YTBR frontend (13)
+## npm packages bundled into the YTBR frontend (15)
 
 License distribution:
 
 - 9× `MIT`
+- 3× `MIT OR Apache-2.0`
 - 1× `Apache-2.0`
 - 1× `Apache-2.0 OR MIT`
 - 1× `ISC`
-- 1× `MIT OR Apache-2.0`
 
 | Package | Version | License | Source |
 |---|---|---|---|
 | `@tauri-apps/api` | 2.11.0 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri#readme |
+| `@tauri-apps/plugin-clipboard-manager` | 2.3.2 | MIT OR Apache-2.0 | https://github.com/tauri-apps/plugins-workspace#readme |
+| `@tauri-apps/plugin-notification` | 2.3.3 | MIT OR Apache-2.0 | https://github.com/tauri-apps/plugins-workspace#readme |
 | `@tauri-apps/plugin-opener` | 2.5.4 | MIT OR Apache-2.0 | https://github.com/tauri-apps/plugins-workspace#readme |
 | `@types/react` | 19.2.14 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react |
 | `class-variance-authority` | 0.7.1 | Apache-2.0 | https://github.com/joe-bell/cva#readme |

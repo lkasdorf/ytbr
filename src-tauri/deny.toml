@@ -27,6 +27,7 @@ allow = [
   "MIT-0",
   "BSD-2-Clause",
   "BSD-3-Clause",
+  "BSL-1.0",
   "ISC",
   "MPL-2.0",
   "Zlib",
@@ -34,6 +35,7 @@ allow = [
   "Unicode-DFS-2016",
   "Unlicense",
   "CC0-1.0",
+  "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.8
 
