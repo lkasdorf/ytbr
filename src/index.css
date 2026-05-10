@@ -164,3 +164,21 @@
   background-size: 24px 24px;
   animation: ytbr-stripe 1.1s linear infinite;
 }
+
+.ytbr-indeterminate {
+  animation: ytbr-indeterminate 1.4s ease-in-out infinite;
+}
+
+/* Honor the OS-level reduced-motion preference. Vestibular-sensitive
+   users get a static striped pattern (still readable as "active") and
+   a frozen indeterminate block sitting at ~40% across the track
+   instead of continuous sweeps. */
+@media (prefers-reduced-motion: reduce) {
+  .ytbr-stripes {
+    animation: none;
+  }
+  .ytbr-indeterminate {
+    animation: none;
+    transform: translateX(40%);
+  }
+}

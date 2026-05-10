@@ -309,12 +309,7 @@ function ProgressBar({
   if (indeterminate) {
     return (
       <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="absolute inset-y-0 left-0 w-1/4 rounded-full bg-primary"
-          style={{
-            animation: "ytbr-indeterminate 1.4s ease-in-out infinite",
-          }}
-        />
+        <div className="ytbr-indeterminate absolute inset-y-0 left-0 w-1/4 rounded-full bg-primary" />
       </div>
     );
   }

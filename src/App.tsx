@@ -116,6 +116,7 @@ function App() {
                 onClick={() => setRoute(item.id)}
                 className={cn(
                   "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
@@ -331,7 +332,11 @@ function DownloadView({
       )}
 
       {probe.status === "error" && (
-        <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm"
+        >
           <AlertCircle className="size-4 shrink-0 text-destructive" />
           <code className="break-all font-mono text-xs">{probe.message}</code>
         </div>

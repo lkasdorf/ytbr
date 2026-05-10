@@ -23,7 +23,10 @@ export function UrlInput({ value, onChange, loading, onProbe }: Props) {
   return (
     <form
       onSubmit={submit}
-      className="flex items-center gap-2 rounded-lg border border-border bg-card p-2"
+      className={cn(
+        "flex items-center gap-2 rounded-lg border border-border bg-card p-2 transition-colors",
+        "focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-ring",
+      )}
     >
       <Search className="ml-2 size-4 shrink-0 text-muted-foreground" />
       <input

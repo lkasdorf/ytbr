@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Accessibility pass against the ui-ux-pro-max P1–P10 checklist:
+  - **`prefers-reduced-motion`**: the new `ytbr-stripe` (active-download tape stripes) and `ytbr-indeterminate` (sweeping bytes-unknown bar) animations now sit inside a `@media (prefers-reduced-motion: reduce)` guard. Vestibular-sensitive users get a static striped pattern (still readable as "active") and a parked indeterminate block at ~40% across the track instead of continuous motion.
+  - **`focus-visible` on sidebar nav**: previously every keyboard tab landed on a sidebar button with no visual indication. Added `focus-visible:ring-2 focus-visible:ring-sidebar-ring`. The new chartreuse `--sidebar-ring` makes the ring read clearly in both themes.
+  - **`focus-within` on the URL form wrapper**: `<input>` had `outline-none` for the borderless inline look but no replacement focus state, so keyboard focus was invisible. The wrapping `<form>` now lights up with `focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-ring` whenever its child input is focused.
+  - **`role="alert"` + `aria-live="polite"`** on the probe-error region. Screen readers now announce URL probe failures instead of silently leaving them on screen.
 - yt-dlp self-updater reported "could not locate the yt-dlp sidecar to overwrite" in bundled MSI/NSIS/DEB/AppImage installs. The sidecar resolver in `runner.rs` only tried the target-triple-suffixed filename (`yt-dlp-<TARGET>{.exe}`), but Tauri's bundler drops the target triple when it places the file next to the main exe — so the bundled install has just `yt-dlp.exe` (matching the bare name the plugin-shell runtime resolver looks for at spawn time). The resolver now tries both candidate names in both the next-to-exe and the dev-walk-up locations. The ffmpeg path resolution benefits from the same change automatically since it shares the helper.
 - Native `<select>` dropdowns (Cookies-from-browser in Settings, Sort in Queue) were unreadable in dark mode — `bg-input` is alpha-transparent in dark mode, so the OS-rendered popup landed on a white system surface and rendered light foreground text on white. Fixed by adding `[&>option]:bg-card [&>option]:text-foreground` so `<option>` elements style independently from the `<select>` body.
 
