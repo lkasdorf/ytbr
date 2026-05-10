@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, FileText, Layers, ListPlus, Loader2 } from "lucide-react";
 import {
   DEFAULT_BATCH_SELECTOR,
@@ -53,7 +53,16 @@ interface PlaylistState {
   lastSummary: { title: string | null; count: number } | null;
 }
 
-export function BatchView() {
+interface BatchViewProps {
+  // When the Download tab redirects a playlist/channel URL via App's
+  // switchToBatch, the URL lands here. We append it to the textarea
+  // on render and signal consumption so a manual revisit of this tab
+  // doesn't replay it.
+  pendingUrl?: string | null;
+  onConsumePending?: () => void;
+}
+
+export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {}) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<BatchResult | null>(null);
@@ -72,6 +81,14 @@ export function BatchView() {
   const [choice, setChoice] = useState<Choice>(defaultPreset ?? "default");
 
   const urls = useMemo(() => parseUrls(text), [text]);
+
+  useEffect(() => {
+    if (pendingUrl == null || pendingUrl.trim().length === 0) return;
+    setText((cur) =>
+      cur.trim() ? `${cur.trim()}\n${pendingUrl.trim()}` : pendingUrl.trim(),
+    );
+    onConsumePending?.();
+  }, [pendingUrl, onConsumePending]);
 
   const selectedChoice =
     CHOICES.find((c) => c.id === choice) ?? CHOICES[0];

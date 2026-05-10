@@ -26,6 +26,7 @@ import { isActive, useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
 import { ClipboardSuggestion } from "@/features/url-input/ClipboardSuggestion";
+import { PlaylistRedirect } from "@/features/url-input/PlaylistRedirect";
 import { FormatTable } from "@/features/format-picker/FormatTable";
 import { PresetButtons } from "@/features/format-picker/PresetButtons";
 import { OutputDirPicker } from "@/features/settings/OutputDirPicker";
@@ -51,6 +52,16 @@ const NAV: NavItem[] = [
 function App() {
   const [route, setRoute] = useState<Route>("download");
   const [aboutOpen, setAboutOpen] = useState(false);
+  // Ephemeral handoff: DownloadView calls onSwitchToBatch(url) when the
+  // user clicks "Open in Batch" on a playlist/channel URL banner. The
+  // url lands in BatchView's textarea on its next render and we clear
+  // the slot so a manual revisit of the Batch tab doesn't replay it.
+  const [pendingBatchUrl, setPendingBatchUrl] = useState<string | null>(null);
+
+  function switchToBatch(url: string) {
+    setPendingBatchUrl(url);
+    setRoute("batch");
+  }
 
   useEffect(() => {
     void startJobListeners();
@@ -113,8 +124,13 @@ function App() {
           <h1 className="text-base font-medium capitalize">{route}</h1>
         </header>
         <div className="flex-1 overflow-auto p-6">
-          {route === "download" && <DownloadView />}
-          {route === "batch" && <BatchView />}
+          {route === "download" && <DownloadView onSwitchToBatch={switchToBatch} />}
+          {route === "batch" && (
+            <BatchView
+              pendingUrl={pendingBatchUrl}
+              onConsumePending={() => setPendingBatchUrl(null)}
+            />
+          )}
           {route === "queue" && <QueueView />}
           {route === "settings" && <SettingsView />}
         </div>
@@ -139,7 +155,11 @@ type ProbeState =
   | { status: "ok"; url: string; result: ProbeResult }
   | { status: "error"; url: string; message: string };
 
-function DownloadView() {
+function DownloadView({
+  onSwitchToBatch,
+}: {
+  onSwitchToBatch: (url: string) => void;
+}) {
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [url, setUrl] = useState("");
   const outputDir = useSettingsStore((s) => s.outputDir);
@@ -214,6 +234,7 @@ function DownloadView() {
 
   return (
     <div className="flex flex-col gap-4">
+      <PlaylistRedirect url={url} onSwitchToBatch={onSwitchToBatch} />
       <ClipboardSuggestion currentUrl={url} onInsert={setUrl} />
       <UrlInput
         value={url}
