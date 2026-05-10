@@ -106,7 +106,7 @@ src/
 - Frontend TS strict mode (`noUnusedLocals`, `noUnusedParameters`, etc.). Path alias `@/*` → `src/*`.
 - shadcn/ui set up manually (CLI hangs in non-interactive shells); add components by hand into `src/components/ui/` if you need them, with `style: new-york`, slate base.
 - **`CHANGELOG.md` is updated alongside meaningful commits**, not only at session end. Keep a Changelog 1.1.0 categories under `[Unreleased]`. The `/end-session` skill is the safety net.
-- App version is sourced from `package.json#version` and injected as `__APP_VERSION__` via `vite.config.ts` → shown in the sidebar header. Bump `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` together when cutting a release; the prompt's helper-script-keeps-them-synchronized check is still TODO.
+- App version is sourced from `package.json#version` and injected as `__APP_VERSION__` via `vite.config.ts` → shown in the sidebar header. Bump `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` together when cutting a release — `pnpm version:check` asserts they match and `pnpm version:set <semver>` (`scripts/version-sync.mjs`) bumps all three at once.
 
 ## Memories and the `/end-session` skill
 
