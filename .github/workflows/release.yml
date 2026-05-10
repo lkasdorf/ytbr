@@ -1,0 +1,135 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Leon Kasdorf
+#
+# Release workflow for YTBR.
+#
+# Trigger: a tag matching `v*.*.*` pushed to the repo (e.g. `v0.3.0`).
+# Output: a draft GitHub Release named `YTBR <tag>` with platform
+#         installers attached:
+#           - Windows: .msi (Wix) + .exe (NSIS)
+#           - Linux:   .deb + .AppImage
+# The user reviews the draft and clicks Publish manually.
+#
+# Pre-flight (run locally before tagging):
+#
+#   pnpm version:set 0.3.0          # bumps the three manifests
+#   # ...edit CHANGELOG: move [Unreleased] entries under [0.3.0] - DATE...
+#   git commit -am "chore(release): v0.3.0"
+#   git tag -a v0.3.0 -m "v0.3.0"
+#   git push origin main v0.3.0     # the tag push fires this workflow
+#
+# Concurrency is keyed by tag, not branch — two simultaneous tag pushes
+# would race for the same release, which is what we want to prevent.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Linux Tauri build deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      # Refuse to build if `pnpm version:set` was forgotten — releasing
+      # a tag whose three manifests disagree means the sidebar shows a
+      # different version than the installer filename.
+      - name: Assert tag matches package version
+        shell: bash
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$pkg" != "$tag" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package.json version $pkg" >&2
+            echo "did you forget to run 'pnpm version:set $tag' before tagging?" >&2
+            exit 1
+          fi
+          echo "tag/pkg match: $pkg"
+          pnpm version:check
+
+      - name: Fetch sidecar binaries (yt-dlp + LGPL ffmpeg, UPX-compressed)
+        if: matrix.os == 'ubuntu-latest'
+        run: ./scripts/fetch-binaries.sh ${{ matrix.target }}
+
+      - name: Fetch sidecar binaries (yt-dlp + LGPL ffmpeg, UPX-compressed)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./scripts/fetch-binaries.ps1 -Target ${{ matrix.target }}
+
+      # tauri-action runs `pnpm tauri build`, then walks the
+      # src-tauri/target/release/bundle/ output and uploads every
+      # installer it finds to the release identified by tagName.
+      # First runner that lands creates the draft release; subsequent
+      # runners attach to the same release.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'YTBR ${{ github.ref_name }}'
+          releaseBody: |
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for the entry corresponding to ${{ github.ref_name }}.
+
+            Installers: `.msi` / `.exe` (Windows), `.deb` / `.AppImage` (Linux).
+
+            Each YTBR installer bundles `yt-dlp` (Unlicense) and a UPX-compressed LGPL build of `ffmpeg`. Per LGPL Section 6 the `ffmpeg` sidecar inside the install directory may be replaced by the end user with a compatible build.
+          releaseDraft: true
+          prerelease: false
