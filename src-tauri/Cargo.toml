@@ -28,6 +28,8 @@ thiserror = "2.0.18"
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-notification = "2"
 tauri-plugin-clipboard-manager = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 uuid = { version = "1.23.1", features = ["v4"] }
 tokio = { version = "1.52.3", features = ["sync"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }

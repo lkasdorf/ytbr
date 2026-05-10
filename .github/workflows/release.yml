@@ -119,9 +119,22 @@ jobs:
       # installer it finds to the release identified by tagName.
       # First runner that lands creates the draft release; subsequent
       # runners attach to the same release.
+      # tauri-action signs the bundles when TAURI_SIGNING_PRIVATE_KEY is
+      # set in the env, generates `latest.json` with the signatures and
+      # download URLs, and uploads it to the release alongside the
+      # installers. The shipped `tauri-plugin-updater` looks for that
+      # `latest.json` at the URL configured in tauri.conf.json's
+      # `plugins.updater.endpoints` (latest/download/latest.json).
+      #
+      # Both env vars come from GitHub repo secrets — see CLAUDE.md for
+      # the keypair-generation steps. If they're empty the build still
+      # works but no signatures land in latest.json, and the in-app
+      # updater silently falls back to the GitHub-API path.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'YTBR ${{ github.ref_name }}'

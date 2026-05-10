@@ -117,6 +117,32 @@ All Claude Code artifacts — memories, skills, settings, hooks — are **user-l
 
 A fresh clone on another machine starts with no memory and no skill. That's by design — they're personal context, not project artifacts. `CHANGELOG.md` and this `CLAUDE.md` carry the parts that future contributors actually need.
 
+## App auto-update setup (one-time)
+
+The signed in-app updater path (`tauri-plugin-updater` + the About dialog's "Download & install" button) needs a Tauri signing keypair before it can verify a newer release. Until the keypair is in place the in-app updater silently falls back to the GitHub-API path that just opens the release page.
+
+Generate the keypair **on the maintainer's machine** (the private key never lands in the repo or in any CI environment except as a GitHub secret):
+
+```bash
+pnpm tauri signer generate -w ~/.tauri/ytbr-updater.key
+# follow the prompts; an empty password is fine for an unattended CI build
+```
+
+The command prints the public key to stdout. Copy it (one line, base64) into `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`, replacing the `REPLACE_BEFORE_NEXT_RELEASE` placeholder. Commit and push that change.
+
+Add two repo secrets at https://github.com/lkasdorf/ytbr/settings/secrets/actions:
+
+- `TAURI_SIGNING_PRIVATE_KEY` — full contents of `~/.tauri/ytbr-updater.key`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — the password if any, otherwise leave blank
+
+Both env vars are wired into `tauri-action` in `.github/workflows/release.yml`. On the next tag push the action signs the bundles, generates `latest.json` with signatures + download URLs, and uploads it to the GitHub release alongside the installers. The frontend's `plugins.updater.endpoints` already points at `https://github.com/lkasdorf/ytbr/releases/latest/download/latest.json`, so once that file exists the in-app "Download & install" button starts working.
+
+A few notes worth keeping nearby:
+
+- The keypair is for *update* signing, not OS code-signing. The MSI/NSIS installers themselves stay unsigned until a separate Authenticode/notarization story lands. Windows SmartScreen still warns on first install.
+- If the private key is rotated, every release after that needs the new pubkey deployed in `tauri.conf.json` *before* the tag push, otherwise installed clients with the old pubkey will reject the new signature and stay stuck on the previous version.
+- Never commit `~/.tauri/ytbr-updater.key`. The `.claude/` gitignore doesn't cover it; treat it like an SSH private key.
+
 ## Gotchas
 
 - **OneDrive triggers tauri dev's Rust watcher.** This project lives under `OneDrive\…\16_Projects\YTBR\`. OneDrive touches file metadata in the background; tauri-cli reads that as "file changed" and rebuilds mid-run, killing in-flight downloads. **Always** use `pnpm tauri dev --no-watch`. After Rust edits, stop and restart manually.
