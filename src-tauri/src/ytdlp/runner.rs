@@ -50,10 +50,32 @@ pub async fn run(
         "-o".into(),
         output_template,
     ];
-    if let Some(path) = ffmpeg_sidecar_path() {
+
+    // ffmpeg location: explicit user override wins; otherwise fall
+    // back to the bundled sidecar so video-only + audio-only YouTube
+    // streams still mux correctly.
+    let ffmpeg_path: Option<String> = spec
+        .ffmpeg_location
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .or_else(|| ffmpeg_sidecar_path().map(|p| p.to_string_lossy().into_owned()));
+    if let Some(path) = ffmpeg_path {
         args.push("--ffmpeg-location".into());
-        args.push(path.to_string_lossy().into_owned());
+        args.push(path);
     }
+
+    if let Some(browser) = spec
+        .cookies_from_browser
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        args.push("--cookies-from-browser".into());
+        args.push(browser.to_string());
+    }
+
     if let Some(fmt) = &spec.format_id {
         args.push("-f".into());
         args.push(fmt.clone());

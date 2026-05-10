@@ -34,9 +34,16 @@ pub struct JobSpec {
     pub output_dir: PathBuf,
     #[serde(default = "default_template")]
     pub output_template: String,
-    // Iter 2 fields (write_subs, write_thumbnail, embed_metadata,
-    // cookies_from_browser, use_archive, extra_args) intentionally
-    // omitted until they're actually consumed.
+    /// yt-dlp `--cookies-from-browser` value (e.g. "chrome", "firefox").
+    /// `None` means no cookies are read.
+    #[serde(default)]
+    pub cookies_from_browser: Option<String>,
+    /// User-supplied path that overrides the bundled ffmpeg sidecar.
+    /// `None` falls back to `ffmpeg_sidecar_path()` in the runner.
+    #[serde(default)]
+    pub ffmpeg_location: Option<String>,
+    // Iter 2 fields still pending: write_subs, write_thumbnail,
+    // embed_metadata, use_archive, extra_args.
 }
 
 fn default_template() -> String {

@@ -138,13 +138,24 @@ function DownloadView() {
 
   async function enqueue(formatId: string) {
     if (!outputDir || probe.status !== "ok") return;
+    // Snapshot the settings at enqueue time. Mid-flight setting
+    // changes never disturb running jobs.
+    const settings = useSettingsStore.getState();
+    const spec = {
+      url: probe.url,
+      formatId,
+      outputDir,
+      outputTemplate: settings.outputTemplate,
+      cookiesFromBrowser: settings.cookiesFromBrowser,
+      ffmpegLocation: settings.ffmpegPath,
+    };
     try {
-      const id = await enqueueJob({ url: probe.url, formatId, outputDir });
+      const id = await enqueueJob(spec);
       // Optimistic insert so the Queue tab shows the row before the
       // first job-status event lands.
       useJobsStore.getState().upsert({
         id,
-        spec: { url: probe.url, formatId, outputDir },
+        spec,
         status: "queued",
         progress: null,
         error: null,

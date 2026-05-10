@@ -38,6 +38,10 @@ export interface JobSpec {
   formatId: string | null;
   outputDir: string;
   outputTemplate?: string;
+  /// yt-dlp `--cookies-from-browser` value, or `null` for no cookies.
+  cookiesFromBrowser?: string | null;
+  /// Path that overrides the bundled ffmpeg sidecar. `null` uses the bundle.
+  ffmpegLocation?: string | null;
 }
 
 export interface JobProgress {
