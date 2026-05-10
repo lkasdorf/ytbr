@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- yt-dlp self-updater reported "could not locate the yt-dlp sidecar to overwrite" in bundled MSI/NSIS/DEB/AppImage installs. The sidecar resolver in `runner.rs` only tried the target-triple-suffixed filename (`yt-dlp-<TARGET>{.exe}`), but Tauri's bundler drops the target triple when it places the file next to the main exe — so the bundled install has just `yt-dlp.exe` (matching the bare name the plugin-shell runtime resolver looks for at spawn time). The resolver now tries both candidate names in both the next-to-exe and the dev-walk-up locations. The ffmpeg path resolution benefits from the same change automatically since it shares the helper.
 - Native `<select>` dropdowns (Cookies-from-browser in Settings, Sort in Queue) were unreadable in dark mode — `bg-input` is alpha-transparent in dark mode, so the OS-rendered popup landed on a white system surface and rendered light foreground text on white. Fixed by adding `[&>option]:bg-card [&>option]:text-foreground` so `<option>` elements style independently from the `<select>` body.
 
 ## [0.4.0] - 2026-05-10

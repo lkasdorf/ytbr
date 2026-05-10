@@ -221,21 +221,35 @@ fn archive_file_path(app: &AppHandle) -> Option<PathBuf> {
 // walk back up a few levels to find them.
 fn sidecar_path(prefix: &str) -> Option<PathBuf> {
     let suffix = if cfg!(windows) { ".exe" } else { "" };
-    let name = format!("{prefix}-{TARGET_TRIPLE}{suffix}");
+    // Two candidate filenames cover both layouts:
+    //  - bundled install (Tauri MSI/NSIS/DEB/AppImage): the bundler
+    //    drops the target-triple suffix, so the file lands as
+    //    `<prefix>{.exe}` next to the main exe — same name the
+    //    plugin-shell runtime resolver looks for at spawn time.
+    //  - dev / `tauri dev` runs: the source files in
+    //    `src-tauri/binaries/` keep their target-triple suffix
+    //    (`<prefix>-<TARGET>{.exe}`) because the build looks them up
+    //    that way.
+    let bare = format!("{prefix}{suffix}");
+    let triple = format!("{prefix}-{TARGET_TRIPLE}{suffix}");
 
     let exe = std::env::current_exe().ok()?;
     let exe_dir = exe.parent()?.to_path_buf();
 
-    let next_to_exe = exe_dir.join(&name);
-    if next_to_exe.exists() {
-        return Some(next_to_exe);
+    for name in [&bare, &triple] {
+        let candidate = exe_dir.join(name);
+        if candidate.exists() {
+            return Some(candidate);
+        }
     }
 
     let mut cursor = exe_dir;
     for _ in 0..6 {
-        let candidate = cursor.join("src-tauri").join("binaries").join(&name);
-        if candidate.exists() {
-            return Some(candidate);
+        for name in [&bare, &triple] {
+            let candidate = cursor.join("src-tauri").join("binaries").join(name);
+            if candidate.exists() {
+                return Some(candidate);
+            }
         }
         if !cursor.pop() {
             break;
