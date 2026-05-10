@@ -23,7 +23,7 @@ interface Preset {
 // preset working when the preferred mp4+m4a pair isn't published —
 // e.g. some sources only ship webm. yt-dlp tries each branch
 // left-to-right and uses the first that resolves.
-const PRESETS: Preset[] = [
+export const PRESETS: Preset[] = [
   {
     id: "audio-best",
     label: "Best Audio",
@@ -56,6 +56,11 @@ const PRESETS: Preset[] = [
     icon: Film,
   },
 ];
+
+/// yt-dlp's default selector when nothing else is requested. Used by
+/// the Batch view when the user opts to enqueue without picking a
+/// specific preset.
+export const DEFAULT_BATCH_SELECTOR = "bestvideo*+bestaudio/best";
 
 export function PresetButtons({ onPick, disabled, disabledReason }: Props) {
   const defaultPreset = useSettingsStore((s) => s.defaultPreset);

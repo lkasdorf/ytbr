@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   AlertCircle,
   Download,
+  Layers,
   ListVideo,
   Settings as SettingsIcon,
 } from "lucide-react";
@@ -27,8 +28,9 @@ import { PresetButtons } from "@/features/format-picker/PresetButtons";
 import { OutputDirPicker } from "@/features/settings/OutputDirPicker";
 import { SettingsView } from "@/features/settings/SettingsView";
 import { QueueView } from "@/features/queue/QueueView";
+import { BatchView } from "@/features/batch/BatchView";
 
-type Route = "download" | "queue" | "settings";
+type Route = "download" | "batch" | "queue" | "settings";
 
 interface NavItem {
   id: Route;
@@ -38,6 +40,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { id: "download", label: "Download", icon: Download },
+  { id: "batch",    label: "Batch",    icon: Layers },
   { id: "queue",    label: "Queue",    icon: ListVideo },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -100,6 +103,7 @@ function App() {
         </header>
         <div className="flex-1 overflow-auto p-6">
           {route === "download" && <DownloadView />}
+          {route === "batch" && <BatchView />}
           {route === "queue" && <QueueView />}
           {route === "settings" && <SettingsView />}
         </div>
