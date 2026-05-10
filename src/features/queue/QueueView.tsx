@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   CheckCircle2,
   CircleDashed,
@@ -15,12 +15,77 @@ import { isActive, useJobsStore } from "@/stores/jobs";
 import { formatBytes } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 
+type SortMode =
+  | "newest"
+  | "oldest"
+  | "status"
+  | "progress-desc"
+  | "progress-asc";
+
+interface SortOption {
+  id: SortMode;
+  label: string;
+}
+
+const SORT_OPTIONS: readonly SortOption[] = [
+  { id: "newest", label: "Newest first" },
+  { id: "oldest", label: "Oldest first" },
+  { id: "status", label: "Status (active first)" },
+  { id: "progress-desc", label: "Progress (high → low)" },
+  { id: "progress-asc", label: "Progress (low → high)" },
+];
+
+// Lower rank surfaces sooner. Active jobs first, then queued, then
+// failures (likely to need attention), then completed, then cancelled.
+const STATUS_RANK: Record<JobStatus, number> = {
+  downloading: 0,
+  queued: 1,
+  failed: 2,
+  completed: 3,
+  cancelled: 4,
+};
+
 export function QueueView() {
   const jobs = useJobsStore((s) => s.jobs);
   const ids = useJobsStore((s) => s.ids);
+  const [sort, setSort] = useState<SortMode>("newest");
 
-  // Newest first.
-  const ordered = useMemo(() => [...ids].reverse().map((id) => jobs[id]).filter(Boolean), [ids, jobs]);
+  // `ids` is insertion order — earlier index means older. Used both as
+  // a created-at proxy and as the deterministic tie-breaker for sorts
+  // that have ties (status, progress).
+  const ordered = useMemo(() => {
+    const indexOf = new Map(ids.map((id, i) => [id, i]));
+    const list = ids
+      .map((id) => jobs[id])
+      .filter((j): j is JobState => j != null);
+
+    const newer = (a: JobState, b: JobState) =>
+      (indexOf.get(b.id) ?? 0) - (indexOf.get(a.id) ?? 0);
+
+    switch (sort) {
+      case "newest":
+        return list.sort(newer);
+      case "oldest":
+        return list.sort((a, b) => -newer(a, b));
+      case "status":
+        return list.sort(
+          (a, b) =>
+            STATUS_RANK[a.status] - STATUS_RANK[b.status] || newer(a, b),
+        );
+      case "progress-desc":
+        return list.sort(
+          (a, b) =>
+            (b.progress?.percent ?? 0) - (a.progress?.percent ?? 0) ||
+            newer(a, b),
+        );
+      case "progress-asc":
+        return list.sort(
+          (a, b) =>
+            (a.progress?.percent ?? 0) - (b.progress?.percent ?? 0) ||
+            newer(a, b),
+        );
+    }
+  }, [ids, jobs, sort]);
 
   const hasTerminal = ordered.some(
     (j) => j.status === "completed" || j.status === "failed" || j.status === "cancelled",
@@ -38,8 +103,26 @@ export function QueueView() {
 
   return (
     <div className="flex flex-col gap-3">
-      {hasTerminal && (
-        <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Sort</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortMode)}
+            className={cn(
+              "rounded-md border border-border bg-input px-2 py-1 text-xs",
+              "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+            )}
+            aria-label="Sort queue"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {hasTerminal && (
           <button
             onClick={() => {
               void clearCompletedJobs();
@@ -50,8 +133,8 @@ export function QueueView() {
             <Trash2 className="size-3.5" />
             Clear completed
           </button>
-        </div>
-      )}
+        )}
+      </div>
       {ordered.map((job) => (
         <JobCard key={job.id} job={job} />
       ))}
