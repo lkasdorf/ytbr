@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Theme switcher in Settings. Three modes — System (default, follows the OS `prefers-color-scheme` and updates live when it flips), Light, Dark — persisted in the existing `ytbr.settings.v1` localStorage entry alongside the other UI preferences. The `.dark` token block in `index.css` shipped with v0.1.0 but was never reachable; a tiny `useThemeEffect` hook in `src/lib/theme.ts` now toggles the class on `<html>` based on the resolved mode.
+
 ## [0.3.0] - 2026-05-10
 
 Cross-cutting cleanup. CI/CD comes online (Windows + Ubuntu matrix +

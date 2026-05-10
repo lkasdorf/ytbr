@@ -30,6 +30,8 @@ export const COOKIE_BROWSERS: readonly CookieBrowser[] = [
 
 export type PresetId = "audio-best" | "video-720" | "video-1080" | "video-4k";
 
+export type ThemeMode = "system" | "light" | "dark";
+
 export const DEFAULT_OUTPUT_TEMPLATE = "%(title)s.%(ext)s";
 export const DEFAULT_PARALLEL_LIMIT = 2;
 export const MIN_PARALLEL_LIMIT = 1;
@@ -48,6 +50,7 @@ interface SettingsStore {
   embedThumbnail: boolean;
   embedMetadata: boolean;
   useDownloadArchive: boolean;
+  theme: ThemeMode;
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -59,6 +62,7 @@ interface SettingsStore {
   setEmbedThumbnail: (v: boolean) => void;
   setEmbedMetadata: (v: boolean) => void;
   setUseDownloadArchive: (v: boolean) => void;
+  setTheme: (theme: ThemeMode) => void;
 }
 
 function clampParallel(n: number): number {
@@ -82,6 +86,7 @@ export const useSettingsStore = create<SettingsStore>()(
       embedThumbnail: false,
       embedMetadata: false,
       useDownloadArchive: false,
+      theme: "system",
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -97,6 +102,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setEmbedThumbnail: (v) => set({ embedThumbnail: v }),
       setEmbedMetadata: (v) => set({ embedMetadata: v }),
       setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),
+      setTheme: (theme) => set({ theme }),
     }),
     { name: "ytbr.settings.v1" },
   ),

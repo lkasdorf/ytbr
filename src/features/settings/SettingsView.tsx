@@ -6,6 +6,7 @@ import {
   Film,
   Folder,
   Package,
+  Palette,
   RotateCcw,
   Sliders,
   Star,
@@ -19,6 +20,7 @@ import {
   MAX_PARALLEL_LIMIT,
   MIN_PARALLEL_LIMIT,
   type PresetId,
+  type ThemeMode,
   useSettingsStore,
 } from "@/stores/settings";
 import { cn } from "@/lib/utils";
@@ -36,6 +38,18 @@ const PRESET_OPTIONS: readonly PresetOption[] = [
   { id: "video-4k", label: "4K", hint: "mp4, video + audio" },
 ];
 
+interface ThemeOption {
+  id: ThemeMode;
+  label: string;
+  hint: string;
+}
+
+const THEME_OPTIONS: readonly ThemeOption[] = [
+  { id: "system", label: "System", hint: "Follow OS preference" },
+  { id: "light", label: "Light", hint: "Always light" },
+  { id: "dark", label: "Dark", hint: "Always dark" },
+];
+
 export function SettingsView() {
   const parallelLimit = useSettingsStore((s) => s.parallelLimit);
   const cookiesFromBrowser = useSettingsStore((s) => s.cookiesFromBrowser);
@@ -46,6 +60,7 @@ export function SettingsView() {
   const embedThumbnail = useSettingsStore((s) => s.embedThumbnail);
   const embedMetadata = useSettingsStore((s) => s.embedMetadata);
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
+  const theme = useSettingsStore((s) => s.theme);
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -60,6 +75,7 @@ export function SettingsView() {
   const setUseDownloadArchive = useSettingsStore(
     (s) => s.setUseDownloadArchive,
   );
+  const setTheme = useSettingsStore((s) => s.setTheme);
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -74,6 +90,24 @@ export function SettingsView() {
         desc="Where finished downloads land. Used by every job."
       >
         <OutputDirPicker />
+      </Section>
+
+      <Section
+        icon={Palette}
+        title="Theme"
+        desc="System follows your OS light/dark preference and updates live when you change it."
+      >
+        <div className="flex flex-wrap gap-2">
+          {THEME_OPTIONS.map((t) => (
+            <PresetChip
+              key={t.id}
+              label={t.label}
+              hint={t.hint}
+              active={theme === t.id}
+              onClick={() => setTheme(t.id)}
+            />
+          ))}
+        </div>
       </Section>
 
       <Section

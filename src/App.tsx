@@ -20,6 +20,7 @@ import {
 import { classifyFormat, formatDuration } from "@/lib/format-utils";
 import { startJobListeners } from "@/lib/tauri-events";
 import { useSettingsSync } from "@/lib/settings-sync";
+import { useThemeEffect } from "@/lib/theme";
 import { isActive, useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
@@ -54,6 +55,7 @@ function App() {
   }, []);
 
   useSettingsSync();
+  useThemeEffect();
 
   const activeCount = useJobsStore((s) =>
     Object.values(s.jobs).filter((j) => isActive(j.status)).length,
