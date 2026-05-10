@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-10
+
+Iter 3+ closes and the app gets a real visual identity. Three feature
+items polish parity with established yt-dlp wrappers (concurrent
+fragments slider, audio-format chips for audio-only downloads,
+playlist/channel detection on the Download tab that redirects to the
+Batch tab). The signed `tauri-plugin-updater` path is scaffolded
+end-to-end — plugin + capability + workflow secrets + About-dialog
+"Download & install" button — pending a `tauri signer generate`
+keypair injection on the maintainer's machine; until then the
+in-app updater silently falls through to the existing GitHub-API
+release-page link. The in-bundled-install yt-dlp self-updater is
+fixed (the resolver was looking for the target-triple-suffixed
+filename Tauri's bundler doesn't keep). Two design passes land in
+the same release: a chartreuse `--primary` brand accent across both
+themes, JetBrains Mono bundled offline as `--font-mono`, status-keyed
+JobCard left edges, redesigned ProgressBar with tape stripes and a
+sweeping indeterminate state, sidebar/header/empty-state polish — and
+behind that, a proper accessibility pass (`prefers-reduced-motion`
+guard on the new animations, `focus-visible` rings on sidebar nav,
+`focus-within` on the URL form, `role="alert"` on the probe error).
+The `BSL-1.0` and `CDLA-Permissive-2.0` licenses joined the
+`deny.toml` allow-list as transitive deps of
+`tauri-plugin-clipboard-manager` and `reqwest`; the `OFL-1.1` license
+shows up in THIRD_PARTY_LICENSES.md for JetBrains Mono.
+
 ### Changed
 
 - Visual identity pass — the app now reads as a tool rather than a default-shadcn admin panel:
