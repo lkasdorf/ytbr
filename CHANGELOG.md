@@ -7,25 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-05-11
+
+Signed-updater activation, take two. v0.5.2's release build did sign
+the bundles, but `tauri-action` skipped the `latest.json` upload
+because Tauri 2 requires the explicit `bundle.createUpdaterArtifacts:
+true` config flag to flag the `.zip`/`.sig` pairs as updater
+artifacts (without it, only the bare installers were uploaded and
+the action logged `Signature not found for the updater JSON.
+Skipping upload...`). With the flag set, `latest.json` ships
+alongside the installers and the in-app "Download & install" button
+verifies signatures end-to-end.
+
+### Fixed
+
+- `bundle.createUpdaterArtifacts: true` set in `tauri.conf.json` —
+  required in Tauri 2 for `tauri-action` to recognize and upload the
+  `.msi.zip` / `.exe.zip` / `.AppImage.tar.gz` updater artifacts plus
+  their `.sig` files, and to assemble + upload the `latest.json`
+  manifest the in-app updater polls.
+
 ## [0.5.2] - 2026-05-11
 
-Signed-updater activation release. The signing keypair scaffolded in
-v0.5.0 is now live — the GitHub release workflow signs the bundles
-with the maintainer's private key (held as a GitHub Actions secret),
-and `tauri-action` uploads a verified `latest.json` alongside the
-installers. From this release on, the in-app "Download & install"
-button in the About dialog verifies signatures end-to-end instead
-of falling through to the GitHub-API release-page link.
+Signed-updater activation release — *broken in flight*: bundles were
+signed but `tauri-action` skipped the `latest.json` upload because
+`bundle.createUpdaterArtifacts: true` was not yet set in
+`tauri.conf.json`. The v0.5.2 GitHub release was never published
+(draft only); the fix is in v0.5.3.
 
 ### Security
 
 - Tauri updater public key injected into `tauri.conf.json` (replaces the
   `REPLACE_BEFORE_NEXT_RELEASE` placeholder shipped since v0.5.0). The
   matching private key + (empty) password live as GitHub Actions secrets
-  `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, so
-  this tag push produces a signed `latest.json` and the in-app
-  "Download & install" button starts verifying signatures instead of
-  falling through to the GitHub-API release-page link.
+  `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 
 ## [0.5.1] - 2026-05-11
 
