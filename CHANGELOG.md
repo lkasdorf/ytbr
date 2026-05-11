@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New History tab with terminal-state jobs (completed / failed /
+  cancelled). Search by URL or format id/label, filter by status with
+  count chips, sort newest / oldest, and a "Clear history" button with
+  an inline confirm prompt. The Queue tab now shows live work only
+  (downloading / paused / queued) and stops accumulating finished rows.
+  Sidebar shows count badges on both tabs. The shared JobCard render
+  is now exported from QueueView so both views use the same row layout.
 - Output template preset chips and live preview in Settings → Output
   template. Five preset chips (Title, Title + ID, Uploader / Title,
   Date · Title, Channel folder) fill the field with one click. A live
@@ -35,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of quits; Quit stays reachable via the tray menu. Wired through a
   process-wide `CloseToTray` atomic that the Rust window close-handler
   consults each time.
+
+### Changed
+
+- Queue tab no longer shows finished, failed, or cancelled jobs —
+  they move to the new History tab. The "Clear completed" button
+  moves with them and is renamed "Clear history" (with a confirm
+  prompt before flushing). The queue empty-state copy now says
+  "No active jobs" with a pointer to History.
 
 ## [0.7.1] - 2026-05-11
 

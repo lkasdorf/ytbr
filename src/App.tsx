@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   Download,
+  History,
   Layers,
   ListVideo,
   Search,
@@ -36,8 +37,9 @@ import { OutputDirPicker } from "@/features/settings/OutputDirPicker";
 import { SettingsView } from "@/features/settings/SettingsView";
 import { QueueView } from "@/features/queue/QueueView";
 import { BatchView } from "@/features/batch/BatchView";
+import { HistoryView } from "@/features/history/HistoryView";
 
-type Route = "download" | "batch" | "queue" | "settings";
+type Route = "download" | "batch" | "queue" | "history" | "settings";
 
 interface NavItem {
   id: Route;
@@ -49,6 +51,7 @@ const NAV: NavItem[] = [
   { id: "download", label: "Download", icon: Download },
   { id: "batch",    label: "Batch",    icon: Layers },
   { id: "queue",    label: "Queue",    icon: ListVideo },
+  { id: "history",  label: "History",  icon: History },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -128,7 +131,12 @@ function App() {
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = route === item.id;
-            const badge = item.id === "queue" && activeCount > 0 ? activeCount : null;
+            const badge =
+              item.id === "queue" && activeCount > 0
+                ? activeCount
+                : item.id === "history" && doneCount > 0
+                  ? doneCount
+                  : null;
             return (
               <button
                 key={item.id}
@@ -186,6 +194,7 @@ function App() {
             />
           )}
           {route === "queue" && <QueueView />}
+          {route === "history" && <HistoryView />}
           {route === "settings" && <SettingsView />}
         </div>
       </main>
@@ -250,11 +259,17 @@ function RouteHeaderInfo({
     const parts: string[] = [];
     if (activeCount > 0) parts.push(`${activeCount} active`);
     if (queuedCount > 0) parts.push(`${queuedCount} queued`);
-    if (doneCount > 0) parts.push(`${doneCount} done`);
     if (parts.length === 0) return null;
     return (
       <span className="font-mono text-xs text-muted-foreground tabular-nums">
         {parts.join(" · ")}
+      </span>
+    );
+  }
+  if (route === "history" && doneCount > 0) {
+    return (
+      <span className="font-mono text-xs text-muted-foreground tabular-nums">
+        {doneCount} {doneCount === 1 ? "entry" : "entries"}
       </span>
     );
   }

@@ -12,12 +12,10 @@ import {
   Play,
   RotateCw,
   StopCircle,
-  Trash2,
   XCircle,
 } from "lucide-react";
 import {
   cancelJob,
-  clearCompletedJobs,
   enqueueJob,
   pauseJob,
   resumeJob,
@@ -70,9 +68,12 @@ export function QueueView() {
   // that have ties (status, progress).
   const ordered = useMemo(() => {
     const indexOf = new Map(ids.map((id, i) => [id, i]));
+    // Queue tab shows live work only. Terminal jobs live in the
+    // History tab so the queue stays focused on what's in flight.
     const list = ids
       .map((id) => jobs[id])
-      .filter((j): j is JobState => j != null);
+      .filter((j): j is JobState => j != null)
+      .filter((j) => !isTerminal(j.status));
 
     const newer = (a: JobState, b: JobState) =>
       (indexOf.get(b.id) ?? 0) - (indexOf.get(a.id) ?? 0);
@@ -102,10 +103,6 @@ export function QueueView() {
     }
   }, [ids, jobs, sort]);
 
-  const hasTerminal = ordered.some(
-    (j) => j.status === "completed" || j.status === "failed" || j.status === "cancelled",
-  );
-
   if (ordered.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-6 py-12 text-card-foreground">
@@ -113,10 +110,11 @@ export function QueueView() {
           className="size-10 text-muted-foreground/40"
           strokeWidth={1.5}
         />
-        <p className="text-sm font-medium text-foreground">Queue is empty</p>
+        <p className="text-sm font-medium text-foreground">No active jobs</p>
         <p className="max-w-xs text-center text-xs text-muted-foreground">
           Probe a URL on the Download tab and click the download icon next to a
-          format, or paste a list on the Batch tab.
+          format, or paste a list on the Batch tab. Finished jobs move to the
+          History tab.
         </p>
       </div>
     );
@@ -144,18 +142,6 @@ export function QueueView() {
             ))}
           </select>
         </label>
-        {hasTerminal && (
-          <button
-            onClick={() => {
-              void clearCompletedJobs();
-              useJobsStore.getState().clearTerminal();
-            }}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-secondary/80"
-          >
-            <Trash2 className="size-3.5" />
-            Clear completed
-          </button>
-        )}
       </div>
       {ordered.map((job) => (
         <JobCard key={job.id} job={job} />
@@ -164,7 +150,11 @@ export function QueueView() {
   );
 }
 
-function JobCard({ job }: { job: JobState }) {
+export function isTerminal(status: JobStatus): boolean {
+  return status === "completed" || status === "failed" || status === "cancelled";
+}
+
+export function JobCard({ job }: { job: JobState }) {
   const p = job.progress;
   const percent = p?.percent ?? 0;
   const showBar = isActive(job.status) || job.status === "completed";
