@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Notification opt-in split into three independent toggles: "Notify on
+  successful download", "Notify on failed download", and "Notify on
+  cancelled download". The first two default on (matching the
+  pre-v0.7 behavior of the single "Notify on finish/fail" toggle);
+  cancel notifications default off (you initiated the cancel, no need
+  for a toast back). The persisted store gains version 1 with a
+  migration that propagates the old `notifyOnFinish` value into the
+  two new on-by-default toggles, so installs from v0.6.0 keep their
+  current opt-in state without re-prompting.
+
 ### Added
 
 - "Retries on error" Settings section with two sliders (range 0–20)

@@ -123,7 +123,9 @@ export function SettingsView() {
   const rateLimit = useSettingsStore((s) => s.rateLimit);
   const proxy = useSettingsStore((s) => s.proxy);
   const theme = useSettingsStore((s) => s.theme);
-  const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
+  const notifyOnSuccess = useSettingsStore((s) => s.notifyOnSuccess);
+  const notifyOnFailure = useSettingsStore((s) => s.notifyOnFailure);
+  const notifyOnCancel = useSettingsStore((s) => s.notifyOnCancel);
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
   const concurrentFragments = useSettingsStore((s) => s.concurrentFragments);
   const retries = useSettingsStore((s) => s.retries);
@@ -158,7 +160,9 @@ export function SettingsView() {
   const setRateLimit = useSettingsStore((s) => s.setRateLimit);
   const setProxy = useSettingsStore((s) => s.setProxy);
   const setTheme = useSettingsStore((s) => s.setTheme);
-  const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
+  const setNotifyOnSuccess = useSettingsStore((s) => s.setNotifyOnSuccess);
+  const setNotifyOnFailure = useSettingsStore((s) => s.setNotifyOnFailure);
+  const setNotifyOnCancel = useSettingsStore((s) => s.setNotifyOnCancel);
   const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
   const setConcurrentFragments = useSettingsStore((s) => s.setConcurrentFragments);
   const setRetries = useSettingsStore((s) => s.setRetries);
@@ -209,10 +213,22 @@ export function SettingsView() {
       >
         <div className="flex flex-col gap-3">
           <ToggleRow
-            label="Notify on job finish/fail"
-            desc="OS toast when a job reaches a terminal state. Cancellations stay silent — you initiated those. The first toast triggers the system permission prompt."
-            checked={notifyOnFinish}
-            onChange={setNotifyOnFinish}
+            label="Notify on successful download"
+            desc="OS toast when a job completes successfully. The first toast triggers the system permission prompt."
+            checked={notifyOnSuccess}
+            onChange={setNotifyOnSuccess}
+          />
+          <ToggleRow
+            label="Notify on failed download"
+            desc="OS toast when a job ends with an error. Useful for long batches you walk away from."
+            checked={notifyOnFailure}
+            onChange={setNotifyOnFailure}
+          />
+          <ToggleRow
+            label="Notify on cancelled download"
+            desc="Off by default — you initiated the cancel, so the toast is usually noise. Flip on if you want symmetry with the other two."
+            checked={notifyOnCancel}
+            onChange={setNotifyOnCancel}
           />
           <ToggleRow
             label="Watch clipboard for URLs"

@@ -125,7 +125,14 @@ interface SettingsStore {
   /// Empty string = no proxy.
   proxy: string;
   theme: ThemeMode;
-  notifyOnFinish: boolean;
+  /// Three independent toggles for terminal-state OS notifications.
+  /// Replaces the single `notifyOnFinish` boolean that was on by default
+  /// for completed + failed and never fired for cancelled. The migration
+  /// in `persist({ version: 1 })` propagates the old value into success
+  /// and failure (cancel always defaults off).
+  notifyOnSuccess: boolean;
+  notifyOnFailure: boolean;
+  notifyOnCancel: boolean;
   watchClipboard: boolean;
   concurrentFragments: number;
   /// yt-dlp `--retries`. Whole-download retries on HTTP / connection
@@ -158,7 +165,9 @@ interface SettingsStore {
   setRateLimit: (v: string) => void;
   setProxy: (v: string) => void;
   setTheme: (theme: ThemeMode) => void;
-  setNotifyOnFinish: (v: boolean) => void;
+  setNotifyOnSuccess: (v: boolean) => void;
+  setNotifyOnFailure: (v: boolean) => void;
+  setNotifyOnCancel: (v: boolean) => void;
   setWatchClipboard: (v: boolean) => void;
   setConcurrentFragments: (n: number) => void;
   setRetries: (n: number) => void;
@@ -211,7 +220,9 @@ export const useSettingsStore = create<SettingsStore>()(
       rateLimit: "",
       proxy: "",
       theme: "system",
-      notifyOnFinish: true,
+      notifyOnSuccess: true,
+      notifyOnFailure: true,
+      notifyOnCancel: false,
       watchClipboard: true,
       concurrentFragments: DEFAULT_CONCURRENT_FRAGMENTS,
       retries: DEFAULT_RETRIES,
@@ -244,7 +255,9 @@ export const useSettingsStore = create<SettingsStore>()(
       setRateLimit: (v) => set({ rateLimit: v.trim() }),
       setProxy: (v) => set({ proxy: v.trim() }),
       setTheme: (theme) => set({ theme }),
-      setNotifyOnFinish: (v) => set({ notifyOnFinish: v }),
+      setNotifyOnSuccess: (v) => set({ notifyOnSuccess: v }),
+      setNotifyOnFailure: (v) => set({ notifyOnFailure: v }),
+      setNotifyOnCancel: (v) => set({ notifyOnCancel: v }),
       setWatchClipboard: (v) => set({ watchClipboard: v }),
       setConcurrentFragments: (n) =>
         set({ concurrentFragments: clampConcurrentFragments(n) }),
@@ -254,6 +267,25 @@ export const useSettingsStore = create<SettingsStore>()(
       setSponsorblockMode: (mode) => set({ sponsorblockMode: mode }),
       setSponsorblockCategories: (cats) => set({ sponsorblockCategories: cats }),
     }),
-    { name: "ytbr.settings.v1" },
+    {
+      name: "ytbr.settings.v1",
+      // version: 1 migrates the old single `notifyOnFinish` boolean
+      // into the three-toggle model. The localStorage key stays
+      // "ytbr.settings.v1" so existing installs keep their other
+      // preferences — only the notification field is rewritten.
+      version: 1,
+      migrate: (persistedState, fromVersion) => {
+        if (fromVersion < 1 && persistedState != null) {
+          const s = persistedState as Record<string, unknown>;
+          const legacy = s["notifyOnFinish"];
+          const wasOn = legacy !== false; // covers undefined + true
+          if (!("notifyOnSuccess" in s)) s["notifyOnSuccess"] = wasOn;
+          if (!("notifyOnFailure" in s)) s["notifyOnFailure"] = wasOn;
+          if (!("notifyOnCancel" in s)) s["notifyOnCancel"] = false;
+          delete s["notifyOnFinish"];
+        }
+        return persistedState as SettingsStore;
+      },
+    },
   ),
 );

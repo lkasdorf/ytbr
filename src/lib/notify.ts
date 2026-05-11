@@ -28,9 +28,20 @@ export async function notifyJobFinished(
   status: JobStatus,
   url: string,
 ): Promise<void> {
-  if (status !== "completed" && status !== "failed") return;
+  if (
+    status !== "completed" &&
+    status !== "failed" &&
+    status !== "cancelled"
+  ) {
+    return;
+  }
   if (!(await ensurePermission())) return;
 
-  const title = status === "completed" ? "Download finished" : "Download failed";
+  const title =
+    status === "completed"
+      ? "Download finished"
+      : status === "failed"
+        ? "Download failed"
+        : "Download cancelled";
   sendNotification({ title, body: url });
 }

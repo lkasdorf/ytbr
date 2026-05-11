@@ -45,15 +45,17 @@ export async function startJobListeners(): Promise<void> {
       useJobsStore.getState().patchStatus(id, status, error ?? null);
 
       // Fire OS notification only on actual transition into a terminal
-      // state and only if the user opted in. Cancelled is intentionally
-      // excluded — the user just clicked Cancel, no need to toast back.
-      if (
-        prev != null &&
-        prev.status !== status &&
-        (status === "completed" || status === "failed") &&
-        useSettingsStore.getState().notifyOnFinish
-      ) {
-        void notifyJobFinished(status, url);
+      // state. Each terminal status is gated by its own opt-in toggle so
+      // a user who wants failure-only toasts can have exactly that.
+      if (prev != null && prev.status !== status) {
+        const s = useSettingsStore.getState();
+        const shouldNotify =
+          (status === "completed" && s.notifyOnSuccess) ||
+          (status === "failed" && s.notifyOnFailure) ||
+          (status === "cancelled" && s.notifyOnCancel);
+        if (shouldNotify) {
+          void notifyJobFinished(status, url);
+        }
       }
     }),
   );
