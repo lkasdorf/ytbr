@@ -962,20 +962,29 @@ function ResetButton({
   title: string;
 }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-      className={cn(
-        "shrink-0 rounded-md border border-border bg-secondary p-1.5 text-secondary-foreground",
-        "transition-colors hover:bg-secondary/80",
-        disabled && "cursor-not-allowed opacity-40 hover:bg-secondary",
+    <span className="group relative inline-flex shrink-0">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        aria-label={title}
+        className={cn(
+          "rounded-md border border-border bg-secondary p-1.5 text-secondary-foreground",
+          "transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-ring",
+          disabled && "cursor-not-allowed opacity-40 hover:bg-secondary",
+        )}
+      >
+        <RotateCcw className="size-3.5" />
+      </button>
+      {!disabled && (
+        <span
+          role="tooltip"
+          className="pointer-events-none absolute right-full top-1/2 z-10 mr-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-xs text-card-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+        >
+          {title}
+        </span>
       )}
-    >
-      <RotateCcw className="size-3.5" />
-    </button>
+    </span>
   );
 }
 

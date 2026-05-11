@@ -311,15 +311,26 @@ function IconButton({
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
 }) {
+  // Custom hover/focus tooltip — the native `title` attribute waits
+  // ~700ms before showing and renders as an OS popup that ignores the
+  // app theme. The CSS-only popover uses `group-hover` + `focus-within`
+  // so keyboard users get the same hint without animation jitter.
   return (
-    <button
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-      className="flex items-center justify-center rounded-md border border-border bg-secondary px-2.5 py-1 text-secondary-foreground transition-colors hover:bg-secondary/80"
-    >
-      <Icon className="size-3.5" />
-    </button>
+    <span className="group relative inline-flex">
+      <button
+        onClick={onClick}
+        aria-label={title}
+        className="flex items-center justify-center rounded-md border border-border bg-secondary px-2.5 py-1 text-secondary-foreground transition-colors hover:bg-secondary/80 focus:outline-none focus:ring-1 focus:ring-ring"
+      >
+        <Icon className="size-3.5" />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute right-full top-1/2 z-10 mr-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-xs text-card-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {title}
+      </span>
+    </span>
   );
 }
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Icon-only buttons in the queue (pause / resume / cancel / open in
+  folder / retry) and the Settings reset buttons now show a custom
+  themed tooltip on hover and keyboard focus instead of the native
+  browser `title` popup. Same hint text, but theme-consistent,
+  ~700 ms faster on hover, and reachable via keyboard via
+  `focus-within`.
+
 ### Added
 
 - Cookie file source alongside cookies-from-browser. Settings now
