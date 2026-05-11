@@ -182,6 +182,10 @@ export function clearCompletedJobs(): Promise<void> {
   return invoke<void>("clear_completed_jobs");
 }
 
+export function removeJob(id: string): Promise<void> {
+  return invoke<void>("remove_job", { id });
+}
+
 export function pickOutputDir(): Promise<string | null> {
   return invoke<string | null>("pick_output_dir");
 }

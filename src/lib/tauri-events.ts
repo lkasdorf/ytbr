@@ -4,7 +4,7 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useJobsStore, type LogStream } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
-import type { JobProgress, JobStatus } from "@/lib/tauri-bridge";
+import { removeJob, type JobProgress, type JobStatus } from "@/lib/tauri-bridge";
 import { notifyJobFinished } from "@/lib/notify";
 
 let started = false;
@@ -59,15 +59,20 @@ export async function startJobListeners(): Promise<void> {
 
         // Schedule auto-clear of a successful download. Failed and
         // cancelled stay around so the user can review the error or
-        // retry the URL. The setTimeout is captured in module scope —
-        // a subsequent manual "Clear completed" will simply remove a
-        // job that's already gone, which the store handles as a no-op.
+        // retry the URL. Both backend and frontend stores are cleared
+        // so the on-disk queue.json drops the entry too — otherwise
+        // the auto-cleared job would reappear on the next app start.
         if (
           status === "completed" &&
           s.autoClearSuccess &&
           s.autoClearSuccessAfterSeconds > 0
         ) {
           setTimeout(() => {
+            void removeJob(id).catch(() => {
+              // Backend removal can fail if the queue manager has
+              // already evicted the entry (e.g. via Clear completed
+              // racing the timer). Frontend remove is still safe.
+            });
             useJobsStore.getState().remove(id);
           }, s.autoClearSuccessAfterSeconds * 1000);
         }

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{oneshot, Semaphore};
 
 use crate::error::AppError;
@@ -15,7 +15,7 @@ use crate::ytdlp::runner::{self, RunOutcome};
 
 pub type JobId = String;
 
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum JobStatus {
     Queued,
@@ -132,13 +132,15 @@ fn default_template() -> String {
     "%(title)s.%(ext)s".to_string()
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JobState {
     pub id: JobId,
     pub spec: JobSpec,
     pub status: JobStatus,
+    #[serde(default)]
     pub progress: Option<JobProgress>,
+    #[serde(default)]
     pub error: Option<String>,
 }
 
@@ -262,6 +264,7 @@ impl QueueManager {
                     pid: pid.clone(),
                 },
             );
+            persist_jobs(&app, &jobs);
         }
         emit_status(&app, &id, JobStatus::Queued, None);
 
@@ -386,7 +389,7 @@ impl QueueManager {
         })
     }
 
-    pub fn clear_completed(&self) {
+    pub fn clear_completed(&self, app: &AppHandle) {
         let mut jobs = self.inner.jobs.lock().unwrap();
         jobs.retain(|_, entry| {
             !matches!(
@@ -394,6 +397,57 @@ impl QueueManager {
                 JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled
             )
         });
+        persist_jobs(app, &jobs);
+    }
+
+    /// Remove a single job by id. Idempotent: missing ids are ignored.
+    /// Callers should make sure the job is in a terminal state — removing
+    /// a running job leaks the spawn task and any held permits. The frontend
+    /// auto-clear path only fires on `completed`, the manual per-job
+    /// button is currently surfaced only for terminal cards, so this
+    /// stays an internal invariant rather than an Err return for now.
+    pub fn remove_job(&self, app: &AppHandle, id: &str) {
+        let mut jobs = self.inner.jobs.lock().unwrap();
+        if jobs.remove(id).is_some() {
+            persist_jobs(app, &jobs);
+        }
+    }
+
+    /// Read `queue.json` on app startup and seed the in-memory map.
+    /// Any job in a non-terminal state (queued / downloading / paused)
+    /// is flipped to Cancelled with an explanatory error string — the
+    /// OS process is gone, there's no way to resume. The post-rehydrate
+    /// state is persisted back so a subsequent crash before any user
+    /// activity doesn't lose the "interrupted" markers.
+    pub fn hydrate_from_disk(&self, app: &AppHandle) {
+        let persisted = load_persisted_jobs(app);
+        if persisted.is_empty() {
+            return;
+        }
+        let mut jobs = self.inner.jobs.lock().unwrap();
+        for mut state in persisted {
+            let needs_flip = matches!(
+                state.status,
+                JobStatus::Queued | JobStatus::Downloading | JobStatus::Paused
+            );
+            if needs_flip {
+                state.status = JobStatus::Cancelled;
+                if state.error.is_none() {
+                    state.error =
+                        Some("App was closed before this job finished".into());
+                }
+                state.progress = None;
+            }
+            jobs.insert(
+                state.id.clone(),
+                JobEntry {
+                    state,
+                    cancel_tx: None,
+                    pid: Arc::new(Mutex::new(None)),
+                },
+            );
+        }
+        persist_jobs(app, &jobs);
     }
 }
 
@@ -405,8 +459,79 @@ impl QueueInner {
                 entry.state.error = error.clone();
             }
         }
+        // Persist after every transition. Cheap for typical queue sizes
+        // (low hundreds of entries) and means the on-disk view never
+        // lags behind the in-memory truth by more than one operation.
+        persist_jobs(app, &self.jobs.lock().unwrap());
         emit_status(app, id, status, error);
     }
+}
+
+// Persistence: store the whole queue as a single JSON file under
+// `<app_config_dir>/queue.json`. Atomic-replaced via tmp+rename so a
+// process crash mid-write can't truncate the file. The file is the
+// only source of truth across app restarts; the in-memory HashMap is
+// the source of truth while the app runs.
+//
+// We don't persist logs (session-local, can be megabytes per failed
+// job) or the cancel/pid handles (process-local, meaningless across
+// restarts). On hydration anything that was running flips to
+// Cancelled — the OS process is gone, no way to resume.
+
+#[derive(Serialize, Deserialize)]
+struct PersistedQueue {
+    version: u32,
+    jobs: Vec<JobState>,
+}
+
+const PERSIST_VERSION: u32 = 1;
+// `static`, not `const` — a const Mutex is re-instantiated on every
+// use site, defeating the serialization. The static guarantees one
+// lock for the whole process so concurrent writers can't tear JSON.
+static PERSIST_LOCK: Mutex<()> = Mutex::new(());
+
+fn queue_file_path(app: &AppHandle) -> Option<PathBuf> {
+    let dir = app.path().app_config_dir().ok()?;
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir.join("queue.json"))
+}
+
+fn persist_jobs(app: &AppHandle, jobs: &HashMap<JobId, JobEntry>) {
+    let Some(path) = queue_file_path(app) else {
+        return;
+    };
+    let payload = PersistedQueue {
+        version: PERSIST_VERSION,
+        jobs: jobs.values().map(|e| e.state.clone()).collect(),
+    };
+    let Ok(json) = serde_json::to_vec_pretty(&payload) else {
+        return;
+    };
+    // Serialize concurrent writes via a process-wide lock — torn JSON
+    // would lose the entire history on next boot.
+    let _guard = PERSIST_LOCK.lock().unwrap();
+    let tmp = path.with_extension("json.tmp");
+    if std::fs::write(&tmp, &json).is_ok() {
+        let _ = std::fs::rename(&tmp, &path);
+    }
+}
+
+fn load_persisted_jobs(app: &AppHandle) -> Vec<JobState> {
+    let Some(path) = queue_file_path(app) else {
+        return Vec::new();
+    };
+    let Ok(bytes) = std::fs::read(&path) else {
+        return Vec::new();
+    };
+    let parsed: Result<PersistedQueue, _> = serde_json::from_slice(&bytes);
+    let Ok(persisted) = parsed else {
+        return Vec::new();
+    };
+    if persisted.version > PERSIST_VERSION {
+        // Don't truncate forward-compat data we don't understand.
+        return Vec::new();
+    }
+    persisted.jobs
 }
 
 fn emit_status(app: &AppHandle, id: &str, status: JobStatus, error: Option<String>) {

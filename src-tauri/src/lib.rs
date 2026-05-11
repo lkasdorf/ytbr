@@ -7,6 +7,7 @@ mod queue;
 mod ytdlp;
 
 use queue::QueueManager;
+use tauri::Manager;
 
 /// Parallel-download limit at boot. The frontend pushes its persisted
 /// value (`useSettingsStore.parallelLimit`) right after mount, so this
@@ -25,6 +26,16 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(QueueManager::new(DEFAULT_PARALLEL_LIMIT))
+        .setup(|app| {
+            // Rehydrate the queue from disk before the frontend mounts.
+            // Persistence is opt-out only at the file-system level (delete
+            // queue.json); there's no setting to disable it because there's
+            // no real cost to keep it on and the alternative is silent loss
+            // of every prior job's history on each restart.
+            let queue = app.state::<QueueManager>();
+            queue.hydrate_from_disk(&app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::system::ytdlp_version,
             commands::system::ffmpeg_version,
@@ -37,6 +48,7 @@ pub fn run() {
             commands::download::resume_job,
             commands::download::list_jobs,
             commands::download::clear_completed_jobs,
+            commands::download::remove_job,
             commands::settings::pick_output_dir,
             commands::settings::set_parallel_limit,
             commands::updater::update_ytdlp,

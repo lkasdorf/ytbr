@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 // yt-dlp `--progress-template` line we ask for:
 //   PROG|<downloaded>|<total>|<speed>|<eta>|<status>
 // Unknown numeric fields render as "NA".
 pub const TEMPLATE: &str = "PROG|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s|%(progress.status)s";
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JobProgress {
     pub percent: f64,
+    #[serde(default)]
     pub speed_bps: Option<f64>,
+    #[serde(default)]
     pub eta_secs: Option<u64>,
+    #[serde(default)]
     pub downloaded_bytes: Option<u64>,
+    #[serde(default)]
     pub total_bytes: Option<u64>,
 }
 

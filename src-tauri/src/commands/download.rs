@@ -47,7 +47,20 @@ pub async fn list_jobs(queue: State<'_, QueueManager>) -> Result<Vec<JobState>, 
 }
 
 #[tauri::command]
-pub async fn clear_completed_jobs(queue: State<'_, QueueManager>) -> Result<(), AppError> {
-    queue.clear_completed();
+pub async fn clear_completed_jobs(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+) -> Result<(), AppError> {
+    queue.clear_completed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_job(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+    id: String,
+) -> Result<(), AppError> {
+    queue.remove_job(&app, &id);
     Ok(())
 }

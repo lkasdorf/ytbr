@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Queue persistence across app restarts. The job queue (incl. completed,
+  failed, and cancelled history) is now stored as a single JSON file at
+  `<app_config_dir>/queue.json` and rehydrated on every boot. Writes are
+  atomic (tmp+rename under a process-wide lock) so a crash mid-write
+  can't corrupt the file. Jobs that were `queued`, `downloading`, or
+  `paused` at the time the app closed are flipped to `cancelled` on
+  hydration with the message "App was closed before this job finished"
+  — the underlying OS process is gone, no way to resume. Logs are
+  intentionally not persisted (session-local; can be MBs per failure).
+  No setting to disable: deleting `queue.json` is the opt-out path.
+- New `remove_job` Tauri command + `removeJob(id)` frontend wrapper.
+  The "Auto-clear successful downloads" feature now calls both the
+  backend remove and the frontend store remove, so auto-cleared jobs
+  don't reappear after a restart.
 - "Auto-clear successful downloads" Settings toggle with a 1–60 second
   delay slider. When on, completed jobs disappear from the queue view
   after the chosen delay so the list doesn't accumulate during long
