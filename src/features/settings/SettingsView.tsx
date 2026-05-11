@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { OutputDirPicker } from "./OutputDirPicker";
 import {
+  pickCookiesFile,
   updateYtdlp,
   ytdlpVersion,
   type UpdateOutcome,
@@ -109,6 +110,7 @@ const SPONSORBLOCK_CATEGORY_LABELS: Record<SponsorblockCategory, string> = {
 export function SettingsView() {
   const parallelLimit = useSettingsStore((s) => s.parallelLimit);
   const cookiesFromBrowser = useSettingsStore((s) => s.cookiesFromBrowser);
+  const cookiesFile = useSettingsStore((s) => s.cookiesFile);
   const ffmpegPath = useSettingsStore((s) => s.ffmpegPath);
   const outputTemplate = useSettingsStore((s) => s.outputTemplate);
   const defaultPreset = useSettingsStore((s) => s.defaultPreset);
@@ -146,6 +148,7 @@ export function SettingsView() {
   const setCookiesFromBrowser = useSettingsStore(
     (s) => s.setCookiesFromBrowser,
   );
+  const setCookiesFile = useSettingsStore((s) => s.setCookiesFile);
   const setFfmpegPath = useSettingsStore((s) => s.setFfmpegPath);
   const setOutputTemplate = useSettingsStore((s) => s.setOutputTemplate);
   const setDefaultPreset = useSettingsStore((s) => s.setDefaultPreset);
@@ -461,36 +464,96 @@ export function SettingsView() {
 
       <Section
         icon={Cookie}
-        title="Cookies from browser"
-        desc="Read cookies from a local browser profile so age-gated or member-only videos can be probed and downloaded. Off by default."
+        title="Cookies"
+        desc="Read cookies so age-gated or member-only videos can be probed and downloaded. Two sources: a local browser profile, or a Netscape-format cookies.txt file. Mutually exclusive — picking one clears the other. Off by default."
       >
-        <div className="flex items-center gap-2">
-          <select
-            value={cookiesFromBrowser ?? ""}
-            onChange={(e) =>
-              setCookiesFromBrowser(
-                e.target.value === ""
-                  ? null
-                  : (e.target.value as (typeof COOKIE_BROWSERS)[number]),
-              )
-            }
-            className={cn(
-              "flex-1 rounded-md border border-border bg-input px-3 py-1.5 text-sm",
-              "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
-              // Native option list inherits from <option>, not from <select>'s
-              // Tailwind classes — and `bg-input` is alpha-transparent in dark
-              // mode, which makes the OS-rendered popup white-on-white.
-              "[&>option]:bg-card [&>option]:text-foreground",
-            )}
-            aria-label="Cookies from browser"
-          >
-            <option value="">Off — no cookies</option>
-            {COOKIE_BROWSERS.map((b) => (
-              <option key={b} value={b}>
-                {capitalize(b)}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="cookies-from-browser"
+              className="text-xs font-medium text-card-foreground"
+            >
+              From browser
+            </label>
+            <select
+              id="cookies-from-browser"
+              value={cookiesFromBrowser ?? ""}
+              onChange={(e) =>
+                setCookiesFromBrowser(
+                  e.target.value === ""
+                    ? null
+                    : (e.target.value as (typeof COOKIE_BROWSERS)[number]),
+                )
+              }
+              disabled={cookiesFile != null}
+              className={cn(
+                "rounded-md border border-border bg-input px-3 py-1.5 text-sm",
+                "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                // Native option list inherits from <option>, not from
+                // <select>'s Tailwind classes — and `bg-input` is
+                // alpha-transparent in dark mode, which makes the
+                // OS-rendered popup white-on-white.
+                "[&>option]:bg-card [&>option]:text-foreground",
+              )}
+              aria-label="Cookies from browser"
+            >
+              <option value="">Off</option>
+              {COOKIE_BROWSERS.map((b) => (
+                <option key={b} value={b}>
+                  {capitalize(b)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="cookies-file"
+              className="text-xs font-medium text-card-foreground"
+            >
+              Or from file
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="cookies-file"
+                type="text"
+                value={cookiesFile ?? ""}
+                readOnly
+                placeholder="No file selected"
+                disabled={cookiesFromBrowser != null}
+                className={cn(
+                  "flex-1 rounded-md border border-border bg-input px-3 py-1.5 font-mono text-xs",
+                  "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                )}
+                aria-label="Cookies file path"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  const picked = await pickCookiesFile();
+                  if (picked) setCookiesFile(picked);
+                }}
+                disabled={cookiesFromBrowser != null}
+                className={cn(
+                  "shrink-0 rounded-md border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground",
+                  "hover:bg-secondary/80",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                )}
+              >
+                Browse…
+              </button>
+              <ResetButton
+                disabled={cookiesFile == null}
+                onClick={() => setCookiesFile(null)}
+                title="Clear cookies file"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pick a Netscape-format <code>cookies.txt</code> (most browser
+              extensions can export this). yt-dlp <code>--cookies</code>.
+            </p>
+          </div>
         </div>
       </Section>
 

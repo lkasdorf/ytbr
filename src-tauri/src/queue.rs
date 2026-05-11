@@ -47,6 +47,11 @@ pub struct JobSpec {
     /// `None` means no cookies are read.
     #[serde(default)]
     pub cookies_from_browser: Option<String>,
+    /// yt-dlp `--cookies` file path. Mutually exclusive with
+    /// `cookies_from_browser`; the runner picks file first if both
+    /// happen to be set (UI enforces single-source already).
+    #[serde(default)]
+    pub cookies_file: Option<String>,
     /// User-supplied path that overrides the bundled ffmpeg sidecar.
     /// `None` falls back to `ffmpeg_sidecar_path()` in the runner.
     #[serde(default)]

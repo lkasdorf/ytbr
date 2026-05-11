@@ -151,6 +151,7 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
       outputDir,
       outputTemplate: settings.outputTemplate,
       cookiesFromBrowser: settings.cookiesFromBrowser,
+      cookiesFile: settings.cookiesFile,
       ffmpegLocation: settings.ffmpegPath,
       writeSubs: settings.writeSubs,
       subLangs: settings.subLangs,

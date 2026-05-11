@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Cookie file source alongside cookies-from-browser. Settings now
+  shows a "Cookies" section with two mutually exclusive sub-controls:
+  the existing browser dropdown and a new file picker for a
+  Netscape-format `cookies.txt` (yt-dlp `--cookies`). Useful for
+  servers, environments without a local browser profile, or any
+  case where the browser-extraction path doesn't apply (e.g.
+  Brave-Private). Picking one source clears the other on the store
+  side; the runner prefers the file when both happen to be set in
+  a stale spec.
 - "Retry" button on each failed or cancelled JobCard. Clicking it
   re-queues the job with the same `JobSpec` (same URL, format
   selector, output dir, sub flags, …) and the new row appears in the

@@ -67,7 +67,19 @@ pub async fn run(
         args.push(path);
     }
 
-    if let Some(browser) = spec
+    // Cookie sources are mutually exclusive in yt-dlp. Prefer the
+    // explicit file path when both happen to be set — the UI enforces
+    // single-source via the settings store setters, but a stale spec
+    // serialized from an older version could still carry both.
+    let cookies_file = spec
+        .cookies_file
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    if let Some(path) = cookies_file {
+        args.push("--cookies".into());
+        args.push(path.to_string());
+    } else if let Some(browser) = spec
         .cookies_from_browser
         .as_deref()
         .map(str::trim)

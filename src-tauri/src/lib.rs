@@ -50,6 +50,7 @@ pub fn run() {
             commands::download::clear_completed_jobs,
             commands::download::remove_job,
             commands::settings::pick_output_dir,
+            commands::settings::pick_cookies_file,
             commands::settings::set_parallel_limit,
             commands::updater::update_ytdlp,
             commands::updater::check_app_update,

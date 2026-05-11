@@ -20,6 +20,23 @@ pub async fn pick_output_dir(app: tauri::AppHandle) -> Option<String> {
         .map(|p| p.to_string_lossy().into_owned())
 }
 
+#[tauri::command]
+pub async fn pick_cookies_file(app: tauri::AppHandle) -> Option<String> {
+    let (tx, rx) = oneshot::channel();
+    app.dialog()
+        .file()
+        .add_filter("Netscape cookies", &["txt"])
+        .add_filter("All files", &["*"])
+        .pick_file(move |path| {
+            let _ = tx.send(path);
+        });
+    rx.await
+        .ok()
+        .flatten()
+        .and_then(|p| p.into_path().ok())
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
 /// Update the parallel-download limit at runtime. Returns the limit
 /// after clamping (1..=MAX_PARALLEL_LIMIT). The frontend pushes its
 /// persisted value on mount and on every change.

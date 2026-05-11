@@ -45,6 +45,10 @@ export interface JobSpec {
   outputTemplate?: string;
   /// yt-dlp `--cookies-from-browser` value, or `null` for no cookies.
   cookiesFromBrowser?: string | null;
+  /// yt-dlp `--cookies` file path. Mutually exclusive with
+  /// `cookiesFromBrowser`; the runner picks file first if both are set
+  /// (the store enforces single-source on the frontend already).
+  cookiesFile?: string | null;
   /// Path that overrides the bundled ffmpeg sidecar. `null` uses the bundle.
   ffmpegLocation?: string | null;
   /// Per-format yt-dlp toggles. All default to `false` server-side.
@@ -188,6 +192,10 @@ export function removeJob(id: string): Promise<void> {
 
 export function pickOutputDir(): Promise<string | null> {
   return invoke<string | null>("pick_output_dir");
+}
+
+export function pickCookiesFile(): Promise<string | null> {
+  return invoke<string | null>("pick_cookies_file");
 }
 
 // Push the parallel-download limit to the Rust queue. Returns the

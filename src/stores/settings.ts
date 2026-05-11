@@ -96,6 +96,10 @@ interface SettingsStore {
   outputDir: string | null;
   parallelLimit: number;
   cookiesFromBrowser: CookieBrowser | null;
+  /// Absolute path to a Netscape-format cookies.txt file. Mutually
+  /// exclusive with `cookiesFromBrowser` — yt-dlp rejects both flags
+  /// at once. Setting one via its setter clears the other.
+  cookiesFile: string | null;
   ffmpegPath: string | null;
   outputTemplate: string;
   defaultPreset: PresetId | null;
@@ -157,6 +161,7 @@ interface SettingsStore {
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
   setCookiesFromBrowser: (browser: CookieBrowser | null) => void;
+  setCookiesFile: (path: string | null) => void;
   setFfmpegPath: (path: string | null) => void;
   setOutputTemplate: (template: string) => void;
   setDefaultPreset: (id: PresetId | null) => void;
@@ -222,6 +227,7 @@ export const useSettingsStore = create<SettingsStore>()(
       outputDir: null,
       parallelLimit: DEFAULT_PARALLEL_LIMIT,
       cookiesFromBrowser: null,
+      cookiesFile: null,
       ffmpegPath: null,
       outputTemplate: DEFAULT_OUTPUT_TEMPLATE,
       defaultPreset: null,
@@ -253,7 +259,23 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
-      setCookiesFromBrowser: (browser) => set({ cookiesFromBrowser: browser }),
+      // Setting one cookie source clears the other — yt-dlp rejects
+      // --cookies-from-browser + --cookies together, and a UI state
+      // that shows both filled in is misleading.
+      setCookiesFromBrowser: (browser) =>
+        set(
+          browser == null
+            ? { cookiesFromBrowser: null }
+            : { cookiesFromBrowser: browser, cookiesFile: null },
+        ),
+      setCookiesFile: (path) => {
+        const trimmed = path && path.trim() !== "" ? path : null;
+        set(
+          trimmed == null
+            ? { cookiesFile: null }
+            : { cookiesFile: trimmed, cookiesFromBrowser: null },
+        );
+      },
       setFfmpegPath: (path) => set({ ffmpegPath: path && path.trim() !== "" ? path : null }),
       setOutputTemplate: (template) =>
         set({
