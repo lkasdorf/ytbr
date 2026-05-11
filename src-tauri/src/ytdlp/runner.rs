@@ -79,6 +79,21 @@ pub async fn run(
 
     if spec.write_subs {
         args.push("--write-subs".into());
+        if spec.write_auto_subs {
+            args.push("--write-auto-subs".into());
+        }
+        if spec.embed_subs {
+            args.push("--embed-subs".into());
+        }
+        if let Some(langs) = spec
+            .sub_langs
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            args.push("--sub-langs".into());
+            args.push(langs.to_string());
+        }
     }
     if spec.embed_thumbnail {
         args.push("--embed-thumbnail".into());

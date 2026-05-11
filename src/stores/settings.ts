@@ -72,6 +72,10 @@ export const SPONSORBLOCK_CATEGORIES: readonly SponsorblockCategory[] = [
 export type SponsorblockMode = "off" | "mark" | "remove";
 
 export const DEFAULT_OUTPUT_TEMPLATE = "%(title)s.%(ext)s";
+// yt-dlp accepts a comma-separated list of BCP-47 ISO codes, "all", or a
+// wildcard like "en.*". We default to English only — most users want
+// captions in one language and pulling every available track wastes disk.
+export const DEFAULT_SUB_LANGS = "en";
 export const DEFAULT_PARALLEL_LIMIT = 2;
 export const MIN_PARALLEL_LIMIT = 1;
 export const MAX_PARALLEL_LIMIT = 8;
@@ -89,6 +93,12 @@ interface SettingsStore {
   // Per-format options (yt-dlp flags). Defaults all off — opt-in is
   // safer for first-time downloads.
   writeSubs: boolean;
+  /// Comma-separated yt-dlp `--sub-langs` value. Only consulted when
+  /// `writeSubs` is on. Empty string falls back to yt-dlp's default
+  /// (which is "all" — way too broad — so we always send something).
+  subLangs: string;
+  writeAutoSubs: boolean;
+  embedSubs: boolean;
   embedThumbnail: boolean;
   embedMetadata: boolean;
   useDownloadArchive: boolean;
@@ -107,6 +117,9 @@ interface SettingsStore {
   setOutputTemplate: (template: string) => void;
   setDefaultPreset: (id: PresetId | null) => void;
   setWriteSubs: (v: boolean) => void;
+  setSubLangs: (v: string) => void;
+  setWriteAutoSubs: (v: boolean) => void;
+  setEmbedSubs: (v: boolean) => void;
   setEmbedThumbnail: (v: boolean) => void;
   setEmbedMetadata: (v: boolean) => void;
   setUseDownloadArchive: (v: boolean) => void;
@@ -145,6 +158,9 @@ export const useSettingsStore = create<SettingsStore>()(
       outputTemplate: DEFAULT_OUTPUT_TEMPLATE,
       defaultPreset: null,
       writeSubs: false,
+      subLangs: DEFAULT_SUB_LANGS,
+      writeAutoSubs: false,
+      embedSubs: false,
       embedThumbnail: false,
       embedMetadata: false,
       useDownloadArchive: false,
@@ -167,6 +183,10 @@ export const useSettingsStore = create<SettingsStore>()(
         }),
       setDefaultPreset: (id) => set({ defaultPreset: id }),
       setWriteSubs: (v) => set({ writeSubs: v }),
+      setSubLangs: (v) =>
+        set({ subLangs: v.trim() === "" ? DEFAULT_SUB_LANGS : v }),
+      setWriteAutoSubs: (v) => set({ writeAutoSubs: v }),
+      setEmbedSubs: (v) => set({ embedSubs: v }),
       setEmbedThumbnail: (v) => set({ embedThumbnail: v }),
       setEmbedMetadata: (v) => set({ embedMetadata: v }),
       setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),

@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cut out via `--sponsorblock-remove` (uses the bundled ffmpeg). An
   inline alert warns when the mode is on but no categories are picked,
   to avoid the silently-skipped state.
+- Subtitle options expanded. When "Write subtitles" is on, three new
+  controls fold out beneath it: a free-form `--sub-langs` input
+  (default `en`, accepts comma lists like `en,de,fr` or wildcards like
+  `en.*` / `all`), a "Include auto-generated captions" toggle
+  (`--write-auto-subs`), and an "Embed into video container" toggle
+  (`--embed-subs`). Subtitle settings still default to off; the new
+  defaults only activate after the parent toggle is enabled.
 
 ## [0.5.3] - 2026-05-11
 

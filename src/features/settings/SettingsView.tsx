@@ -107,6 +107,9 @@ export function SettingsView() {
   const outputTemplate = useSettingsStore((s) => s.outputTemplate);
   const defaultPreset = useSettingsStore((s) => s.defaultPreset);
   const writeSubs = useSettingsStore((s) => s.writeSubs);
+  const subLangs = useSettingsStore((s) => s.subLangs);
+  const writeAutoSubs = useSettingsStore((s) => s.writeAutoSubs);
+  const embedSubs = useSettingsStore((s) => s.embedSubs);
   const embedThumbnail = useSettingsStore((s) => s.embedThumbnail);
   const embedMetadata = useSettingsStore((s) => s.embedMetadata);
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
@@ -128,6 +131,9 @@ export function SettingsView() {
   const setOutputTemplate = useSettingsStore((s) => s.setOutputTemplate);
   const setDefaultPreset = useSettingsStore((s) => s.setDefaultPreset);
   const setWriteSubs = useSettingsStore((s) => s.setWriteSubs);
+  const setSubLangs = useSettingsStore((s) => s.setSubLangs);
+  const setWriteAutoSubs = useSettingsStore((s) => s.setWriteAutoSubs);
+  const setEmbedSubs = useSettingsStore((s) => s.setEmbedSubs);
   const setEmbedThumbnail = useSettingsStore((s) => s.setEmbedThumbnail);
   const setEmbedMetadata = useSettingsStore((s) => s.setEmbedMetadata);
   const setUseDownloadArchive = useSettingsStore(
@@ -396,6 +402,47 @@ export function SettingsView() {
             checked={writeSubs}
             onChange={setWriteSubs}
           />
+          {writeSubs && (
+            <div className="ml-7 flex flex-col gap-3 rounded-md border border-border bg-input/40 p-3">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="sub-langs"
+                  className="text-xs font-medium text-card-foreground"
+                >
+                  Languages
+                </label>
+                <input
+                  id="sub-langs"
+                  type="text"
+                  value={subLangs}
+                  onChange={(e) => setSubLangs(e.target.value)}
+                  spellCheck={false}
+                  className="rounded-md border border-border bg-input px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  aria-describedby="sub-langs-hint"
+                />
+                <p
+                  id="sub-langs-hint"
+                  className="text-xs text-muted-foreground"
+                >
+                  Comma-separated yt-dlp <code>--sub-langs</code> value. e.g.{" "}
+                  <code>en</code>, <code>en,de,fr</code>, <code>en.*</code>, or{" "}
+                  <code>all</code>.
+                </p>
+              </div>
+              <ToggleRow
+                label="Include auto-generated captions"
+                desc="Falls back to auto-captions when manual subtitles aren't available for a requested language. yt-dlp `--write-auto-subs`."
+                checked={writeAutoSubs}
+                onChange={setWriteAutoSubs}
+              />
+              <ToggleRow
+                label="Embed into video container"
+                desc="Also bakes subtitles into the video file (mp4 / mkv / webm). The sidecar `.vtt` / `.srt` still gets written. yt-dlp `--embed-subs`."
+                checked={embedSubs}
+                onChange={setEmbedSubs}
+              />
+            </div>
+          )}
           <ToggleRow
             label="Embed thumbnail"
             desc="Bakes the cover art into the file (mp4, m4a, mkv supported). yt-dlp `--embed-thumbnail`."

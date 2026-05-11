@@ -49,6 +49,13 @@ export interface JobSpec {
   ffmpegLocation?: string | null;
   /// Per-format yt-dlp toggles. All default to `false` server-side.
   writeSubs?: boolean;
+  /// yt-dlp `--sub-langs`. Only consulted when `writeSubs` is on.
+  /// Frontend sends a non-empty string ("en" by default); empty / null
+  /// makes the runner skip the flag entirely (so yt-dlp's default kicks
+  /// in, which is currently "all" — usually not what users want).
+  subLangs?: string | null;
+  writeAutoSubs?: boolean;
+  embedSubs?: boolean;
   embedThumbnail?: boolean;
   embedMetadata?: boolean;
   /// Enables `--download-archive` against the app config dir's archive.txt.

@@ -56,6 +56,19 @@ pub struct JobSpec {
     /// off so a v0.1.0 install picks no behavior change up.
     #[serde(default)]
     pub write_subs: bool,
+    /// yt-dlp `--sub-langs`. `None` or empty makes the runner skip the
+    /// flag entirely (yt-dlp falls back to "all", which is rarely what
+    /// the user wants — the frontend sends "en" by default).
+    #[serde(default)]
+    pub sub_langs: Option<String>,
+    /// yt-dlp `--write-auto-subs`. Only meaningful with `write_subs`;
+    /// the runner gates emission on both flags being on.
+    #[serde(default)]
+    pub write_auto_subs: bool,
+    /// yt-dlp `--embed-subs`. Bakes subtitles into the container
+    /// alongside the sidecar file. Only meaningful with `write_subs`.
+    #[serde(default)]
+    pub embed_subs: bool,
     #[serde(default)]
     pub embed_thumbnail: bool,
     #[serde(default)]
