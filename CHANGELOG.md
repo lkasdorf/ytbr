@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-11
+
+Settings-feature minor release. Three new yt-dlp flags get user-facing
+controls in Settings: SponsorBlock (mark/remove sponsor-style
+segments), expanded subtitle handling (language picker + auto-caption
+fallback + embed-into-container), and a filename-restriction toggle
+for ASCII-safe saves on SMB / FAT32 shares. All three default to off,
+so v0.5.x installs see no behavior change until the toggles are
+flipped.
+
+This is also the first release whose signed-updater path runs end-to-end
+since v0.5.3 — clients still on v0.5.0–v0.5.3 should now receive the
+signed `latest.json` and verify the update against the pubkey bundled
+in their installed app.
+
 ### Added
 
 - SponsorBlock integration. New Settings section with a 3-way mode chip
