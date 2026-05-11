@@ -88,6 +88,9 @@ export const MAX_CONCURRENT_FRAGMENTS = 8;
 export const DEFAULT_RETRIES = 10;
 export const MIN_RETRIES = 0;
 export const MAX_RETRIES = 20;
+export const DEFAULT_AUTO_CLEAR_AFTER_SECONDS = 10;
+export const MIN_AUTO_CLEAR_AFTER_SECONDS = 1;
+export const MAX_AUTO_CLEAR_AFTER_SECONDS = 60;
 
 interface SettingsStore {
   outputDir: string | null;
@@ -134,6 +137,11 @@ interface SettingsStore {
   notifyOnFailure: boolean;
   notifyOnCancel: boolean;
   watchClipboard: boolean;
+  /// When on, successfully completed jobs auto-disappear from the queue
+  /// view after `autoClearSuccessAfterSeconds`. Failed/cancelled jobs
+  /// are intentionally not auto-cleared so the user can review them.
+  autoClearSuccess: boolean;
+  autoClearSuccessAfterSeconds: number;
   concurrentFragments: number;
   /// yt-dlp `--retries`. Whole-download retries on HTTP / connection
   /// errors. The runner skips the flag when this equals
@@ -169,6 +177,8 @@ interface SettingsStore {
   setNotifyOnFailure: (v: boolean) => void;
   setNotifyOnCancel: (v: boolean) => void;
   setWatchClipboard: (v: boolean) => void;
+  setAutoClearSuccess: (v: boolean) => void;
+  setAutoClearSuccessAfterSeconds: (n: number) => void;
   setConcurrentFragments: (n: number) => void;
   setRetries: (n: number) => void;
   setFragmentRetries: (n: number) => void;
@@ -193,6 +203,14 @@ function clampConcurrentFragments(n: number): number {
 function clampRetries(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_RETRIES;
   return Math.max(MIN_RETRIES, Math.min(MAX_RETRIES, Math.floor(n)));
+}
+
+function clampAutoClearSeconds(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_AUTO_CLEAR_AFTER_SECONDS;
+  return Math.max(
+    MIN_AUTO_CLEAR_AFTER_SECONDS,
+    Math.min(MAX_AUTO_CLEAR_AFTER_SECONDS, Math.floor(n)),
+  );
 }
 
 // Persisted in localStorage via zustand-persist. Existing keys survive new
@@ -224,6 +242,8 @@ export const useSettingsStore = create<SettingsStore>()(
       notifyOnFailure: true,
       notifyOnCancel: false,
       watchClipboard: true,
+      autoClearSuccess: false,
+      autoClearSuccessAfterSeconds: DEFAULT_AUTO_CLEAR_AFTER_SECONDS,
       concurrentFragments: DEFAULT_CONCURRENT_FRAGMENTS,
       retries: DEFAULT_RETRIES,
       fragmentRetries: DEFAULT_RETRIES,
@@ -259,6 +279,9 @@ export const useSettingsStore = create<SettingsStore>()(
       setNotifyOnFailure: (v) => set({ notifyOnFailure: v }),
       setNotifyOnCancel: (v) => set({ notifyOnCancel: v }),
       setWatchClipboard: (v) => set({ watchClipboard: v }),
+      setAutoClearSuccess: (v) => set({ autoClearSuccess: v }),
+      setAutoClearSuccessAfterSeconds: (n) =>
+        set({ autoClearSuccessAfterSeconds: clampAutoClearSeconds(n) }),
       setConcurrentFragments: (n) =>
         set({ concurrentFragments: clampConcurrentFragments(n) }),
       setRetries: (n) => set({ retries: clampRetries(n) }),

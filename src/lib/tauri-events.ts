@@ -56,6 +56,21 @@ export async function startJobListeners(): Promise<void> {
         if (shouldNotify) {
           void notifyJobFinished(status, url);
         }
+
+        // Schedule auto-clear of a successful download. Failed and
+        // cancelled stay around so the user can review the error or
+        // retry the URL. The setTimeout is captured in module scope —
+        // a subsequent manual "Clear completed" will simply remove a
+        // job that's already gone, which the store handles as a no-op.
+        if (
+          status === "completed" &&
+          s.autoClearSuccess &&
+          s.autoClearSuccessAfterSeconds > 0
+        ) {
+          setTimeout(() => {
+            useJobsStore.getState().remove(id);
+          }, s.autoClearSuccessAfterSeconds * 1000);
+        }
       }
     }),
   );

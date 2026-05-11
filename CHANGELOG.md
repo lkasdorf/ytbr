@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- "Auto-clear successful downloads" Settings toggle with a 1–60 second
+  delay slider. When on, completed jobs disappear from the queue view
+  after the chosen delay so the list doesn't accumulate during long
+  sessions. Failed and cancelled jobs intentionally stay — they need
+  review. The pre-existing "Clear completed" button in the queue
+  header still works manually for the cases this auto-flow leaves
+  behind.
+
 ### Changed
 
 - Notification opt-in split into three independent toggles: "Notify on

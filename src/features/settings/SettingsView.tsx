@@ -32,9 +32,11 @@ import {
   DEFAULT_OUTPUT_TEMPLATE,
   DEFAULT_PARALLEL_LIMIT,
   DEFAULT_RETRIES,
+  MAX_AUTO_CLEAR_AFTER_SECONDS,
   MAX_CONCURRENT_FRAGMENTS,
   MAX_PARALLEL_LIMIT,
   MAX_RETRIES,
+  MIN_AUTO_CLEAR_AFTER_SECONDS,
   MIN_CONCURRENT_FRAGMENTS,
   MIN_PARALLEL_LIMIT,
   MIN_RETRIES,
@@ -127,6 +129,10 @@ export function SettingsView() {
   const notifyOnFailure = useSettingsStore((s) => s.notifyOnFailure);
   const notifyOnCancel = useSettingsStore((s) => s.notifyOnCancel);
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
+  const autoClearSuccess = useSettingsStore((s) => s.autoClearSuccess);
+  const autoClearSuccessAfterSeconds = useSettingsStore(
+    (s) => s.autoClearSuccessAfterSeconds,
+  );
   const concurrentFragments = useSettingsStore((s) => s.concurrentFragments);
   const retries = useSettingsStore((s) => s.retries);
   const fragmentRetries = useSettingsStore((s) => s.fragmentRetries);
@@ -164,6 +170,10 @@ export function SettingsView() {
   const setNotifyOnFailure = useSettingsStore((s) => s.setNotifyOnFailure);
   const setNotifyOnCancel = useSettingsStore((s) => s.setNotifyOnCancel);
   const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
+  const setAutoClearSuccess = useSettingsStore((s) => s.setAutoClearSuccess);
+  const setAutoClearSuccessAfterSeconds = useSettingsStore(
+    (s) => s.setAutoClearSuccessAfterSeconds,
+  );
   const setConcurrentFragments = useSettingsStore((s) => s.setConcurrentFragments);
   const setRetries = useSettingsStore((s) => s.setRetries);
   const setFragmentRetries = useSettingsStore((s) => s.setFragmentRetries);
@@ -236,6 +246,46 @@ export function SettingsView() {
             checked={watchClipboard}
             onChange={setWatchClipboard}
           />
+          <ToggleRow
+            label="Auto-clear successful downloads"
+            desc="Hide completed jobs from the queue view after the delay below. Only applies to clean successes — failed and cancelled jobs stay around so you can review them. Use the Clear completed button in the Queue header to flush those manually."
+            checked={autoClearSuccess}
+            onChange={setAutoClearSuccess}
+          />
+          {autoClearSuccess && (
+            <div className="ml-7 flex flex-col gap-1.5 rounded-md border border-border bg-input/40 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="auto-clear-after"
+                  className="text-xs font-medium text-card-foreground"
+                >
+                  Clear after
+                </label>
+                <span className="font-mono text-sm tabular-nums">
+                  {autoClearSuccessAfterSeconds}s
+                </span>
+              </div>
+              <input
+                id="auto-clear-after"
+                type="range"
+                min={MIN_AUTO_CLEAR_AFTER_SECONDS}
+                max={MAX_AUTO_CLEAR_AFTER_SECONDS}
+                step={1}
+                value={autoClearSuccessAfterSeconds}
+                onChange={(e) =>
+                  setAutoClearSuccessAfterSeconds(Number(e.target.value))
+                }
+                className="w-full accent-primary"
+                aria-label="Auto-clear delay"
+              />
+              <p className="text-xs text-muted-foreground">
+                Range {MIN_AUTO_CLEAR_AFTER_SECONDS}–
+                {MAX_AUTO_CLEAR_AFTER_SECONDS}s. Long enough to glance at
+                the finished line; short enough that the queue doesn't
+                accumulate.
+              </p>
+            </div>
+          )}
         </div>
       </Section>
 
