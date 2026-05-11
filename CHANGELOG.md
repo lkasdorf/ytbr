@@ -7,13 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-05-11
+
+Signed-updater activation release. The signing keypair scaffolded in
+v0.5.0 is now live — the GitHub release workflow signs the bundles
+with the maintainer's private key (held as a GitHub Actions secret),
+and `tauri-action` uploads a verified `latest.json` alongside the
+installers. From this release on, the in-app "Download & install"
+button in the About dialog verifies signatures end-to-end instead
+of falling through to the GitHub-API release-page link.
+
 ### Security
 
 - Tauri updater public key injected into `tauri.conf.json` (replaces the
   `REPLACE_BEFORE_NEXT_RELEASE` placeholder shipped since v0.5.0). The
   matching private key + (empty) password live as GitHub Actions secrets
   `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, so
-  the next tag push produces a signed `latest.json` and the in-app
+  this tag push produces a signed `latest.json` and the in-app
   "Download & install" button starts verifying signatures instead of
   falling through to the GitHub-API release-page link.
 
