@@ -38,6 +38,7 @@ import { SettingsView } from "@/features/settings/SettingsView";
 import { QueueView } from "@/features/queue/QueueView";
 import { BatchView } from "@/features/batch/BatchView";
 import { HistoryView } from "@/features/history/HistoryView";
+import { UpdateBanner } from "@/features/update-banner/UpdateBanner";
 
 type Route = "download" | "batch" | "queue" | "history" | "settings";
 
@@ -169,6 +170,7 @@ function App() {
       </aside>
 
       <main className="flex flex-1 flex-col overflow-hidden">
+        <UpdateBanner />
         <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-6">
           <h1 className="text-base font-medium capitalize">{route}</h1>
           <RouteHeaderInfo

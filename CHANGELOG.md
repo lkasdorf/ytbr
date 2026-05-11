@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Startup auto-update check. The app pings the signed-updater
+  endpoint (with a GitHub-API fallback) ~3 seconds after launch and
+  surfaces a dismissible banner across the top of the main pane when
+  a newer version is available. Banner offers "Download & install"
+  on signed builds and "View release" on the unsigned fallback path.
+  Dismissal sticks for the session via `sessionStorage` so a user
+  who needs to focus on a download isn't repeatedly nagged, but the
+  banner reappears on the next launch so a new release isn't
+  silently buried.
+- README rewritten for v1.0: real feature list, real release links,
+  per-platform install instructions including RPM, build-from-source
+  prerequisites, and a section pointing at the release page for
+  screenshots so the README isn't stuck with a `_Coming soon._`
+  placeholder.
 - New History tab with terminal-state jobs (completed / failed /
   cancelled). Search by URL or format id/label, filter by status with
   count chips, sort newest / oldest, and a "Clear history" button with
