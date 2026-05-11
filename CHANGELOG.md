@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- "Retries on error" Settings section with two sliders (range 0–20)
+  controlling yt-dlp `--retries` (whole-download retry count) and
+  `--fragment-retries` (per-segment retries for HLS / DASH sources).
+  Both default to 10, matching yt-dlp's own default; the runner skips
+  emitting the flag at the default so unchanged settings keep the
+  command line clean in the log. Drop to 0 for fail-fast behavior.
 - "Write thumbnail sidecar" and "Write info JSON" toggles in Download
   options. yt-dlp `--write-thumbnail` saves the cover art as a separate
   `.jpg`/`.webp` (independent of Embed thumbnail); `--write-info-json`

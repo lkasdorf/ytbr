@@ -31,10 +31,13 @@ import {
   DEFAULT_CONCURRENT_FRAGMENTS,
   DEFAULT_OUTPUT_TEMPLATE,
   DEFAULT_PARALLEL_LIMIT,
+  DEFAULT_RETRIES,
   MAX_CONCURRENT_FRAGMENTS,
   MAX_PARALLEL_LIMIT,
+  MAX_RETRIES,
   MIN_CONCURRENT_FRAGMENTS,
   MIN_PARALLEL_LIMIT,
+  MIN_RETRIES,
   SPONSORBLOCK_CATEGORIES,
   type AudioFormat,
   type PresetId,
@@ -123,6 +126,8 @@ export function SettingsView() {
   const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
   const concurrentFragments = useSettingsStore((s) => s.concurrentFragments);
+  const retries = useSettingsStore((s) => s.retries);
+  const fragmentRetries = useSettingsStore((s) => s.fragmentRetries);
   const audioFormat = useSettingsStore((s) => s.audioFormat);
   const sponsorblockMode = useSettingsStore((s) => s.sponsorblockMode);
   const sponsorblockCategories = useSettingsStore(
@@ -156,6 +161,8 @@ export function SettingsView() {
   const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
   const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
   const setConcurrentFragments = useSettingsStore((s) => s.setConcurrentFragments);
+  const setRetries = useSettingsStore((s) => s.setRetries);
+  const setFragmentRetries = useSettingsStore((s) => s.setFragmentRetries);
   const setAudioFormat = useSettingsStore((s) => s.setAudioFormat);
   const setSponsorblockMode = useSettingsStore((s) => s.setSponsorblockMode);
   const setSponsorblockCategories = useSettingsStore(
@@ -258,6 +265,73 @@ export function SettingsView() {
           className="w-full accent-primary"
           aria-label="Concurrent fragments"
         />
+      </Section>
+
+      <Section
+        icon={RotateCcw}
+        title="Retries on error"
+        desc={`How aggressively yt-dlp keeps trying when a request or fragment fails. yt-dlp's own default is ${DEFAULT_RETRIES}; drop to 0 for fail-fast. Both default ${DEFAULT_RETRIES}, max ${MAX_RETRIES}.`}
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-3">
+              <label
+                htmlFor="retries"
+                className="text-xs font-medium text-card-foreground"
+              >
+                Whole-download retries
+              </label>
+              <span className="font-mono text-sm tabular-nums">
+                {retries}
+              </span>
+            </div>
+            <input
+              id="retries"
+              type="range"
+              min={MIN_RETRIES}
+              max={MAX_RETRIES}
+              step={1}
+              value={retries}
+              onChange={(e) => setRetries(Number(e.target.value))}
+              className="w-full accent-primary"
+              aria-label="Whole-download retries"
+            />
+            <p className="text-xs text-muted-foreground">
+              yt-dlp <code>--retries</code>. Applies to top-level HTTP /
+              connection failures.
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-3">
+              <label
+                htmlFor="fragment-retries"
+                className="text-xs font-medium text-card-foreground"
+              >
+                Fragment retries
+              </label>
+              <span className="font-mono text-sm tabular-nums">
+                {fragmentRetries}
+              </span>
+            </div>
+            <input
+              id="fragment-retries"
+              type="range"
+              min={MIN_RETRIES}
+              max={MAX_RETRIES}
+              step={1}
+              value={fragmentRetries}
+              onChange={(e) =>
+                setFragmentRetries(Number(e.target.value))
+              }
+              className="w-full accent-primary"
+              aria-label="Fragment retries"
+            />
+            <p className="text-xs text-muted-foreground">
+              yt-dlp <code>--fragment-retries</code>. Per-segment retries
+              for HLS / DASH sources.
+            </p>
+          </div>
+        </div>
       </Section>
 
       <Section

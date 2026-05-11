@@ -143,6 +143,20 @@ pub async fn run(
             args.push(n.to_string());
         }
     }
+    // Same skip-at-default rule for retries: yt-dlp's default is 10 for
+    // both, so when the slider sits at 10 we don't emit anything.
+    if let Some(n) = spec.retries {
+        if n != 10 {
+            args.push("--retries".into());
+            args.push(n.to_string());
+        }
+    }
+    if let Some(n) = spec.fragment_retries {
+        if n != 10 {
+            args.push("--fragment-retries".into());
+            args.push(n.to_string());
+        }
+    }
     // "default" carries no recode intent — only emit the flags when an
     // explicit codec is requested. The frontend takes care of only
     // sending this for audio-only downloads (see App.tsx).

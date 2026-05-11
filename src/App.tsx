@@ -287,6 +287,8 @@ function DownloadView({
       rateLimit: settings.rateLimit,
       proxy: settings.proxy,
       concurrentFragments: settings.concurrentFragments,
+      retries: settings.retries,
+      fragmentRetries: settings.fragmentRetries,
       audioFormat,
       sponsorblockMode: settings.sponsorblockMode,
       sponsorblockCategories: settings.sponsorblockCategories,

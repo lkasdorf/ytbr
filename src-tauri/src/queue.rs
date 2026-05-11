@@ -100,6 +100,14 @@ pub struct JobSpec {
     /// by the frontend slider.
     #[serde(default)]
     pub concurrent_fragments: Option<u8>,
+    /// yt-dlp `--retries N`. `None` or `Some(10)` (yt-dlp default)
+    /// makes the runner skip the flag so the command line stays clean
+    /// when the user hasn't moved the slider.
+    #[serde(default)]
+    pub retries: Option<u8>,
+    /// yt-dlp `--fragment-retries N`. Same skip rule as `retries`.
+    #[serde(default)]
+    pub fragment_retries: Option<u8>,
     /// yt-dlp `--audio-format`. When `Some` and not "default", the
     /// runner additionally emits `--extract-audio`. The frontend only
     /// sets this for audio-only downloads — applying to a video

@@ -165,6 +165,8 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
       rateLimit: settings.rateLimit,
       proxy: settings.proxy,
       concurrentFragments: settings.concurrentFragments,
+      retries: settings.retries,
+      fragmentRetries: settings.fragmentRetries,
       // The Batch tab only knows the user's preset id; only the
       // "audio-best" choice is audio-only, the rest are video.
       audioFormat:

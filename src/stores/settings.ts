@@ -82,6 +82,12 @@ export const MAX_PARALLEL_LIMIT = 8;
 export const DEFAULT_CONCURRENT_FRAGMENTS = 1;
 export const MIN_CONCURRENT_FRAGMENTS = 1;
 export const MAX_CONCURRENT_FRAGMENTS = 8;
+// yt-dlp's own default for both --retries and --fragment-retries is 10.
+// We mirror that so the runner can skip the flag when the slider is at
+// the default, keeping the command line in the log clean.
+export const DEFAULT_RETRIES = 10;
+export const MIN_RETRIES = 0;
+export const MAX_RETRIES = 20;
 
 interface SettingsStore {
   outputDir: string | null;
@@ -122,6 +128,13 @@ interface SettingsStore {
   notifyOnFinish: boolean;
   watchClipboard: boolean;
   concurrentFragments: number;
+  /// yt-dlp `--retries`. Whole-download retries on HTTP / connection
+  /// errors. The runner skips the flag when this equals
+  /// `DEFAULT_RETRIES` to keep the command line clean.
+  retries: number;
+  /// yt-dlp `--fragment-retries`. Per-fragment retries for HLS / DASH
+  /// sources. Same skip-at-default rule as `retries`.
+  fragmentRetries: number;
   audioFormat: AudioFormat;
   sponsorblockMode: SponsorblockMode;
   sponsorblockCategories: SponsorblockCategory[];
@@ -148,6 +161,8 @@ interface SettingsStore {
   setNotifyOnFinish: (v: boolean) => void;
   setWatchClipboard: (v: boolean) => void;
   setConcurrentFragments: (n: number) => void;
+  setRetries: (n: number) => void;
+  setFragmentRetries: (n: number) => void;
   setAudioFormat: (fmt: AudioFormat) => void;
   setSponsorblockMode: (mode: SponsorblockMode) => void;
   setSponsorblockCategories: (cats: SponsorblockCategory[]) => void;
@@ -164,6 +179,11 @@ function clampConcurrentFragments(n: number): number {
     MIN_CONCURRENT_FRAGMENTS,
     Math.min(MAX_CONCURRENT_FRAGMENTS, Math.floor(n)),
   );
+}
+
+function clampRetries(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_RETRIES;
+  return Math.max(MIN_RETRIES, Math.min(MAX_RETRIES, Math.floor(n)));
 }
 
 // Persisted in localStorage via zustand-persist. Existing keys survive new
@@ -194,6 +214,8 @@ export const useSettingsStore = create<SettingsStore>()(
       notifyOnFinish: true,
       watchClipboard: true,
       concurrentFragments: DEFAULT_CONCURRENT_FRAGMENTS,
+      retries: DEFAULT_RETRIES,
+      fragmentRetries: DEFAULT_RETRIES,
       audioFormat: "default",
       sponsorblockMode: "off",
       sponsorblockCategories: [...SPONSORBLOCK_CATEGORIES],
@@ -226,6 +248,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setWatchClipboard: (v) => set({ watchClipboard: v }),
       setConcurrentFragments: (n) =>
         set({ concurrentFragments: clampConcurrentFragments(n) }),
+      setRetries: (n) => set({ retries: clampRetries(n) }),
+      setFragmentRetries: (n) => set({ fragmentRetries: clampRetries(n) }),
       setAudioFormat: (fmt) => set({ audioFormat: fmt }),
       setSponsorblockMode: (mode) => set({ sponsorblockMode: mode }),
       setSponsorblockCategories: (cats) => set({ sponsorblockCategories: cats }),
