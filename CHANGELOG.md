@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-11
+
+Three small but visible polish features on top of v0.7.0's queue
+persistence: a per-job Retry button that turns persisted failures
+into one-click re-queues, a cookies-from-file source for environments
+where the browser-extraction path isn't viable, and themed tooltips
+replacing the native `title` popup on every icon-only button.
+
 ### Changed
 
 - Icon-only buttons in the queue (pause / resume / cancel / open in
