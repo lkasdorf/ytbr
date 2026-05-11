@@ -157,6 +157,12 @@ interface SettingsStore {
   audioFormat: AudioFormat;
   sponsorblockMode: SponsorblockMode;
   sponsorblockCategories: SponsorblockCategory[];
+  /// When on, clicking the window's X button hides the window to the
+  /// system tray instead of quitting. The tray icon itself is always
+  /// shown — this toggle only affects the close-button behavior. Quit
+  /// stays reachable via the tray's right-click menu. Default off so
+  /// new users don't get a surprise background process.
+  closeToTray: boolean;
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -190,6 +196,7 @@ interface SettingsStore {
   setAudioFormat: (fmt: AudioFormat) => void;
   setSponsorblockMode: (mode: SponsorblockMode) => void;
   setSponsorblockCategories: (cats: SponsorblockCategory[]) => void;
+  setCloseToTray: (v: boolean) => void;
 }
 
 function clampParallel(n: number): number {
@@ -256,6 +263,7 @@ export const useSettingsStore = create<SettingsStore>()(
       audioFormat: "default",
       sponsorblockMode: "off",
       sponsorblockCategories: [...SPONSORBLOCK_CATEGORIES],
+      closeToTray: false,
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -311,6 +319,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setAudioFormat: (fmt) => set({ audioFormat: fmt }),
       setSponsorblockMode: (mode) => set({ sponsorblockMode: mode }),
       setSponsorblockCategories: (cats) => set({ sponsorblockCategories: cats }),
+      setCloseToTray: (v) => set({ closeToTray: v }),
     }),
     {
       name: "ytbr.settings.v1",

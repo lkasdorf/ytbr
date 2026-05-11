@@ -203,3 +203,8 @@ export function pickCookiesFile(): Promise<string | null> {
 export function setParallelLimit(limit: number): Promise<number> {
   return invoke<number>("set_parallel_limit", { limit });
 }
+
+// Push the close-to-tray preference to the Rust window close-handler.
+export function setCloseToTray(enabled: boolean): Promise<void> {
+  return invoke<void>("set_close_to_tray", { enabled });
+}

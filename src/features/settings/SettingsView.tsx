@@ -10,6 +10,7 @@ import {
   Folder,
   Globe,
   Loader2,
+  Minimize2,
   Music,
   Package,
   Palette,
@@ -143,6 +144,7 @@ export function SettingsView() {
   const sponsorblockCategories = useSettingsStore(
     (s) => s.sponsorblockCategories,
   );
+  const closeToTray = useSettingsStore((s) => s.closeToTray);
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -185,6 +187,7 @@ export function SettingsView() {
   const setSponsorblockCategories = useSettingsStore(
     (s) => s.setSponsorblockCategories,
   );
+  const setCloseToTray = useSettingsStore((s) => s.setCloseToTray);
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -217,6 +220,19 @@ export function SettingsView() {
             />
           ))}
         </div>
+      </Section>
+
+      <Section
+        icon={Minimize2}
+        title="Window & tray"
+        desc="A tray icon is always shown — right-click it for Show / Hide / Quit. This toggle only changes what the window's close button does."
+      >
+        <ToggleRow
+          label="Close button minimizes to tray"
+          desc="When on, clicking X hides the window instead of quitting the app. Use the tray menu's Quit to exit. Off by default — turn on if you want downloads to keep running in the background."
+          checked={closeToTray}
+          onChange={setCloseToTray}
+        />
       </Section>
 
       <Section

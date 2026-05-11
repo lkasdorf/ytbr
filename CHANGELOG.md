@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- System tray icon with Show / Hide / Quit menu (left-click toggles
+  window visibility). Always present — independent of the close-button
+  behavior. Sits in Tauri 2's built-in `tray-icon` feature, no extra
+  plugin.
+- "Close button minimizes to tray" toggle in Settings → Window & tray.
+  Off by default so first-time users don't accidentally leave a
+  background process. When on, clicking the window's X hides instead
+  of quits; Quit stays reachable via the tray menu. Wired through a
+  process-wide `CloseToTray` atomic that the Rust window close-handler
+  consults each time.
+
 ## [0.7.1] - 2026-05-11
 
 Three small but visible polish features on top of v0.7.0's queue

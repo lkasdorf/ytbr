@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Leon Kasdorf
 
 import { useEffect } from "react";
-import { setParallelLimit } from "./tauri-bridge";
+import { setCloseToTray, setParallelLimit } from "./tauri-bridge";
 import { useSettingsStore } from "@/stores/settings";
 
 /// Push every settings field that the Rust backend cares about
@@ -13,10 +13,17 @@ import { useSettingsStore } from "@/stores/settings";
 /// and re-syncs on each later change.
 export function useSettingsSync(): void {
   const parallelLimit = useSettingsStore((s) => s.parallelLimit);
+  const closeToTray = useSettingsStore((s) => s.closeToTray);
 
   useEffect(() => {
     void setParallelLimit(parallelLimit).catch((err) => {
       console.error("setParallelLimit failed", err);
     });
   }, [parallelLimit]);
+
+  useEffect(() => {
+    void setCloseToTray(closeToTray).catch((err) => {
+      console.error("setCloseToTray failed", err);
+    });
+  }, [closeToTray]);
 }
