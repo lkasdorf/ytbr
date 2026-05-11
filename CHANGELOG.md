@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-11
+
+Queue persistence + Settings-feature minor release. The job queue and
+its history now survive app restarts — `queue.json` in the app config
+dir is rehydrated on boot, so the Queue tab feels continuous instead
+of resetting on every launch. Five smaller Settings additions round
+out the release: Network options, write-sidecars for thumbnail/info,
+retry tuning, finer-grained notifications (split into success / fail
+/ cancel toggles with a v0 → v1 store migration), and an
+auto-clear-successful toggle that pairs with the existing "Clear
+completed" button.
+
 ### Added
 
 - Queue persistence across app restarts. The job queue (incl. completed,
