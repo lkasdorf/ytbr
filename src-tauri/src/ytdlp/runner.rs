@@ -112,6 +112,36 @@ pub async fn run(
         }
     }
 
+    // SponsorBlock. Skip the flag entirely on mode "off", missing mode,
+    // or empty category list — yt-dlp rejects an empty value and a
+    // mode-without-categories state is a UI bug we don't want to send.
+    if let Some(mode) = spec
+        .sponsorblock_mode
+        .as_deref()
+        .map(str::trim)
+        .filter(|m| !m.is_empty() && *m != "off")
+    {
+        if let Some(cats) = spec.sponsorblock_categories.as_ref() {
+            let joined = cats
+                .iter()
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join(",");
+            if !joined.is_empty() {
+                let flag = match mode {
+                    "mark" => "--sponsorblock-mark",
+                    "remove" => "--sponsorblock-remove",
+                    _ => "",
+                };
+                if !flag.is_empty() {
+                    args.push(flag.into());
+                    args.push(joined);
+                }
+            }
+        }
+    }
+
     if let Some(fmt) = &spec.format_id {
         args.push("-f".into());
         args.push(fmt.clone());

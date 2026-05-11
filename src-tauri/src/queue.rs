@@ -73,6 +73,18 @@ pub struct JobSpec {
     /// selector would strip the video track.
     #[serde(default)]
     pub audio_format: Option<String>,
+    /// SponsorBlock mode. `None` or "off" emits nothing. "mark" → yt-dlp
+    /// `--sponsorblock-mark`; "remove" → `--sponsorblock-remove`.
+    /// Categories list below is comma-joined and passed as the flag value.
+    #[serde(default)]
+    pub sponsorblock_mode: Option<String>,
+    /// SponsorBlock category ids the frontend selected (e.g. "sponsor",
+    /// "intro", "music_offtopic"). Joined with commas for the yt-dlp
+    /// flag. Empty or `None` means "skip the flag entirely" even if the
+    /// mode is set — protects against an "enabled with no categories"
+    /// state that would pass an empty value yt-dlp rejects.
+    #[serde(default)]
+    pub sponsorblock_categories: Option<Vec<String>>,
 }
 
 fn default_template() -> String {

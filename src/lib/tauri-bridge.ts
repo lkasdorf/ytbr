@@ -61,6 +61,14 @@ export interface JobSpec {
   /// selector would strip the video track. `null` or "default" means
   /// no recode (yt-dlp picks whatever the source publishes).
   audioFormat?: string | null;
+  /// SponsorBlock mode. `null` or "off" emits no flag. "mark" adds
+  /// chapter markers via `--sponsorblock-mark`; "remove" cuts segments
+  /// via `--sponsorblock-remove` (requires ffmpeg, which we bundle).
+  sponsorblockMode?: "off" | "mark" | "remove" | null;
+  /// Comma-joined category list applied to whichever flag the mode
+  /// selects. Empty list means yt-dlp's default set; we always pass
+  /// an explicit list so the user's settings are authoritative.
+  sponsorblockCategories?: string[] | null;
 }
 
 export interface JobProgress {

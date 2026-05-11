@@ -163,6 +163,8 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
         choice === "audio-best" && settings.audioFormat !== "default"
           ? settings.audioFormat
           : null,
+      sponsorblockMode: settings.sponsorblockMode,
+      sponsorblockCategories: settings.sponsorblockCategories,
     };
 
     let succeeded = 0;

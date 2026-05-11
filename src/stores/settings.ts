@@ -45,6 +45,32 @@ export const AUDIO_FORMATS: readonly AudioFormat[] = [
   "wav",
 ];
 
+// SponsorBlock category ids that yt-dlp accepts. We expose the six the
+// SponsorBlock browser extension surfaces; yt-dlp supports more (`preview`,
+// `filler`, `poi_highlight`) but they overlap or are too niche to clutter
+// the settings panel. Bump the list if a user requests a missing one.
+export type SponsorblockCategory =
+  | "sponsor"
+  | "intro"
+  | "outro"
+  | "selfpromo"
+  | "interaction"
+  | "music_offtopic";
+
+export const SPONSORBLOCK_CATEGORIES: readonly SponsorblockCategory[] = [
+  "sponsor",
+  "intro",
+  "outro",
+  "selfpromo",
+  "interaction",
+  "music_offtopic",
+];
+
+// "off" disables the feature entirely; "mark" adds chapter markers without
+// cutting (yt-dlp `--sponsorblock-mark`); "remove" cuts the segments via
+// ffmpeg (yt-dlp `--sponsorblock-remove`).
+export type SponsorblockMode = "off" | "mark" | "remove";
+
 export const DEFAULT_OUTPUT_TEMPLATE = "%(title)s.%(ext)s";
 export const DEFAULT_PARALLEL_LIMIT = 2;
 export const MIN_PARALLEL_LIMIT = 1;
@@ -71,6 +97,8 @@ interface SettingsStore {
   watchClipboard: boolean;
   concurrentFragments: number;
   audioFormat: AudioFormat;
+  sponsorblockMode: SponsorblockMode;
+  sponsorblockCategories: SponsorblockCategory[];
 
   setOutputDir: (dir: string | null) => void;
   setParallelLimit: (n: number) => void;
@@ -87,6 +115,8 @@ interface SettingsStore {
   setWatchClipboard: (v: boolean) => void;
   setConcurrentFragments: (n: number) => void;
   setAudioFormat: (fmt: AudioFormat) => void;
+  setSponsorblockMode: (mode: SponsorblockMode) => void;
+  setSponsorblockCategories: (cats: SponsorblockCategory[]) => void;
 }
 
 function clampParallel(n: number): number {
@@ -123,6 +153,8 @@ export const useSettingsStore = create<SettingsStore>()(
       watchClipboard: true,
       concurrentFragments: DEFAULT_CONCURRENT_FRAGMENTS,
       audioFormat: "default",
+      sponsorblockMode: "off",
+      sponsorblockCategories: [...SPONSORBLOCK_CATEGORIES],
 
       setOutputDir: (dir) => set({ outputDir: dir }),
       setParallelLimit: (n) => set({ parallelLimit: clampParallel(n) }),
@@ -144,6 +176,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setConcurrentFragments: (n) =>
         set({ concurrentFragments: clampConcurrentFragments(n) }),
       setAudioFormat: (fmt) => set({ audioFormat: fmt }),
+      setSponsorblockMode: (mode) => set({ sponsorblockMode: mode }),
+      setSponsorblockCategories: (cats) => set({ sponsorblockCategories: cats }),
     }),
     { name: "ytbr.settings.v1" },
   ),

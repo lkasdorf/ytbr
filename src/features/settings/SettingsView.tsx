@@ -13,6 +13,7 @@ import {
   Package,
   Palette,
   RotateCcw,
+  SkipForward,
   Sliders,
   Star,
   Terminal,
@@ -33,8 +34,11 @@ import {
   MAX_PARALLEL_LIMIT,
   MIN_CONCURRENT_FRAGMENTS,
   MIN_PARALLEL_LIMIT,
+  SPONSORBLOCK_CATEGORIES,
   type AudioFormat,
   type PresetId,
+  type SponsorblockCategory,
+  type SponsorblockMode,
   type ThemeMode,
   useSettingsStore,
 } from "@/stores/settings";
@@ -65,6 +69,37 @@ const THEME_OPTIONS: readonly ThemeOption[] = [
   { id: "dark", label: "Dark", hint: "Always dark" },
 ];
 
+interface SponsorblockModeOption {
+  id: SponsorblockMode;
+  label: string;
+  hint: string;
+}
+
+const SPONSORBLOCK_MODE_OPTIONS: readonly SponsorblockModeOption[] = [
+  { id: "off", label: "Off", hint: "Don't touch SponsorBlock segments" },
+  {
+    id: "mark",
+    label: "Mark as chapters",
+    hint: "Add chapter markers, keep the full video",
+  },
+  {
+    id: "remove",
+    label: "Remove",
+    hint: "Cut the segments out (needs ffmpeg, bundled)",
+  },
+];
+
+// User-facing labels for the SponsorBlock category ids. Order mirrors
+// SPONSORBLOCK_CATEGORIES so the UI stays predictable.
+const SPONSORBLOCK_CATEGORY_LABELS: Record<SponsorblockCategory, string> = {
+  sponsor: "Sponsor",
+  intro: "Intro / hook",
+  outro: "Outro / endcards",
+  selfpromo: "Self-promotion",
+  interaction: "Interaction reminder",
+  music_offtopic: "Non-music in music videos",
+};
+
 export function SettingsView() {
   const parallelLimit = useSettingsStore((s) => s.parallelLimit);
   const cookiesFromBrowser = useSettingsStore((s) => s.cookiesFromBrowser);
@@ -80,6 +115,10 @@ export function SettingsView() {
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
   const concurrentFragments = useSettingsStore((s) => s.concurrentFragments);
   const audioFormat = useSettingsStore((s) => s.audioFormat);
+  const sponsorblockMode = useSettingsStore((s) => s.sponsorblockMode);
+  const sponsorblockCategories = useSettingsStore(
+    (s) => s.sponsorblockCategories,
+  );
 
   const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
   const setCookiesFromBrowser = useSettingsStore(
@@ -99,6 +138,10 @@ export function SettingsView() {
   const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
   const setConcurrentFragments = useSettingsStore((s) => s.setConcurrentFragments);
   const setAudioFormat = useSettingsStore((s) => s.setAudioFormat);
+  const setSponsorblockMode = useSettingsStore((s) => s.setSponsorblockMode);
+  const setSponsorblockCategories = useSettingsStore(
+    (s) => s.setSponsorblockCategories,
+  );
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -371,6 +414,64 @@ export function SettingsView() {
             checked={useDownloadArchive}
             onChange={setUseDownloadArchive}
           />
+        </div>
+      </Section>
+
+      <Section
+        icon={SkipForward}
+        title="SponsorBlock"
+        desc="Skip or mark sponsor segments, intros, outros and other categories crowdsourced via the SponsorBlock database. Off by default."
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            {SPONSORBLOCK_MODE_OPTIONS.map((m) => (
+              <PresetChip
+                key={m.id}
+                label={m.label}
+                hint={m.hint}
+                active={sponsorblockMode === m.id}
+                onClick={() => setSponsorblockMode(m.id)}
+              />
+            ))}
+          </div>
+          {sponsorblockMode !== "off" && (
+            <fieldset className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border border-border bg-input/40 p-3">
+              <legend className="sr-only">SponsorBlock categories</legend>
+              {SPONSORBLOCK_CATEGORIES.map((cat) => {
+                const checked = sponsorblockCategories.includes(cat);
+                return (
+                  <label
+                    key={cat}
+                    className="flex cursor-pointer items-center gap-2 text-sm text-card-foreground"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...sponsorblockCategories, cat]
+                          : sponsorblockCategories.filter((c) => c !== cat);
+                          setSponsorblockCategories(next);
+                      }}
+                      className="size-4 cursor-pointer accent-primary"
+                    />
+                    <span>{SPONSORBLOCK_CATEGORY_LABELS[cat]}</span>
+                  </label>
+                );
+              })}
+            </fieldset>
+          )}
+          {sponsorblockMode !== "off" &&
+            sponsorblockCategories.length === 0 && (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400"
+              >
+                Pick at least one category, otherwise SponsorBlock is silently
+                skipped on every download.
+              </p>
+            )}
         </div>
       </Section>
 

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- SponsorBlock integration. New Settings section with a 3-way mode chip
+  (Off / Mark as chapters / Remove) and per-category toggles for
+  `sponsor`, `intro`, `outro`, `selfpromo`, `interaction`, and
+  `music_offtopic`. Off by default. In "Mark" mode yt-dlp adds chapter
+  markers via `--sponsorblock-mark`; in "Remove" mode the segments are
+  cut out via `--sponsorblock-remove` (uses the bundled ffmpeg). An
+  inline alert warns when the mode is on but no categories are picked,
+  to avoid the silently-skipped state.
+
 ## [0.5.3] - 2026-05-11
 
 Signed-updater activation, take two. v0.5.2's release build did sign

@@ -280,6 +280,8 @@ function DownloadView({
       downloadArchive: settings.useDownloadArchive,
       concurrentFragments: settings.concurrentFragments,
       audioFormat,
+      sponsorblockMode: settings.sponsorblockMode,
+      sponsorblockCategories: settings.sponsorblockCategories,
     };
     try {
       const id = await enqueueJob(spec);
