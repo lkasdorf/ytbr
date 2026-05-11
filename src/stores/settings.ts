@@ -101,6 +101,13 @@ interface SettingsStore {
   embedSubs: boolean;
   embedThumbnail: boolean;
   embedMetadata: boolean;
+  /// yt-dlp `--write-thumbnail`. Writes the cover art as a sidecar
+  /// `.jpg`/`.webp` next to the video. Independent of `embedThumbnail`
+  /// (which bakes it into the container).
+  writeThumbnail: boolean;
+  /// yt-dlp `--write-info-json`. Writes the full yt-dlp metadata JSON
+  /// next to the video. Useful for archiving / debugging downloads.
+  writeInfoJson: boolean;
   useDownloadArchive: boolean;
   /// yt-dlp `--restrict-filenames`. Strips Unicode + special chars from
   /// the filename so it stays safe across SMB / FAT32 / cross-OS shares.
@@ -131,6 +138,8 @@ interface SettingsStore {
   setEmbedSubs: (v: boolean) => void;
   setEmbedThumbnail: (v: boolean) => void;
   setEmbedMetadata: (v: boolean) => void;
+  setWriteThumbnail: (v: boolean) => void;
+  setWriteInfoJson: (v: boolean) => void;
   setUseDownloadArchive: (v: boolean) => void;
   setRestrictFilenames: (v: boolean) => void;
   setRateLimit: (v: string) => void;
@@ -175,6 +184,8 @@ export const useSettingsStore = create<SettingsStore>()(
       embedSubs: false,
       embedThumbnail: false,
       embedMetadata: false,
+      writeThumbnail: false,
+      writeInfoJson: false,
       useDownloadArchive: false,
       restrictFilenames: false,
       rateLimit: "",
@@ -204,6 +215,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setEmbedSubs: (v) => set({ embedSubs: v }),
       setEmbedThumbnail: (v) => set({ embedThumbnail: v }),
       setEmbedMetadata: (v) => set({ embedMetadata: v }),
+      setWriteThumbnail: (v) => set({ writeThumbnail: v }),
+      setWriteInfoJson: (v) => set({ writeInfoJson: v }),
       setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),
       setRestrictFilenames: (v) => set({ restrictFilenames: v }),
       setRateLimit: (v) => set({ rateLimit: v.trim() }),

@@ -115,6 +115,8 @@ export function SettingsView() {
   const embedMetadata = useSettingsStore((s) => s.embedMetadata);
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
   const restrictFilenames = useSettingsStore((s) => s.restrictFilenames);
+  const writeThumbnail = useSettingsStore((s) => s.writeThumbnail);
+  const writeInfoJson = useSettingsStore((s) => s.writeInfoJson);
   const rateLimit = useSettingsStore((s) => s.rateLimit);
   const proxy = useSettingsStore((s) => s.proxy);
   const theme = useSettingsStore((s) => s.theme);
@@ -146,6 +148,8 @@ export function SettingsView() {
   const setRestrictFilenames = useSettingsStore(
     (s) => s.setRestrictFilenames,
   );
+  const setWriteThumbnail = useSettingsStore((s) => s.setWriteThumbnail);
+  const setWriteInfoJson = useSettingsStore((s) => s.setWriteInfoJson);
   const setRateLimit = useSettingsStore((s) => s.setRateLimit);
   const setProxy = useSettingsStore((s) => s.setProxy);
   const setTheme = useSettingsStore((s) => s.setTheme);
@@ -522,6 +526,18 @@ export function SettingsView() {
             desc="Bakes title, uploader, upload date, etc. into the file's container tags. yt-dlp `--embed-metadata`."
             checked={embedMetadata}
             onChange={setEmbedMetadata}
+          />
+          <ToggleRow
+            label="Write thumbnail sidecar"
+            desc="Saves the cover art as a separate `.jpg` / `.webp` next to the video. Independent of Embed thumbnail — you can have one, both, or neither. yt-dlp `--write-thumbnail`."
+            checked={writeThumbnail}
+            onChange={setWriteThumbnail}
+          />
+          <ToggleRow
+            label="Write info JSON"
+            desc="Saves the full yt-dlp metadata blob (title, formats, chapters, …) as a sidecar `.info.json`. Useful for archiving or scripting against downloads later. yt-dlp `--write-info-json`."
+            checked={writeInfoJson}
+            onChange={setWriteInfoJson}
           />
           <ToggleRow
             label="Use download archive"

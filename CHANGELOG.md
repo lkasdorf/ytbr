@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- "Write thumbnail sidecar" and "Write info JSON" toggles in Download
+  options. yt-dlp `--write-thumbnail` saves the cover art as a separate
+  `.jpg`/`.webp` (independent of Embed thumbnail); `--write-info-json`
+  saves the full metadata blob next to the video, useful for archiving
+  or scripting against downloads later. Both off by default.
 - "Network" Settings section with two new free-form text fields:
   **Speed limit** (yt-dlp `--limit-rate`, accepts `500K`/`1.5M`/`2G`)
   and **Proxy** (yt-dlp `--proxy`, accepts `http://`, `https://`,

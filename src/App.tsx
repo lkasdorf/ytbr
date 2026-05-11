@@ -280,6 +280,8 @@ function DownloadView({
       embedSubs: settings.embedSubs,
       embedThumbnail: settings.embedThumbnail,
       embedMetadata: settings.embedMetadata,
+      writeThumbnail: settings.writeThumbnail,
+      writeInfoJson: settings.writeInfoJson,
       downloadArchive: settings.useDownloadArchive,
       restrictFilenames: settings.restrictFilenames,
       rateLimit: settings.rateLimit,

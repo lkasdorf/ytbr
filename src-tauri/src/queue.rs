@@ -73,6 +73,13 @@ pub struct JobSpec {
     pub embed_thumbnail: bool,
     #[serde(default)]
     pub embed_metadata: bool,
+    /// yt-dlp `--write-thumbnail`. Sidecar image next to the video.
+    /// Independent of `embed_thumbnail` (which bakes into container).
+    #[serde(default)]
+    pub write_thumbnail: bool,
+    /// yt-dlp `--write-info-json`. Sidecar metadata JSON.
+    #[serde(default)]
+    pub write_info_json: bool,
     #[serde(default)]
     pub download_archive: bool,
     /// yt-dlp `--restrict-filenames`. Strips Unicode/specials so the

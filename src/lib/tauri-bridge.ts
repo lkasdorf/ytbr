@@ -58,6 +58,10 @@ export interface JobSpec {
   embedSubs?: boolean;
   embedThumbnail?: boolean;
   embedMetadata?: boolean;
+  /// yt-dlp `--write-thumbnail`. Sidecar `.jpg`/`.webp`.
+  writeThumbnail?: boolean;
+  /// yt-dlp `--write-info-json`. Sidecar `.info.json`.
+  writeInfoJson?: boolean;
   /// Enables `--download-archive` against the app config dir's archive.txt.
   downloadArchive?: boolean;
   /// yt-dlp `--restrict-filenames`. ASCII-only / safe-on-FAT32 file names.

@@ -101,6 +101,12 @@ pub async fn run(
     if spec.embed_metadata {
         args.push("--embed-metadata".into());
     }
+    if spec.write_thumbnail {
+        args.push("--write-thumbnail".into());
+    }
+    if spec.write_info_json {
+        args.push("--write-info-json".into());
+    }
     if spec.download_archive {
         if let Some(archive) = archive_file_path(app) {
             args.push("--download-archive".into());
