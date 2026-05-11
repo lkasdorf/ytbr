@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Tauri updater public key injected into `tauri.conf.json` (replaces the
+  `REPLACE_BEFORE_NEXT_RELEASE` placeholder shipped since v0.5.0). The
+  matching private key + (empty) password live as GitHub Actions secrets
+  `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, so
+  the next tag push produces a signed `latest.json` and the in-app
+  "Download & install" button starts verifying signatures instead of
+  falling through to the GitHub-API release-page link.
+
 ## [0.5.1] - 2026-05-11
 
 Postprocessing-fix patch. Every format selection that triggered a

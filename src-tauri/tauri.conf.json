@@ -44,7 +44,7 @@
       "endpoints": [
         "https://github.com/lkasdorf/ytbr/releases/latest/download/latest.json"
       ],
-      "pubkey": "REPLACE_BEFORE_NEXT_RELEASE"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdCNDBFQjZGNzVBRjg1NUIKUldSYmhhOTFiK3RBZTAvNUtFVGM3VmpzT1lnbWJDMGJGSDR0b1k5WDN3djdTWnFTK05FN1VQU3cK"
     }
   }
 }
