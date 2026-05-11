@@ -8,6 +8,7 @@ import {
   Download,
   Film,
   Folder,
+  Globe,
   Loader2,
   Music,
   Package,
@@ -114,6 +115,8 @@ export function SettingsView() {
   const embedMetadata = useSettingsStore((s) => s.embedMetadata);
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
   const restrictFilenames = useSettingsStore((s) => s.restrictFilenames);
+  const rateLimit = useSettingsStore((s) => s.rateLimit);
+  const proxy = useSettingsStore((s) => s.proxy);
   const theme = useSettingsStore((s) => s.theme);
   const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
@@ -143,6 +146,8 @@ export function SettingsView() {
   const setRestrictFilenames = useSettingsStore(
     (s) => s.setRestrictFilenames,
   );
+  const setRateLimit = useSettingsStore((s) => s.setRateLimit);
+  const setProxy = useSettingsStore((s) => s.setProxy);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
   const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
@@ -249,6 +254,65 @@ export function SettingsView() {
           className="w-full accent-primary"
           aria-label="Concurrent fragments"
         />
+      </Section>
+
+      <Section
+        icon={Globe}
+        title="Network"
+        desc="Throttle the connection or route it through a proxy. Both are off by default — leave the fields empty for direct unlimited downloads."
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="rate-limit"
+              className="text-xs font-medium text-card-foreground"
+            >
+              Speed limit
+            </label>
+            <input
+              id="rate-limit"
+              type="text"
+              value={rateLimit}
+              onChange={(e) => setRateLimit(e.target.value)}
+              placeholder="e.g. 500K or 1.5M"
+              spellCheck={false}
+              className="rounded-md border border-border bg-input px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              aria-describedby="rate-limit-hint"
+            />
+            <p
+              id="rate-limit-hint"
+              className="text-xs text-muted-foreground"
+            >
+              Passed verbatim to yt-dlp <code>--limit-rate</code>. Suffixes:{" "}
+              <code>K</code> (KiB/s), <code>M</code> (MiB/s), <code>G</code>{" "}
+              (GiB/s). Empty = no limit.
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="proxy"
+              className="text-xs font-medium text-card-foreground"
+            >
+              Proxy
+            </label>
+            <input
+              id="proxy"
+              type="text"
+              value={proxy}
+              onChange={(e) => setProxy(e.target.value)}
+              placeholder="e.g. http://127.0.0.1:8080 or socks5://host:1080"
+              spellCheck={false}
+              autoComplete="off"
+              className="rounded-md border border-border bg-input px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              aria-describedby="proxy-hint"
+            />
+            <p id="proxy-hint" className="text-xs text-muted-foreground">
+              yt-dlp <code>--proxy</code>. Supports <code>http://</code>,{" "}
+              <code>https://</code>, <code>socks4://</code>,{" "}
+              <code>socks5://</code>. Empty = direct connection.
+            </p>
+          </div>
+        </div>
       </Section>
 
       <Section

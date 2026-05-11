@@ -282,6 +282,8 @@ function DownloadView({
       embedMetadata: settings.embedMetadata,
       downloadArchive: settings.useDownloadArchive,
       restrictFilenames: settings.restrictFilenames,
+      rateLimit: settings.rateLimit,
+      proxy: settings.proxy,
       concurrentFragments: settings.concurrentFragments,
       audioFormat,
       sponsorblockMode: settings.sponsorblockMode,

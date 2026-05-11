@@ -110,6 +110,24 @@ pub async fn run(
     if spec.restrict_filenames {
         args.push("--restrict-filenames".into());
     }
+    if let Some(rate) = spec
+        .rate_limit
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        args.push("--limit-rate".into());
+        args.push(rate.to_string());
+    }
+    if let Some(proxy) = spec
+        .proxy
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        args.push("--proxy".into());
+        args.push(proxy.to_string());
+    }
     // Skip the flag entirely when 0 or 1 — yt-dlp's default is 1 and
     // passing it explicitly does nothing useful but adds noise to the
     // command line shown in logs.

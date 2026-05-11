@@ -105,6 +105,12 @@ interface SettingsStore {
   /// yt-dlp `--restrict-filenames`. Strips Unicode + special chars from
   /// the filename so it stays safe across SMB / FAT32 / cross-OS shares.
   restrictFilenames: boolean;
+  /// yt-dlp `--limit-rate` value, e.g. "500K", "1.5M". Empty string =
+  /// no limit. The runner trusts the format and lets yt-dlp validate.
+  rateLimit: string;
+  /// yt-dlp `--proxy` URL (http://, https://, socks5://, socks4://).
+  /// Empty string = no proxy.
+  proxy: string;
   theme: ThemeMode;
   notifyOnFinish: boolean;
   watchClipboard: boolean;
@@ -127,6 +133,8 @@ interface SettingsStore {
   setEmbedMetadata: (v: boolean) => void;
   setUseDownloadArchive: (v: boolean) => void;
   setRestrictFilenames: (v: boolean) => void;
+  setRateLimit: (v: string) => void;
+  setProxy: (v: string) => void;
   setTheme: (theme: ThemeMode) => void;
   setNotifyOnFinish: (v: boolean) => void;
   setWatchClipboard: (v: boolean) => void;
@@ -169,6 +177,8 @@ export const useSettingsStore = create<SettingsStore>()(
       embedMetadata: false,
       useDownloadArchive: false,
       restrictFilenames: false,
+      rateLimit: "",
+      proxy: "",
       theme: "system",
       notifyOnFinish: true,
       watchClipboard: true,
@@ -196,6 +206,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setEmbedMetadata: (v) => set({ embedMetadata: v }),
       setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),
       setRestrictFilenames: (v) => set({ restrictFilenames: v }),
+      setRateLimit: (v) => set({ rateLimit: v.trim() }),
+      setProxy: (v) => set({ proxy: v.trim() }),
       setTheme: (theme) => set({ theme }),
       setNotifyOnFinish: (v) => set({ notifyOnFinish: v }),
       setWatchClipboard: (v) => set({ watchClipboard: v }),

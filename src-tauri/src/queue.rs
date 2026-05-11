@@ -79,6 +79,15 @@ pub struct JobSpec {
     /// filename is safe across SMB, FAT32, and most foreign filesystems.
     #[serde(default)]
     pub restrict_filenames: bool,
+    /// yt-dlp `--limit-rate` value. `None` or empty skips. The frontend
+    /// trusts the user-typed string verbatim — yt-dlp rejects malformed
+    /// input via its own error path which we surface in the runner.
+    #[serde(default)]
+    pub rate_limit: Option<String>,
+    /// yt-dlp `--proxy` URL (http://, https://, socks4://, socks5://).
+    /// `None` or empty skips.
+    #[serde(default)]
+    pub proxy: Option<String>,
     /// yt-dlp `--concurrent-fragments N`. `None` or `Some(1)` keeps
     /// yt-dlp's default single-fragment behavior. Range 1–8 enforced
     /// by the frontend slider.

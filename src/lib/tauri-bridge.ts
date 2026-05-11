@@ -62,6 +62,10 @@ export interface JobSpec {
   downloadArchive?: boolean;
   /// yt-dlp `--restrict-filenames`. ASCII-only / safe-on-FAT32 file names.
   restrictFilenames?: boolean;
+  /// yt-dlp `--limit-rate` value (e.g. "500K", "1.5M"). Empty/null skips.
+  rateLimit?: string | null;
+  /// yt-dlp `--proxy` URL. Empty/null skips.
+  proxy?: string | null;
   /// yt-dlp `--concurrent-fragments N` for HLS/DASH fragment downloads.
   /// Omitted or 1 means single-fragment (yt-dlp default). Range 1–8.
   concurrentFragments?: number | null;

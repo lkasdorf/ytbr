@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- "Network" Settings section with two new free-form text fields:
+  **Speed limit** (yt-dlp `--limit-rate`, accepts `500K`/`1.5M`/`2G`)
+  and **Proxy** (yt-dlp `--proxy`, accepts `http://`, `https://`,
+  `socks4://`, `socks5://`). Both default empty — the runner skips the
+  flag entirely when the field is empty so existing connection
+  behavior is unchanged.
+
 ## [0.6.0] - 2026-05-11
 
 Settings-feature minor release. Three new yt-dlp flags get user-facing
