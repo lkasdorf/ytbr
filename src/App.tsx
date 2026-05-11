@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   Download,
@@ -9,6 +9,7 @@ import {
   ListVideo,
   Search,
   Settings as SettingsIcon,
+  Link as LinkIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -22,6 +23,7 @@ import { classifyFormat, formatDuration } from "@/lib/format-utils";
 import { startJobListeners } from "@/lib/tauri-events";
 import { useSettingsSync } from "@/lib/settings-sync";
 import { useThemeEffect } from "@/lib/theme";
+import { useUrlDrop } from "@/lib/url-drop";
 import { AboutDialog } from "@/features/about/AboutDialog";
 import { isActive, useJobsStore } from "@/stores/jobs";
 import { useSettingsStore } from "@/stores/settings";
@@ -58,11 +60,28 @@ function App() {
   // url lands in BatchView's textarea on its next render and we clear
   // the slot so a manual revisit of the Batch tab doesn't replay it.
   const [pendingBatchUrl, setPendingBatchUrl] = useState<string | null>(null);
+  // Companion to pendingBatchUrl for the Download tab. Set by the
+  // drag-drop receiver when exactly one URL was dropped; DownloadView
+  // picks it up on its next render and signals consumption.
+  const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(
+    null,
+  );
 
   function switchToBatch(url: string) {
     setPendingBatchUrl(url);
     setRoute("batch");
   }
+
+  const onDroppedUrls = useCallback((urls: string[]) => {
+    if (urls.length === 1) {
+      setPendingDownloadUrl(urls[0]);
+      setRoute("download");
+    } else if (urls.length > 1) {
+      setPendingBatchUrl(urls.join("\n"));
+      setRoute("batch");
+    }
+  }, []);
+  const dropActive = useUrlDrop(onDroppedUrls);
 
   useEffect(() => {
     void startJobListeners();
@@ -153,7 +172,13 @@ function App() {
           />
         </header>
         <div className="flex-1 overflow-auto p-6">
-          {route === "download" && <DownloadView onSwitchToBatch={switchToBatch} />}
+          {route === "download" && (
+            <DownloadView
+              onSwitchToBatch={switchToBatch}
+              pendingUrl={pendingDownloadUrl}
+              onConsumePending={() => setPendingDownloadUrl(null)}
+            />
+          )}
           {route === "batch" && (
             <BatchView
               pendingUrl={pendingBatchUrl}
@@ -166,6 +191,24 @@ function App() {
       </main>
 
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {dropActive && <DropOverlay />}
+    </div>
+  );
+}
+
+function DropOverlay() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm"
+    >
+      <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-primary bg-card px-10 py-8 text-card-foreground shadow-2xl">
+        <LinkIcon className="size-10 text-primary" strokeWidth={1.5} />
+        <p className="text-sm font-medium">Drop URLs or a .txt file</p>
+        <p className="max-w-xs text-center text-xs text-muted-foreground">
+          One URL goes to the Download tab. Multiple URLs land in Batch.
+        </p>
+      </div>
     </div>
   );
 }
@@ -236,8 +279,12 @@ type ProbeState =
 
 function DownloadView({
   onSwitchToBatch,
+  pendingUrl,
+  onConsumePending,
 }: {
   onSwitchToBatch: (url: string) => void;
+  pendingUrl?: string | null;
+  onConsumePending?: () => void;
 }) {
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [url, setUrl] = useState("");
@@ -252,6 +299,17 @@ function DownloadView({
       setProbe({ status: "error", url, message: String(err) });
     }
   }
+
+  // Drag-dropped single-URL handoff. Fill the input and kick off a
+  // probe so the user lands directly on the format list — same shape
+  // as if they'd pasted and pressed Probe themselves.
+  useEffect(() => {
+    if (pendingUrl == null || pendingUrl.trim().length === 0) return;
+    const trimmed = pendingUrl.trim();
+    setUrl(trimmed);
+    void onProbe(trimmed);
+    onConsumePending?.();
+  }, [pendingUrl, onConsumePending]);
 
   async function enqueue(
     formatId: string,

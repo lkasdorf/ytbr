@@ -208,3 +208,9 @@ export function setParallelLimit(limit: number): Promise<number> {
 export function setCloseToTray(enabled: boolean): Promise<void> {
   return invoke<void>("set_close_to_tray", { enabled });
 }
+
+// Read a .txt file for the drag-drop importer. Rust enforces the
+// .txt suffix and a 1 MiB hard cap.
+export function readTextFileSafe(path: string): Promise<string> {
+  return invoke<string>("read_txt_for_drop", { path });
+}

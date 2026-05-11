@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Drag-and-drop URLs anywhere onto the window. A single dropped URL
+  fills the Download tab and auto-probes; multiple URLs land in the
+  Batch tab's textarea. Accepts both browser-address-bar drags
+  (`text/uri-list` / `text/plain`) and `.txt` files via Tauri's
+  webview drag-drop event. A full-window overlay shows during the
+  drag so the target area is unambiguous. `.txt` reads are gated by
+  a new `read_txt_for_drop` Rust command with a hard 1 MiB cap and
+  extension check, so a stray binary drop can't load megabytes into
+  memory.
 - System tray icon with Show / Hide / Quit menu (left-click toggles
   window visibility). Always present — independent of the close-button
   behavior. Sits in Tauri 2's built-in `tray-icon` feature, no extra

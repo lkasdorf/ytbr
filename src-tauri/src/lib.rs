@@ -42,7 +42,7 @@ pub fn run() {
 
             // Tray icon. Always shown; the close-to-tray toggle below
             // only controls what the window's X button does.
-            tray::build_tray(&app.handle())?;
+            tray::build_tray(app.handle())?;
 
             // Intercept window close when close-to-tray is enabled.
             // The atomic is flipped from the frontend via
@@ -67,6 +67,7 @@ pub fn run() {
             commands::system::ytdlp_version,
             commands::system::ffmpeg_version,
             commands::system::reveal_in_folder,
+            commands::system::read_txt_for_drop,
             commands::probe::probe_url,
             commands::probe::expand_playlist,
             commands::download::enqueue_job,
