@@ -62,6 +62,7 @@ $Spec = switch ($Target) {
             YtDlpName    = "yt-dlp.exe"
             FfmpegUrl    = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
             FfmpegName   = "ffmpeg.exe"
+            FfprobeName  = "ffprobe.exe"
             Suffix       = ".exe"
             UpxUrl       = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-win64.zip"
             UpxExe       = "upx.exe"
@@ -74,6 +75,7 @@ $Spec = switch ($Target) {
             YtDlpName    = "yt-dlp"
             FfmpegUrl    = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
             FfmpegName   = "ffmpeg"
+            FfprobeName  = "ffprobe"
             Suffix       = ""
             UpxUrl       = "https://github.com/upx/upx/releases/download/v$UpxVersion/upx-$UpxVersion-amd64_linux.tar.xz"
             UpxExe       = "upx"
@@ -152,6 +154,19 @@ try {
     if (-not $Found) {
         throw "ffmpeg binary $($Spec.FfmpegName) not found inside archive"
     }
+    # ffprobe ships in the same BtbN archive next to ffmpeg. yt-dlp
+    # needs it for any postprocessing path that inspects streams
+    # (muxing video+audio, --extract-audio, --embed-metadata, ...).
+    # When yt-dlp gets --ffmpeg-location <file>, it auto-discovers
+    # ffprobe in the same directory under the literal name "ffprobe"
+    # (or ".exe"). So we stage two copies: the triple-suffixed one
+    # for the Tauri sidecar manifest, and a bare-named sibling for
+    # yt-dlp's auto-discover to pick up at runtime.
+    $FfprobeFound = Get-ChildItem -Path $ExtractDir -Recurse -Filter $Spec.FfprobeName |
+                    Select-Object -First 1
+    if (-not $FfprobeFound) {
+        throw "ffprobe binary $($Spec.FfprobeName) not found inside archive"
+    }
 
     # ---------- upx (compress ffmpeg in place) ----------
     # BtbN's LGPL ffmpeg ships ~164 MB statically linked. UPX --best --lzma
@@ -175,8 +190,22 @@ try {
     $afterMb = [math]::Round((Get-Item $Found.FullName).Length / 1MB, 2)
     Write-Host "[upx] $beforeMb MB -> $afterMb MB"
 
+    $ffprobeBeforeMb = [math]::Round((Get-Item $FfprobeFound.FullName).Length / 1MB, 2)
+    Write-Host "[upx] compressing ffprobe ($ffprobeBeforeMb MB) with --best --lzma ..."
+    & $UpxExePath --best --lzma --quiet $FfprobeFound.FullName
+    if ($LASTEXITCODE -ne 0) { throw "upx exited with code $LASTEXITCODE (ffprobe)" }
+    $ffprobeAfterMb = [math]::Round((Get-Item $FfprobeFound.FullName).Length / 1MB, 2)
+    Write-Host "[upx] $ffprobeBeforeMb MB -> $ffprobeAfterMb MB"
+
     Copy-Item -Path $Found.FullName `
               -Destination (Join-Path $BinDir "ffmpeg-$Target$($Spec.Suffix)") `
+              -Force
+    # Stage ffprobe twice — see the comment next to the extract step.
+    Copy-Item -Path $FfprobeFound.FullName `
+              -Destination (Join-Path $BinDir "ffprobe-$Target$($Spec.Suffix)") `
+              -Force
+    Copy-Item -Path $FfprobeFound.FullName `
+              -Destination (Join-Path $BinDir $Spec.FfprobeName) `
               -Force
 
     Write-Host ""

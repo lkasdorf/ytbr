@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ffprobe` now ships alongside the bundled `ffmpeg` sidecar — extracted
+  from the same BtbN LGPL archive, UPX-compressed in place, declared as
+  a third Tauri `externalBin`, and staged in dev under both the
+  triple-suffixed name (for the manifest) and the bare `ffprobe{.exe}`
+  name yt-dlp's auto-discover looks for next to `--ffmpeg-location`.
+  Without this, format selections that trigger postprocessing
+  (video+audio muxing, `--extract-audio`, `--embed-metadata`, …) failed
+  with `ERROR: Postprocessing: ffprobe not found`. Installer footprint
+  grows by ~38 MB (one extra UPX-compressed binary).
+
 ### Changed
 
 - Failed jobs now surface yt-dlp's own `ERROR: …` stderr line instead of
@@ -14,7 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Could not copy <Browser> cookie database` case (yt-dlp issue #7271)
   is translated into an actionable hint pointing at the
   "Cookies from browser" Settings toggle. The raw upstream line still
-  shows in the logs panel.
+  shows in the logs panel. The `Postprocessing: ffprobe not found`
+  case is also humanized as a defensive fallback in case a future
+  install drops the bundled binary.
 
 ## [0.5.0] - 2026-05-10
 

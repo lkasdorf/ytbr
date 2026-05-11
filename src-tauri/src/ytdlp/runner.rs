@@ -243,6 +243,21 @@ fn humanize_yt_dlp_error(raw: &str) -> String {
         }
     }
 
+    // "Postprocessing: ffprobe not found" fires when yt-dlp can't
+    // locate ffprobe next to the ffmpeg sidecar — i.e. the install
+    // is incomplete. The bundled ffprobe shipped alongside ffmpeg
+    // covers this on a normal install, so the actionable fix for
+    // the user is to reinstall (or run `scripts/fetch-binaries`
+    // in dev) so the binary is staged.
+    if trimmed.starts_with("Postprocessing: ffprobe not found")
+        || trimmed.starts_with("ffprobe/avprobe not found")
+    {
+        return "ffprobe is missing from this install — yt-dlp needs it to mux video+audio or \
+                extract audio. Reinstall YTBR (or rerun scripts/fetch-binaries in dev) so the \
+                bundled ffprobe ships next to ffmpeg."
+            .to_string();
+    }
+
     trimmed.to_string()
 }
 
@@ -357,5 +372,14 @@ mod tests {
     fn unknown_errors_pass_through_without_prefix() {
         let msg = humanize_yt_dlp_error("ERROR: Unsupported URL: about:blank");
         assert_eq!(msg, "Unsupported URL: about:blank");
+    }
+
+    #[test]
+    fn humanizes_ffprobe_missing() {
+        let raw = "ERROR: Postprocessing: ffprobe not found. \
+                   Please install or provide the path using --ffmpeg-location";
+        let msg = humanize_yt_dlp_error(raw);
+        assert!(msg.contains("ffprobe is missing"));
+        assert!(msg.contains("Reinstall YTBR"));
     }
 }

@@ -63,6 +63,7 @@ case "$target" in
     ytdlp_name="yt-dlp.exe"
     ffmpeg_url="https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-lgpl.zip"
     ffmpeg_name="ffmpeg.exe"
+    ffprobe_name="ffprobe.exe"
     suffix=".exe"
     upx_url="https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-win64.zip"
     upx_name="upx.exe"
@@ -73,6 +74,7 @@ case "$target" in
     ytdlp_name="yt-dlp"
     ffmpeg_url="https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-lgpl.tar.xz"
     ffmpeg_name="ffmpeg"
+    ffprobe_name="ffprobe"
     suffix=""
     upx_url="https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz"
     upx_name="upx"
@@ -149,6 +151,19 @@ if [ -z "$ffmpeg_path" ]; then
   echo "ffmpeg binary $ffmpeg_name not found inside archive" >&2
   exit 1
 fi
+# ffprobe ships in the same BtbN archive next to ffmpeg. yt-dlp needs
+# it for any postprocessing path that inspects streams (muxing
+# video+audio, --extract-audio, --embed-metadata, ...). When yt-dlp
+# gets --ffmpeg-location <file>, it auto-discovers ffprobe in the same
+# directory under the literal name "ffprobe" (or ".exe"). So we stage
+# two copies: the triple-suffixed one for the Tauri sidecar manifest,
+# and a bare-named sibling for yt-dlp's auto-discover to pick up at
+# runtime.
+ffprobe_path="$(find "$extract_dir" -type f -name "$ffprobe_name" | head -n 1)"
+if [ -z "$ffprobe_path" ]; then
+  echo "ffprobe binary $ffprobe_name not found inside archive" >&2
+  exit 1
+fi
 
 # ---------- upx (compress ffmpeg in place) ----------
 # BtbN's LGPL ffmpeg ships ~164 MB statically linked. UPX --best --lzma
@@ -176,8 +191,19 @@ echo "[upx] compressing ffmpeg ($((before_bytes / 1024 / 1024)) MB) with --best 
 after_bytes="$(stat -c %s "$ffmpeg_path" 2>/dev/null || stat -f %z "$ffmpeg_path")"
 echo "[upx] $((before_bytes / 1024 / 1024)) MB -> $((after_bytes / 1024 / 1024)) MB"
 
+probe_before_bytes="$(stat -c %s "$ffprobe_path" 2>/dev/null || stat -f %z "$ffprobe_path")"
+echo "[upx] compressing ffprobe ($((probe_before_bytes / 1024 / 1024)) MB) with --best --lzma ..."
+"$upx_bin" --best --lzma --quiet "$ffprobe_path"
+probe_after_bytes="$(stat -c %s "$ffprobe_path" 2>/dev/null || stat -f %z "$ffprobe_path")"
+echo "[upx] $((probe_before_bytes / 1024 / 1024)) MB -> $((probe_after_bytes / 1024 / 1024)) MB"
+
 cp -f "$ffmpeg_path" "$BIN_DIR/ffmpeg-${target}${suffix}"
 chmod +x "$BIN_DIR/ffmpeg-${target}${suffix}" || true
+# Stage ffprobe twice — see the comment next to the extract step.
+cp -f "$ffprobe_path" "$BIN_DIR/ffprobe-${target}${suffix}"
+chmod +x "$BIN_DIR/ffprobe-${target}${suffix}" || true
+cp -f "$ffprobe_path" "$BIN_DIR/$ffprobe_name"
+chmod +x "$BIN_DIR/$ffprobe_name" || true
 
 echo ""
 echo "Staged in $BIN_DIR for triple $target :"
