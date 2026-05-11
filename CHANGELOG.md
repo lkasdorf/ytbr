@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-11
+
+v1.0 marks the app as feature-complete for everyday use: download
+flow, batch flow, queue + history persistence, signed in-app updates,
+tray, drag-and-drop, and the polish features that make day-to-day
+operation comfortable. The version bump is a milestone — not a wire
+break — so installs from v0.5.3+ get the v1.0 update through the
+signed-updater path with no migration work.
+
 ### Added
 
 - Startup auto-update check. The app pings the signed-updater
