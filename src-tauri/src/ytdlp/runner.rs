@@ -107,6 +107,9 @@ pub async fn run(
             args.push(archive.to_string_lossy().into_owned());
         }
     }
+    if spec.restrict_filenames {
+        args.push("--restrict-filenames".into());
+    }
     // Skip the flag entirely when 0 or 1 — yt-dlp's default is 1 and
     // passing it explicitly does nothing useful but adds noise to the
     // command line shown in logs.

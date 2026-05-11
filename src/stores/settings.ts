@@ -102,6 +102,9 @@ interface SettingsStore {
   embedThumbnail: boolean;
   embedMetadata: boolean;
   useDownloadArchive: boolean;
+  /// yt-dlp `--restrict-filenames`. Strips Unicode + special chars from
+  /// the filename so it stays safe across SMB / FAT32 / cross-OS shares.
+  restrictFilenames: boolean;
   theme: ThemeMode;
   notifyOnFinish: boolean;
   watchClipboard: boolean;
@@ -123,6 +126,7 @@ interface SettingsStore {
   setEmbedThumbnail: (v: boolean) => void;
   setEmbedMetadata: (v: boolean) => void;
   setUseDownloadArchive: (v: boolean) => void;
+  setRestrictFilenames: (v: boolean) => void;
   setTheme: (theme: ThemeMode) => void;
   setNotifyOnFinish: (v: boolean) => void;
   setWatchClipboard: (v: boolean) => void;
@@ -164,6 +168,7 @@ export const useSettingsStore = create<SettingsStore>()(
       embedThumbnail: false,
       embedMetadata: false,
       useDownloadArchive: false,
+      restrictFilenames: false,
       theme: "system",
       notifyOnFinish: true,
       watchClipboard: true,
@@ -190,6 +195,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setEmbedThumbnail: (v) => set({ embedThumbnail: v }),
       setEmbedMetadata: (v) => set({ embedMetadata: v }),
       setUseDownloadArchive: (v) => set({ useDownloadArchive: v }),
+      setRestrictFilenames: (v) => set({ restrictFilenames: v }),
       setTheme: (theme) => set({ theme }),
       setNotifyOnFinish: (v) => set({ notifyOnFinish: v }),
       setWatchClipboard: (v) => set({ watchClipboard: v }),

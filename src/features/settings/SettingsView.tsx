@@ -113,6 +113,7 @@ export function SettingsView() {
   const embedThumbnail = useSettingsStore((s) => s.embedThumbnail);
   const embedMetadata = useSettingsStore((s) => s.embedMetadata);
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
+  const restrictFilenames = useSettingsStore((s) => s.restrictFilenames);
   const theme = useSettingsStore((s) => s.theme);
   const notifyOnFinish = useSettingsStore((s) => s.notifyOnFinish);
   const watchClipboard = useSettingsStore((s) => s.watchClipboard);
@@ -138,6 +139,9 @@ export function SettingsView() {
   const setEmbedMetadata = useSettingsStore((s) => s.setEmbedMetadata);
   const setUseDownloadArchive = useSettingsStore(
     (s) => s.setUseDownloadArchive,
+  );
+  const setRestrictFilenames = useSettingsStore(
+    (s) => s.setRestrictFilenames,
   );
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setNotifyOnFinish = useSettingsStore((s) => s.setNotifyOnFinish);
@@ -460,6 +464,12 @@ export function SettingsView() {
             desc="Skips re-downloading anything yt-dlp already pulled. Archive lives in the app config directory and is shared across all output folders."
             checked={useDownloadArchive}
             onChange={setUseDownloadArchive}
+          />
+          <ToggleRow
+            label="Restrict filenames to ASCII"
+            desc="Strips Unicode and other special characters from the filename so it stays safe on SMB shares, FAT32 USB sticks, and cross-OS copies. yt-dlp `--restrict-filenames`."
+            checked={restrictFilenames}
+            onChange={setRestrictFilenames}
           />
         </div>
       </Section>

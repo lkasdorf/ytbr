@@ -75,6 +75,10 @@ pub struct JobSpec {
     pub embed_metadata: bool,
     #[serde(default)]
     pub download_archive: bool,
+    /// yt-dlp `--restrict-filenames`. Strips Unicode/specials so the
+    /// filename is safe across SMB, FAT32, and most foreign filesystems.
+    #[serde(default)]
+    pub restrict_filenames: bool,
     /// yt-dlp `--concurrent-fragments N`. `None` or `Some(1)` keeps
     /// yt-dlp's default single-fragment behavior. Range 1–8 enforced
     /// by the frontend slider.

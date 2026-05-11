@@ -60,6 +60,8 @@ export interface JobSpec {
   embedMetadata?: boolean;
   /// Enables `--download-archive` against the app config dir's archive.txt.
   downloadArchive?: boolean;
+  /// yt-dlp `--restrict-filenames`. ASCII-only / safe-on-FAT32 file names.
+  restrictFilenames?: boolean;
   /// yt-dlp `--concurrent-fragments N` for HLS/DASH fragment downloads.
   /// Omitted or 1 means single-fragment (yt-dlp default). Range 1–8.
   concurrentFragments?: number | null;

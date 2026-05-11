@@ -159,6 +159,7 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
       embedThumbnail: settings.embedThumbnail,
       embedMetadata: settings.embedMetadata,
       downloadArchive: settings.useDownloadArchive,
+      restrictFilenames: settings.restrictFilenames,
       concurrentFragments: settings.concurrentFragments,
       // The Batch tab only knows the user's preset id; only the
       // "audio-best" choice is audio-only, the rest are video.

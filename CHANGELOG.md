@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`--write-auto-subs`), and an "Embed into video container" toggle
   (`--embed-subs`). Subtitle settings still default to off; the new
   defaults only activate after the parent toggle is enabled.
+- "Restrict filenames to ASCII" toggle (`--restrict-filenames`) in
+  Download options. Strips Unicode and other special characters from
+  saved filenames so they stay safe on SMB shares, FAT32 USB sticks,
+  and cross-OS copies. Off by default — the regular template handles
+  most filenames cleanly without it.
 
 ## [0.5.3] - 2026-05-11
 
