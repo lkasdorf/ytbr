@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Output template preset chips and live preview in Settings → Output
+  template. Five preset chips (Title, Title + ID, Uploader / Title,
+  Date · Title, Channel folder) fill the field with one click. A live
+  preview line below the input substitutes a sample video's tokens so
+  the user can see the resulting filename shape before downloading.
+  Modifiers (`>%Y-%m-%d`, `.50` length-cap, `:S` sanitize) are stripped
+  for the lookup but kept verbatim in the typed template.
 - Drag-and-drop URLs anywhere onto the window. A single dropped URL
   fills the Download tab and auto-probes; multiple URLs land in the
   Batch tab's textarea. Accepts both browser-address-bar drags

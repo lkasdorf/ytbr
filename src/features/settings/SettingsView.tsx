@@ -65,6 +65,59 @@ const PRESET_OPTIONS: readonly PresetOption[] = [
   { id: "video-4k", label: "4K", hint: "mp4, video + audio" },
 ];
 
+interface TemplatePreset {
+  label: string;
+  template: string;
+}
+
+const TEMPLATE_PRESETS: readonly TemplatePreset[] = [
+  { label: "Title", template: "%(title)s.%(ext)s" },
+  { label: "Title + ID", template: "%(title)s [%(id)s].%(ext)s" },
+  { label: "Uploader / Title", template: "%(uploader)s/%(title)s.%(ext)s" },
+  { label: "Date · Title", template: "%(upload_date)s - %(title)s.%(ext)s" },
+  {
+    label: "Channel folder",
+    template: "%(uploader)s/%(upload_date>%Y-%m-%d)s - %(title)s.%(ext)s",
+  },
+];
+
+// Sample values used to render a non-network preview of an output
+// template. They mirror what yt-dlp would substitute on a typical
+// YouTube video — picked to match the docs page so the preview is
+// recognizable. Tokens we don't have an example for fall through to
+// the raw placeholder, which is honest about what we can't preview.
+const PREVIEW_TOKENS: Record<string, string> = {
+  title: "Some Video Title",
+  id: "dQw4w9WgXcQ",
+  ext: "mp4",
+  uploader: "Channel Name",
+  uploader_id: "channel-name",
+  channel: "Channel Name",
+  upload_date: "20260511",
+  resolution: "1080p",
+  height: "1080",
+  width: "1920",
+  fps: "30",
+  vcodec: "avc1",
+  acodec: "mp4a",
+  format_id: "137",
+  format_note: "1080p",
+  playlist: "NA",
+  playlist_index: "NA",
+};
+
+export function renderTemplatePreview(template: string): string {
+  // Strip yt-dlp output modifiers ("upload_date>%Y-%m-%d", "title.50",
+  // ":S" sanitization) when looking up the sample value, but keep the
+  // result the user typed if no sample is available.
+  return template.replace(/%\(([^)]+)\)([sdf])/g, (_match, expr: string) => {
+    const key = expr.split(/[>:.,+]/)[0]?.trim() ?? expr;
+    const sample = PREVIEW_TOKENS[key];
+    if (sample != null) return sample;
+    return `%(${expr})s`;
+  });
+}
+
 interface ThemeOption {
   id: ThemeMode;
   label: string;
@@ -621,23 +674,44 @@ export function SettingsView() {
           </>
         }
       >
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={outputTemplate}
-            onChange={(e) => setOutputTemplate(e.target.value)}
-            spellCheck={false}
-            className={cn(
-              "flex-1 rounded-md border border-border bg-input px-3 py-1.5 font-mono text-xs",
-              "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
-            )}
-            aria-label="Output template"
-          />
-          <ResetButton
-            disabled={outputTemplate === DEFAULT_OUTPUT_TEMPLATE}
-            onClick={() => setOutputTemplate(DEFAULT_OUTPUT_TEMPLATE)}
-            title="Reset to default"
-          />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={outputTemplate}
+              onChange={(e) => setOutputTemplate(e.target.value)}
+              spellCheck={false}
+              className={cn(
+                "flex-1 rounded-md border border-border bg-input px-3 py-1.5 font-mono text-xs",
+                "text-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+              )}
+              aria-label="Output template"
+            />
+            <ResetButton
+              disabled={outputTemplate === DEFAULT_OUTPUT_TEMPLATE}
+              onClick={() => setOutputTemplate(DEFAULT_OUTPUT_TEMPLATE)}
+              title="Reset to default"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {TEMPLATE_PRESETS.map((p) => (
+              <PresetChip
+                key={p.template}
+                label={p.label}
+                active={outputTemplate === p.template}
+                onClick={() => setOutputTemplate(p.template)}
+              />
+            ))}
+          </div>
+          <p
+            className="rounded-md border border-dashed border-border bg-input/40 px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground"
+            aria-label="Output template preview"
+          >
+            <span className="text-muted-foreground/70">preview </span>
+            <span className="text-foreground">
+              {renderTemplatePreview(outputTemplate)}
+            </span>
+          </p>
         </div>
       </Section>
 
