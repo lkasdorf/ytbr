@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-05-11
+
+Postprocessing-fix patch. Every format selection that triggered a
+yt-dlp postprocessing step (video+audio muxing on YouTube formats
+above 360p, `--extract-audio`, `--embed-metadata`, …) failed with
+`ERROR: Postprocessing: ffprobe not found` because we were only
+bundling `ffmpeg`. yt-dlp auto-discovers `ffprobe` next to
+`--ffmpeg-location`, so the fix is to ship it alongside. Comes with
+a humanized fallback message in case a future install ever drops
+the binary.
+
 ### Added
 
 - `ffprobe` now ships alongside the bundled `ffmpeg` sidecar — extracted
@@ -14,10 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a third Tauri `externalBin`, and staged in dev under both the
   triple-suffixed name (for the manifest) and the bare `ffprobe{.exe}`
   name yt-dlp's auto-discover looks for next to `--ffmpeg-location`.
-  Without this, format selections that trigger postprocessing
-  (video+audio muxing, `--extract-audio`, `--embed-metadata`, …) failed
-  with `ERROR: Postprocessing: ffprobe not found`. Installer footprint
-  grows by ~38 MB (one extra UPX-compressed binary).
+  Installer footprint grows by ~38 MB (one extra UPX-compressed binary).
 
 ### Changed
 
@@ -27,8 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is translated into an actionable hint pointing at the
   "Cookies from browser" Settings toggle. The raw upstream line still
   shows in the logs panel. The `Postprocessing: ffprobe not found`
-  case is also humanized as a defensive fallback in case a future
-  install drops the bundled binary.
+  case is also humanized as a defensive fallback.
 
 ## [0.5.0] - 2026-05-10
 
