@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- "Retry" button on each failed or cancelled JobCard. Clicking it
+  re-queues the job with the same `JobSpec` (same URL, format
+  selector, output dir, sub flags, …) and the new row appears in the
+  queue alongside the original. Particularly useful now that the
+  queue persists across restarts — old failures don't have to be
+  re-pasted by hand.
+
 ## [0.7.0] - 2026-05-11
 
 Queue persistence + Settings-feature minor release. The job queue and

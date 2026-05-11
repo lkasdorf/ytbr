@@ -10,6 +10,7 @@ import {
   Loader2,
   Pause,
   Play,
+  RotateCw,
   StopCircle,
   Trash2,
   XCircle,
@@ -17,6 +18,7 @@ import {
 import {
   cancelJob,
   clearCompletedJobs,
+  enqueueJob,
   pauseJob,
   resumeJob,
   revealInFolder,
@@ -266,11 +268,38 @@ function JobCard({ job }: { job: JobState }) {
               onClick={() => void revealInFolder(job.spec.outputDir)}
               icon={FolderOpen}
             />
+            {(job.status === "failed" || job.status === "cancelled") && (
+              <IconButton
+                title="Retry — re-queue this job with the same spec"
+                onClick={() => void retryJob(job)}
+                icon={RotateCw}
+              />
+            )}
           </div>
         )}
       </div>
     </div>
   );
+}
+
+// Re-queue a previously failed or cancelled job with the same spec.
+// The new job gets a fresh UUID from the backend; the original failed
+// or cancelled row stays in the queue so the user keeps the error
+// context (and can clear it manually via "Clear completed" once the
+// retry has settled).
+async function retryJob(job: JobState): Promise<void> {
+  try {
+    const id = await enqueueJob(job.spec);
+    useJobsStore.getState().upsert({
+      id,
+      spec: job.spec,
+      status: "queued",
+      progress: null,
+      error: null,
+    });
+  } catch (err) {
+    console.error("retry failed", err);
+  }
 }
 
 function IconButton({
