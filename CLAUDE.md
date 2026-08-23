@@ -101,7 +101,7 @@ src/
 ## Conventions
 
 - Every source file (`.rs`, `.ts`, `.tsx`, `.css`) starts with `// SPDX-License-Identifier: Apache-2.0` + `// Copyright (c) 2026 Leon Kasdorf`.
-- Conventional commits. Commit messages explain *why* and call out behavior surprises (see existing log for tone). When Claude authors a commit, append `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>`.
+- Conventional commits. Commit messages explain *why* and call out behavior surprises (see existing log for tone). When Claude authors a commit, append the `Co-Authored-By:` trailer its current session specifies — the model name changes between sessions, so do not copy an older commit's trailer verbatim.
 - Rust modules over fat files. New Tauri commands go in `commands/<group>.rs`, registered in `commands/mod.rs` + the `invoke_handler!` macro in `lib.rs`.
 - Frontend TS strict mode (`noUnusedLocals`, `noUnusedParameters`, etc.). Path alias `@/*` → `src/*`.
 - shadcn/ui set up manually (CLI hangs in non-interactive shells); add components by hand into `src/components/ui/` if you need them, with `style: new-york`, slate base.
@@ -114,6 +114,8 @@ All Claude Code artifacts — memories, skills, settings, hooks — are **user-l
 
 - **Memory**: lives in `~/.claude/projects/<project-hash>/memory/`, auto-loaded at session start. `MEMORY.md` is the index; the rest are the entries it links to. Built up by Leon over the session — backlog, workflow preferences, performance constraints, references.
 - **Skill**: `/end-session` lives at `~/.claude/skills/end-session/SKILL.md`. Walks the routine wrap-up — survey what changed, update memories, append `CHANGELOG.md` entries, commit + push. Invoke whenever wrapping a working session or as a mid-session checkpoint.
+- **Wrap-up specifics** the skill is project-agnostic about, so they live here: `ytbr_backlog.md` is the project-state entry — on wrap-up move done items out, add what was flagged this session, and refresh its `**Status as of <date>:**` line; note bigger landings under `**Recently completed (<date>)**`. The other four entries (`user_profile`, `ytbr_workflow`, `ytbr_perf_constraints`, `ytbr_references`) are touched only on *new* explicit feedback or changed URLs/paths/tooling — re-affirming an unchanged entry is churn.
+- `ytbr_backlog.md` also carries a `**[Unreleased] on main:**` line mirroring the `[Unreleased]` section of `CHANGELOG.md`. Two places, one fact — update them together.
 
 A fresh clone on another machine starts with no memory and no skill. That's by design — they're personal context, not project artifacts. `CHANGELOG.md` and this `CLAUDE.md` carry the parts that future contributors actually need.
 
