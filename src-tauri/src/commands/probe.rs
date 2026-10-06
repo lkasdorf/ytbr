@@ -5,10 +5,40 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 use crate::ytdlp::format::{ProbeResult, VideoInfo};
-use crate::ytdlp::runner::ytdlp_command;
+use crate::ytdlp::runner::{access_args, ytdlp_command, AccessOptions};
+
+/// Login / network settings for probing, mirrored from the user's
+/// Settings by the frontend. All optional; `None` behaves as before.
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProbeOptions {
+    #[serde(default)]
+    pub cookies_file: Option<String>,
+    #[serde(default)]
+    pub cookies_from_browser: Option<String>,
+    #[serde(default)]
+    pub proxy: Option<String>,
+    #[serde(default)]
+    pub extractor_args: Option<String>,
+}
+
+impl ProbeOptions {
+    fn args(&self) -> Vec<String> {
+        access_args(&AccessOptions {
+            cookies_file: self.cookies_file.as_deref(),
+            cookies_from_browser: self.cookies_from_browser.as_deref(),
+            proxy: self.proxy.as_deref(),
+            extractor_args: self.extractor_args.as_deref(),
+        })
+    }
+}
 
 #[tauri::command]
-pub async fn probe_url(app: tauri::AppHandle, url: String) -> Result<ProbeResult, AppError> {
+pub async fn probe_url(
+    app: tauri::AppHandle,
+    url: String,
+    options: Option<ProbeOptions>,
+) -> Result<ProbeResult, AppError> {
     // The Download tab is single-video by design; playlist URLs are
     // expanded in the Batch tab via `expand_playlist` below. Until the
     // Download tab grows a playlist mode, keep --no-playlist so a
@@ -16,13 +46,9 @@ pub async fn probe_url(app: tauri::AppHandle, url: String) -> Result<ProbeResult
     // of failing the VideoInfo parse.
     let output = ytdlp_command(&app)
         .map_err(AppError::Sidecar)?
-        .args([
-            "-J",
-            "--no-playlist",
-            "--no-warnings",
-            "--",
-            url.as_str(),
-        ])
+        .args(["-J", "--no-playlist", "--no-warnings"])
+        .args(options.unwrap_or_default().args())
+        .args(["--", url.as_str()])
         .output()
         .await
         .map_err(|e| AppError::Sidecar(e.to_string()))?;
@@ -81,16 +107,13 @@ struct FlatEntry {
 pub async fn expand_playlist(
     app: tauri::AppHandle,
     url: String,
+    options: Option<ProbeOptions>,
 ) -> Result<PlaylistEntries, AppError> {
     let output = ytdlp_command(&app)
         .map_err(AppError::Sidecar)?
-        .args([
-            "--flat-playlist",
-            "--dump-single-json",
-            "--no-warnings",
-            "--",
-            url.as_str(),
-        ])
+        .args(["--flat-playlist", "--dump-single-json", "--no-warnings"])
+        .args(options.unwrap_or_default().args())
+        .args(["--", url.as_str()])
         .output()
         .await
         .map_err(|e| AppError::Sidecar(e.to_string()))?;

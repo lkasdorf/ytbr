@@ -80,27 +80,12 @@ pub async fn run(
         args.push(path);
     }
 
-    // Cookie sources are mutually exclusive in yt-dlp. Prefer the
-    // explicit file path when both happen to be set — the UI enforces
-    // single-source via the settings store setters, but a stale spec
-    // serialized from an older version could still carry both.
-    let cookies_file = spec
-        .cookies_file
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
-    if let Some(path) = cookies_file {
-        args.push("--cookies".into());
-        args.push(path.to_string());
-    } else if let Some(browser) = spec
-        .cookies_from_browser
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
-        args.push("--cookies-from-browser".into());
-        args.push(browser.to_string());
-    }
+    args.extend(access_args(&AccessOptions {
+        cookies_file: spec.cookies_file.as_deref(),
+        cookies_from_browser: spec.cookies_from_browser.as_deref(),
+        proxy: spec.proxy.as_deref(),
+        extractor_args: spec.extractor_args.as_deref(),
+    }));
 
     if spec.write_subs {
         args.push("--write-subs".into());
@@ -163,15 +148,6 @@ pub async fn run(
         args.push("--limit-rate".into());
         args.push(rate.to_string());
     }
-    if let Some(proxy) = spec
-        .proxy
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
-        args.push("--proxy".into());
-        args.push(proxy.to_string());
-    }
     // Skip the flag entirely when 0 or 1 — yt-dlp's default is 1 and
     // passing it explicitly does nothing useful but adds noise to the
     // command line shown in logs.
@@ -233,13 +209,6 @@ pub async fn run(
                     args.push(joined);
                 }
             }
-        }
-    }
-
-    if let Some(extractor_args) = spec.extractor_args.as_deref() {
-        for value in extractor_args.split_whitespace() {
-            args.push("--extractor-args".into());
-            args.push(value.to_string());
         }
     }
 
@@ -364,6 +333,41 @@ pub async fn run(
                 .unwrap_or_else(|| "yt-dlp event stream closed unexpectedly".into()),
         ))
     }
+}
+
+/// Settings that decide whether yt-dlp can reach a URL at all: login
+/// (cookies), network route (proxy) and extractor workarounds. Shared by
+/// the download runner and the probe / playlist commands, which used to
+/// skip them — so probing anything behind a login failed even with
+/// cookies configured.
+#[derive(Default)]
+pub struct AccessOptions<'a> {
+    pub cookies_file: Option<&'a str>,
+    pub cookies_from_browser: Option<&'a str>,
+    pub proxy: Option<&'a str>,
+    /// Whitespace-separated; each entry becomes one --extractor-args.
+    pub extractor_args: Option<&'a str>,
+}
+
+pub fn access_args(o: &AccessOptions) -> Vec<String> {
+    let set = |v: Option<&str>| v.map(str::trim).filter(|s| !s.is_empty()).map(String::from);
+    let mut args = Vec::new();
+    // Cookie sources are mutually exclusive in yt-dlp. Prefer the
+    // explicit file path when both happen to be set — the UI enforces
+    // single-source via the settings store setters, but a stale spec
+    // serialized from an older version could still carry both.
+    if let Some(path) = set(o.cookies_file) {
+        args.extend(["--cookies".to_string(), path]);
+    } else if let Some(browser) = set(o.cookies_from_browser) {
+        args.extend(["--cookies-from-browser".to_string(), browser]);
+    }
+    if let Some(proxy) = set(o.proxy) {
+        args.extend(["--proxy".to_string(), proxy]);
+    }
+    for value in o.extractor_args.unwrap_or_default().split_whitespace() {
+        args.extend(["--extractor-args".to_string(), value.to_string()]);
+    }
+    args
 }
 
 // `humanize_yt_dlp_error` plus run-level context: when yt-dlp warned that
@@ -562,7 +566,29 @@ fn emit_log(app: &AppHandle, id: &str, line: &str, stream: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{explain_failure, humanize_yt_dlp_error};
+    use super::{access_args, explain_failure, humanize_yt_dlp_error, AccessOptions};
+
+    #[test]
+    fn access_args_prefer_cookie_file_and_skip_blanks() {
+        let args = access_args(&AccessOptions {
+            cookies_file: Some(" C:\\c.txt "),
+            cookies_from_browser: Some("firefox"),
+            proxy: Some("  "),
+            extractor_args: Some("youtube:player_client=web_music  vimeo:client=web"),
+        });
+        assert_eq!(
+            args,
+            [
+                "--cookies",
+                "C:\\c.txt",
+                "--extractor-args",
+                "youtube:player_client=web_music",
+                "--extractor-args",
+                "vimeo:client=web",
+            ]
+        );
+        assert!(access_args(&AccessOptions::default()).is_empty());
+    }
 
     #[test]
     fn explains_missing_js_runtime() {

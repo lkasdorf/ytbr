@@ -3,6 +3,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { ProbeOptions } from "@/lib/tauri-bridge";
 
 // yt-dlp's --cookies-from-browser supports more entries (whale, brave-private,
 // etc.). The list below is the subset we expose in the UI; bump it if a
@@ -355,3 +356,14 @@ export const useSettingsStore = create<SettingsStore>()(
     },
   ),
 );
+
+// Current login / network settings for probe_url / expand_playlist.
+export function probeOptions(): ProbeOptions {
+  const s = useSettingsStore.getState();
+  return {
+    cookiesFile: s.cookiesFile,
+    cookiesFromBrowser: s.cookiesFromBrowser,
+    proxy: s.proxy,
+    extractorArgs: s.extractorArgs,
+  };
+}

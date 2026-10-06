@@ -119,8 +119,18 @@ export interface JobState {
 
 // ---------- commands ----------
 
-export function probeUrl(url: string): Promise<ProbeResult> {
-  return invoke<ProbeResult>("probe_url", { url });
+// Login / network settings applied to probes, so URLs behind a login
+// (cookies) or needing a proxy / extractor workaround probe the same way
+// they download. Build with `probeOptions()` from the settings store.
+export interface ProbeOptions {
+  cookiesFile?: string | null;
+  cookiesFromBrowser?: string | null;
+  proxy?: string | null;
+  extractorArgs?: string | null;
+}
+
+export function probeUrl(url: string, options?: ProbeOptions): Promise<ProbeResult> {
+  return invoke<ProbeResult>("probe_url", { url, options });
 }
 
 export interface PlaylistEntries {
@@ -130,8 +140,11 @@ export interface PlaylistEntries {
   entries: string[];
 }
 
-export function expandPlaylist(url: string): Promise<PlaylistEntries> {
-  return invoke<PlaylistEntries>("expand_playlist", { url });
+export function expandPlaylist(
+  url: string,
+  options?: ProbeOptions,
+): Promise<PlaylistEntries> {
+  return invoke<PlaylistEntries>("expand_playlist", { url, options });
 }
 
 export function ytdlpVersion(): Promise<string> {

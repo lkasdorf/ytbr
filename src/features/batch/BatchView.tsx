@@ -9,7 +9,7 @@ import {
 } from "@/features/format-picker/PresetButtons";
 import { enqueueJob, expandPlaylist, type JobSpec } from "@/lib/tauri-bridge";
 import { useJobsStore } from "@/stores/jobs";
-import { useSettingsStore, type PresetId } from "@/stores/settings";
+import { probeOptions, useSettingsStore, type PresetId } from "@/stores/settings";
 import { cn } from "@/lib/utils";
 
 type Choice = "default" | PresetId;
@@ -113,7 +113,7 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
     if (!target) return;
     setPlaylist((p) => ({ ...p, busy: true, error: null }));
     try {
-      const { title, entries } = await expandPlaylist(target);
+      const { title, entries } = await expandPlaylist(target, probeOptions());
       if (entries.length === 0) {
         setPlaylist((p) => ({
           ...p,

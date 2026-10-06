@@ -28,7 +28,7 @@ import { useThemeEffect } from "@/lib/theme";
 import { useUrlDrop } from "@/lib/url-drop";
 import { AboutDialog } from "@/features/about/AboutDialog";
 import { isActive, useJobsStore } from "@/stores/jobs";
-import { useSettingsStore } from "@/stores/settings";
+import { probeOptions, useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
 import { ClipboardSuggestion } from "@/features/url-input/ClipboardSuggestion";
 import { PlaylistRedirect } from "@/features/url-input/PlaylistRedirect";
@@ -317,7 +317,7 @@ function DownloadView({
   async function onProbe(url: string) {
     setProbe({ status: "loading", url });
     try {
-      const result = await probeUrl(url);
+      const result = await probeUrl(url, probeOptions());
       setProbe({ status: "ok", url, result });
     } catch (err) {
       setProbe({ status: "error", url, message: String(err) });

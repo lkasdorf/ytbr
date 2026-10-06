@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Probe** on the Download tab and **Add playlist or channel** on the
+  Batch tab ignored the cookie, proxy and extractor-args settings — only
+  the download itself used them. Anything behind a login (Vimeo, which
+  now requires one; YouTube Premium-only tracks; members-only videos)
+  failed to probe even with cookies configured. Both now use the same
+  settings as downloads.
+
 ## [1.4.0] - 2026-10-06
 
 ### Added
