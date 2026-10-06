@@ -19,6 +19,7 @@ import {
   Sliders,
   Star,
   Terminal,
+  Wrench,
 } from "lucide-react";
 import { OutputDirPicker } from "./OutputDirPicker";
 import {
@@ -180,6 +181,7 @@ export function SettingsView() {
   const writeInfoJson = useSettingsStore((s) => s.writeInfoJson);
   const rateLimit = useSettingsStore((s) => s.rateLimit);
   const proxy = useSettingsStore((s) => s.proxy);
+  const extractorArgs = useSettingsStore((s) => s.extractorArgs);
   const theme = useSettingsStore((s) => s.theme);
   const notifyOnSuccess = useSettingsStore((s) => s.notifyOnSuccess);
   const notifyOnFailure = useSettingsStore((s) => s.notifyOnFailure);
@@ -223,6 +225,7 @@ export function SettingsView() {
   const setWriteInfoJson = useSettingsStore((s) => s.setWriteInfoJson);
   const setRateLimit = useSettingsStore((s) => s.setRateLimit);
   const setProxy = useSettingsStore((s) => s.setProxy);
+  const setExtractorArgs = useSettingsStore((s) => s.setExtractorArgs);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const setNotifyOnSuccess = useSettingsStore((s) => s.setNotifyOnSuccess);
   const setNotifyOnFailure = useSettingsStore((s) => s.setNotifyOnFailure);
@@ -623,6 +626,34 @@ export function SettingsView() {
               extensions can export this). yt-dlp <code>--cookies</code>.
             </p>
           </div>
+        </div>
+      </Section>
+
+      <Section
+        icon={Wrench}
+        title="Extractor args"
+        desc="Workarounds for YouTube changes that yt-dlp handles via extractor arguments before a fixed release ships. Leave empty unless a download error points you here."
+      >
+        <div className="flex flex-col gap-1.5">
+          <input
+            id="extractor-args"
+            type="text"
+            value={extractorArgs}
+            onChange={(e) => setExtractorArgs(e.target.value)}
+            placeholder="e.g. youtube:player_client=web_music"
+            spellCheck={false}
+            autoComplete="off"
+            aria-label="Extractor args"
+            aria-describedby="extractor-args-hint"
+            className="rounded-md border border-border bg-input px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <p id="extractor-args-hint" className="text-xs text-muted-foreground">
+            Each space-separated entry becomes one yt-dlp{" "}
+            <code>--extractor-args</code> flag. For &quot;The page needs to be
+            reloaded&quot; on music.youtube.com with cookies, use{" "}
+            <code>youtube:player_client=web_music</code>. Applies to newly
+            queued jobs.
+          </p>
         </div>
       </Section>
 

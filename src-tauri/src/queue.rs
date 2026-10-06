@@ -131,6 +131,12 @@ pub struct JobSpec {
     /// state that would pass an empty value yt-dlp rejects.
     #[serde(default)]
     pub sponsorblock_categories: Option<Vec<String>>,
+    /// yt-dlp `--extractor-args` values, whitespace-separated (one flag
+    /// per entry, e.g. `youtube:player_client=web_music`). Escape hatch
+    /// for upstream site breakage that yt-dlp works around with
+    /// extractor args before a fixed release ships. `None` or empty skips.
+    #[serde(default)]
+    pub extractor_args: Option<String>,
 }
 
 fn default_template() -> String {

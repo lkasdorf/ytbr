@@ -221,6 +221,13 @@ pub async fn run(
         }
     }
 
+    if let Some(extractor_args) = spec.extractor_args.as_deref() {
+        for value in extractor_args.split_whitespace() {
+            args.push("--extractor-args".into());
+            args.push(value.to_string());
+        }
+    }
+
     if let Some(fmt) = &spec.format_id {
         args.push("-f".into());
         args.push(fmt.clone());
@@ -384,6 +391,17 @@ fn humanize_yt_dlp_error(raw: &str) -> String {
             .to_string();
     }
 
+    // yt-dlp issue #17389: with cookies, some accounts get downgraded to
+    // the "tv_downgraded" player client, whose response is UNPLAYABLE.
+    // For music.youtube.com URLs the web_music client still works.
+    if trimmed.contains("The page needs to be reloaded") {
+        return format!(
+            "{trimmed} — known yt-dlp issue with cookies on some accounts (yt-dlp #17389). \
+             Workaround: set 'Extractor args' in Settings to youtube:player_client=web_music \
+             (music.youtube.com URLs), then retry."
+        );
+    }
+
     // Account-gated content: YouTube Music Premium tracks, members-only
     // videos, age gates and the bot check ("Sign in to confirm you're
     // not a bot") all need a logged-in session, i.e. cookies.
@@ -524,6 +542,15 @@ mod tests {
     fn unknown_errors_pass_through_without_prefix() {
         let msg = humanize_yt_dlp_error("ERROR: Unsupported URL: about:blank");
         assert_eq!(msg, "Unsupported URL: about:blank");
+    }
+
+    #[test]
+    fn hints_extractor_args_for_page_reload() {
+        let msg = humanize_yt_dlp_error(
+            "ERROR: [youtube] CYvxaXV86QA: The page needs to be reloaded.",
+        );
+        assert!(msg.starts_with("[youtube] CYvxaXV86QA"));
+        assert!(msg.contains("youtube:player_client=web_music"));
     }
 
     #[test]

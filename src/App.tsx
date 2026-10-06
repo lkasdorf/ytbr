@@ -364,6 +364,7 @@ function DownloadView({
       restrictFilenames: settings.restrictFilenames,
       rateLimit: settings.rateLimit,
       proxy: settings.proxy,
+      extractorArgs: settings.extractorArgs,
       concurrentFragments: settings.concurrentFragments,
       retries: settings.retries,
       fragmentRetries: settings.fragmentRetries,

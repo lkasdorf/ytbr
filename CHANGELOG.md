@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Settings → **Extractor args**: passes `--extractor-args` to yt-dlp
+  (space-separated, one flag per entry) as an escape hatch for YouTube
+  changes. The "The page needs to be reloaded" error (yt-dlp #17389,
+  cookies on some accounts) now points to the workaround
+  `youtube:player_client=web_music` for music.youtube.com URLs.
+
 ## [1.1.0] - 2026-10-06
 
 ### Added

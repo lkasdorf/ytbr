@@ -74,6 +74,9 @@ export interface JobSpec {
   rateLimit?: string | null;
   /// yt-dlp `--proxy` URL. Empty/null skips.
   proxy?: string | null;
+  /// yt-dlp `--extractor-args`, whitespace-separated (one flag each).
+  /// Empty/null skips.
+  extractorArgs?: string | null;
   /// yt-dlp `--concurrent-fragments N` for HLS/DASH fragment downloads.
   /// Omitted or 1 means single-fragment (yt-dlp default). Range 1–8.
   concurrentFragments?: number | null;

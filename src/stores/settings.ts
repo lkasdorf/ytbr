@@ -131,6 +131,9 @@ interface SettingsStore {
   /// yt-dlp `--proxy` URL (http://, https://, socks5://, socks4://).
   /// Empty string = no proxy.
   proxy: string;
+  /// yt-dlp `--extractor-args` values, whitespace-separated. Empty
+  /// string = none. Escape hatch for upstream YouTube breakage.
+  extractorArgs: string;
   theme: ThemeMode;
   /// Three independent toggles for terminal-state OS notifications.
   /// Replaces the single `notifyOnFinish` boolean that was on by default
@@ -183,6 +186,7 @@ interface SettingsStore {
   setRestrictFilenames: (v: boolean) => void;
   setRateLimit: (v: string) => void;
   setProxy: (v: string) => void;
+  setExtractorArgs: (v: string) => void;
   setTheme: (theme: ThemeMode) => void;
   setNotifyOnSuccess: (v: boolean) => void;
   setNotifyOnFailure: (v: boolean) => void;
@@ -250,6 +254,7 @@ export const useSettingsStore = create<SettingsStore>()(
       restrictFilenames: false,
       rateLimit: "",
       proxy: "",
+      extractorArgs: "",
       theme: "system",
       notifyOnSuccess: true,
       notifyOnFailure: true,
@@ -304,6 +309,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setRestrictFilenames: (v) => set({ restrictFilenames: v }),
       setRateLimit: (v) => set({ rateLimit: v.trim() }),
       setProxy: (v) => set({ proxy: v.trim() }),
+      setExtractorArgs: (v) => set({ extractorArgs: v }),
       setTheme: (theme) => set({ theme }),
       setNotifyOnSuccess: (v) => set({ notifyOnSuccess: v }),
       setNotifyOnFailure: (v) => set({ notifyOnFailure: v }),
