@@ -40,6 +40,12 @@ pub fn run() {
             let queue = app.state::<QueueManager>();
             queue.hydrate_from_disk(&app.handle());
 
+            // Drop the updater's per-user yt-dlp once the bundled sidecar
+            // has caught up, so a newer YTBR release isn't shadowed by an
+            // older self-updated binary. Background: two `--version`
+            // spawns shouldn't delay the window.
+            tauri::async_runtime::spawn(ytdlp::user_copy::prune_stale(app.handle().clone()));
+
             // Tray icon. Always shown; the close-to-tray toggle below
             // only controls what the window's X button does.
             tray::build_tray(app.handle())?;

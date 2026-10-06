@@ -7,10 +7,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::State;
-use tauri_plugin_shell::ShellExt;
 
 use crate::queue::QueueManager;
-use crate::ytdlp::runner::ytdlp_sidecar_path;
+use crate::ytdlp::runner::{user_ytdlp_path, ytdlp_command};
 
 const RELEASES_API: &str = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
 const APP_RELEASES_API: &str = "https://api.github.com/repos/lkasdorf/ytbr/releases/latest";
@@ -51,9 +50,7 @@ fn upstream_asset_name() -> Result<&'static str, String> {
 }
 
 async fn current_ytdlp_version(app: &tauri::AppHandle) -> Option<String> {
-    let output = app
-        .shell()
-        .sidecar("yt-dlp")
+    let output = ytdlp_command(app)
         .ok()?
         .args(["--version"])
         .output()
@@ -114,8 +111,14 @@ pub async fn update_ytdlp(
         );
     }
 
-    let dest: PathBuf = ytdlp_sidecar_path()
-        .ok_or_else(|| "could not locate the yt-dlp sidecar to overwrite".to_string())?;
+    // Install into the per-user data dir instead of over the bundled
+    // sidecar: a per-machine install under Program Files isn't writable
+    // without elevation ("Access is denied", os error 5).
+    let dest: PathBuf = user_ytdlp_path(&app)
+        .ok_or_else(|| "could not resolve the app data dir for yt-dlp".to_string())?;
+    if let Some(dir) = dest.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
+    }
 
     let asset = upstream_asset_name()?;
     let current = current_ytdlp_version(&app).await;

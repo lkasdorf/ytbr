@@ -5,3 +5,4 @@ pub mod format;
 pub mod process_pause;
 pub mod progress;
 pub mod runner;
+pub mod user_copy;

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- yt-dlp updater failed with "temp write failed: Access is denied
+  (os error 5)" on per-machine installs under `C:\Program Files\YTBR`,
+  which aren't writable without elevation. The updated binary now lands
+  in the per-user app data dir (`%LOCALAPPDATA%\<app id>\bin\`) and
+  every yt-dlp spawn prefers that copy over the bundled sidecar. On
+  startup the app drops that copy again once the bundled yt-dlp is at
+  least as new, so a later YTBR release isn't shadowed by a stale
+  self-updated binary.
+
 ## [1.0.0] - 2026-05-11
 
 v1.0 marks the app as feature-complete for everyday use: download

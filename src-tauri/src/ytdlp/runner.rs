@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_shell::process::{CommandChild, CommandEvent};
+use tauri_plugin_shell::process::{Command, CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::oneshot;
 
@@ -216,10 +216,8 @@ pub async fn run(
     }
     args.push(spec.url.clone());
 
-    let (mut rx, child) = app
-        .shell()
-        .sidecar("yt-dlp")
-        .map_err(|e| AppError::Sidecar(e.to_string()))?
+    let (mut rx, child) = ytdlp_command(app)
+        .map_err(AppError::Sidecar)?
         .args(args)
         .spawn()
         .map_err(|e| AppError::Sidecar(e.to_string()))?;
@@ -421,11 +419,25 @@ fn ffmpeg_sidecar_path() -> Option<PathBuf> {
     sidecar_path("ffmpeg")
 }
 
-/// Same resolution rules as the ffmpeg sidecar — exposed for the yt-dlp
-/// self-updater (`commands::updater`) which needs to overwrite the
-/// binary in place rather than just spawn it.
-pub fn ytdlp_sidecar_path() -> Option<PathBuf> {
-    sidecar_path("yt-dlp")
+/// Where the in-app updater drops a newer yt-dlp. Lives in the per-user
+/// local data dir because a per-machine install (MSI / NSIS into
+/// `C:\Program Files\YTBR`) isn't writable without elevation, so the
+/// bundled sidecar can't be overwritten in place.
+pub fn user_ytdlp_path(app: &AppHandle) -> Option<PathBuf> {
+    let suffix = if cfg!(windows) { ".exe" } else { "" };
+    let dir = app.path().app_local_data_dir().ok()?;
+    Some(dir.join("bin").join(format!("yt-dlp{suffix}")))
+}
+
+/// Every yt-dlp spawn goes through here: the user-updated copy wins when
+/// present, otherwise the bundled sidecar. Rust-side `Shell::command` is
+/// not subject to the capability scope, so no extra allow-list entry is
+/// needed for the user copy.
+pub fn ytdlp_command(app: &AppHandle) -> Result<Command, String> {
+    if let Some(path) = user_ytdlp_path(app).filter(|p| p.is_file()) {
+        return Ok(app.shell().command(path));
+    }
+    app.shell().sidecar("yt-dlp").map_err(|e| e.to_string())
 }
 
 #[derive(Serialize, Clone)]

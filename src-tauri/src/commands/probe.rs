@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Leon Kasdorf
 
 use serde::{Deserialize, Serialize};
-use tauri_plugin_shell::ShellExt;
 
 use crate::error::AppError;
 use crate::ytdlp::format::{ProbeResult, VideoInfo};
+use crate::ytdlp::runner::ytdlp_command;
 
 #[tauri::command]
 pub async fn probe_url(app: tauri::AppHandle, url: String) -> Result<ProbeResult, AppError> {
@@ -14,10 +14,8 @@ pub async fn probe_url(app: tauri::AppHandle, url: String) -> Result<ProbeResult
     // Download tab grows a playlist mode, keep --no-playlist so a
     // playlist URL pasted here resolves to "the first video" instead
     // of failing the VideoInfo parse.
-    let output = app
-        .shell()
-        .sidecar("yt-dlp")
-        .map_err(|e| AppError::Sidecar(e.to_string()))?
+    let output = ytdlp_command(&app)
+        .map_err(AppError::Sidecar)?
         .args([
             "-J",
             "--no-playlist",
@@ -83,10 +81,8 @@ pub async fn expand_playlist(
     app: tauri::AppHandle,
     url: String,
 ) -> Result<PlaylistEntries, AppError> {
-    let output = app
-        .shell()
-        .sidecar("yt-dlp")
-        .map_err(|e| AppError::Sidecar(e.to_string()))?
+    let output = ytdlp_command(&app)
+        .map_err(AppError::Sidecar)?
         .args([
             "--flat-playlist",
             "--dump-single-json",

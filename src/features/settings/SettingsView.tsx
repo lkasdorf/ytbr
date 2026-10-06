@@ -945,7 +945,7 @@ function YtdlpUpdaterSection() {
     <Section
       icon={Download}
       title="yt-dlp updater"
-      desc="Pulls the latest yt-dlp release from GitHub, verifies its SHA-256, and replaces the bundled sidecar in place. Refuses to run while jobs are queued, downloading, or paused."
+      desc="Pulls the latest yt-dlp release from GitHub, verifies its SHA-256, and installs it into your user data folder, where it takes precedence over the bundled copy. Refuses to run while jobs are queued, downloading, or paused."
       right={
         <code className="font-mono text-xs text-muted-foreground" title="current yt-dlp version">
           {version ?? "—"}

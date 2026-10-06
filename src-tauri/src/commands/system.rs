@@ -6,6 +6,8 @@ use std::path::Path;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::ShellExt;
 
+use crate::ytdlp::runner::ytdlp_command;
+
 /// Hard cap on the size of a .txt file the drag-drop handler will read.
 /// 1 MiB is roughly 30k average-length URLs — far past any realistic
 /// batch — and small enough that an accidentally-dropped binary file
@@ -25,9 +27,7 @@ pub async fn reveal_in_folder(app: tauri::AppHandle, path: String) -> Result<(),
 
 #[tauri::command]
 pub async fn ytdlp_version(app: tauri::AppHandle) -> Result<String, String> {
-    let output = app
-        .shell()
-        .sidecar("yt-dlp")
+    let output = ytdlp_command(&app)
         .map_err(|e| format!("sidecar lookup failed: {e}"))?
         .args(["--version"])
         .output()
