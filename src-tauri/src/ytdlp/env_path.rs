@@ -12,24 +12,33 @@
 //! On Windows we therefore re-read the machine + user PATH from the
 //! registry, like a freshly started Explorer would, and append any
 //! entries the current process is missing.
+//!
+//! Every entry is also checked for accessibility from this process and
+//! dropped if that fails. A process relaunched by the Windows installer
+//! can inherit the installer's RedirectionGuard mitigation, under which
+//! traversing a user-created junction on PATH (e.g. Codex's `bin`)
+//! fails with WinError 448 — and yt-dlp aborts the whole download on
+//! that while probing PATH for JS runtimes. Children inherit the same
+//! mitigation, so what this process can't open, yt-dlp can't either.
 
 /// PATH to hand to yt-dlp, or `None` to inherit unchanged.
 pub fn for_child() -> Option<String> {
     let current = std::env::var("PATH").unwrap_or_default();
     let fresh = imp::registry_path()?;
-    Some(merge(&current, &fresh))
+    Some(merge(&current, &fresh, |dir| std::fs::metadata(dir).is_ok()))
 }
 
 /// `current` entries first (order preserved), then every entry of
 /// `fresh` that isn't already present (case-insensitive, ignoring a
-/// trailing backslash — Windows path semantics).
-fn merge(current: &str, fresh: &str) -> String {
+/// trailing backslash — Windows path semantics). Entries for which
+/// `accessible` returns false are dropped.
+fn merge(current: &str, fresh: &str, accessible: impl Fn(&str) -> bool) -> String {
     let norm = |s: &str| s.trim().trim_end_matches(['\\', '/']).to_lowercase();
     let mut seen: Vec<String> = Vec::new();
     let mut out: Vec<&str> = Vec::new();
     for entry in current.split(';').chain(fresh.split(';')) {
         let key = norm(entry);
-        if key.is_empty() || seen.contains(&key) {
+        if key.is_empty() || seen.contains(&key) || !accessible(entry.trim()) {
             continue;
         }
         seen.push(key);
@@ -132,14 +141,26 @@ mod tests {
 
     #[test]
     fn appends_missing_entries_after_current() {
-        let merged = merge(r"C:\Windows;C:\Tools", r"C:\Windows\;C:\Users\me\WinGet\Links");
+        let merged = merge(
+            r"C:\Windows;C:\Tools",
+            r"C:\Windows\;C:\Users\me\WinGet\Links",
+            |_| true,
+        );
         assert_eq!(merged, r"C:\Windows;C:\Tools;C:\Users\me\WinGet\Links");
     }
 
     #[test]
     fn dedupes_case_insensitively_and_skips_empty() {
-        let merged = merge(r"C:\A;;c:\b", r"C:\a;C:\B\;;C:\C");
+        let merged = merge(r"C:\A;;c:\b", r"C:\a;C:\B\;;C:\C", |_| true);
         assert_eq!(merged, r"C:\A;c:\b;C:\C");
+    }
+
+    #[test]
+    fn drops_inaccessible_entries_from_both_sides() {
+        let merged = merge(r"C:\A;C:\Junction", r"C:\Codex\bin;C:\B", |d| {
+            !d.contains("Junction") && !d.contains("Codex")
+        });
+        assert_eq!(merged, r"C:\A;C:\B");
     }
 
     #[cfg(windows)]

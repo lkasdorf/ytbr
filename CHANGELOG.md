@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Every download failed with "[WinError 448] The path cannot be
+  traversed because it contains an untrusted mount point" after an
+  in-app update. YTBR relaunched by the installer inherits Windows'
+  RedirectionGuard, yt-dlp inherits it from YTBR, and a user-created
+  junction on PATH (e.g. Codex's `bin`) then aborts yt-dlp's JS-runtime
+  lookup. PATH entries YTBR itself can't open are now left out of the
+  PATH handed to yt-dlp. Regression from 1.3.0.
+
 ## [1.3.0] - 2026-10-06
 
 ### Added
