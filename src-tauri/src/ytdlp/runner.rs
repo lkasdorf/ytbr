@@ -13,13 +13,24 @@ use tokio::sync::oneshot;
 
 use crate::error::AppError;
 use crate::queue::JobSpec;
-use crate::ytdlp::progress;
+use crate::ytdlp::{process_tree, progress};
 
 // Build-script-injected target triple (see build.rs). Used to locate
 // the `ffmpeg-<triple>{.exe}` sidecar at runtime so we can pass
 // --ffmpeg-location to yt-dlp; without it yt-dlp can't mux the
 // video-only + audio-only streams that YouTube serves above 360p.
 const TARGET_TRIPLE: &str = env!("TARGET");
+
+/// Clears the job's published pid on every exit path of `run`, so a
+/// pause click between process exit and the queue's final status
+/// transition can't signal a pid the OS may already have recycled.
+struct PidSlotGuard(Arc<Mutex<Option<u32>>>);
+
+impl Drop for PidSlotGuard {
+    fn drop(&mut self) {
+        *self.0.lock().unwrap() = None;
+    }
+}
 
 pub enum RunOutcome {
     Completed,
@@ -214,6 +225,10 @@ pub async fn run(
         args.push("-f".into());
         args.push(fmt.clone());
     }
+    // `--` ends option parsing: a "URL" starting with '-' (from a
+    // dropped .txt or a remote playlist entry) must never be read as a
+    // yt-dlp option such as `--exec`.
+    args.push("--".into());
     args.push(spec.url.clone());
 
     let (mut rx, child) = ytdlp_command(app)
@@ -226,7 +241,9 @@ pub async fn run(
     // signal the right OS process. Cleared at the end of the function
     // so a pause click on a freshly-finished job fails fast instead of
     // poking a recycled pid.
-    *pid_slot.lock().unwrap() = Some(child.pid());
+    let pid = child.pid();
+    *pid_slot.lock().unwrap() = Some(pid);
+    let _pid_guard = PidSlotGuard(pid_slot);
 
     let child: Arc<Mutex<Option<CommandChild>>> = Arc::new(Mutex::new(Some(child)));
     let was_cancelled = Arc::new(AtomicBool::new(false));
@@ -239,6 +256,10 @@ pub async fn run(
             if cancel_rx.await.is_ok() {
                 was_cancelled.store(true, Ordering::SeqCst);
                 if let Some(c) = child.lock().unwrap().take() {
+                    // The spawned pid is only the PyInstaller bootloader;
+                    // the worker (and any ffmpeg) are its descendants and
+                    // would survive killing it alone.
+                    process_tree::kill_descendants(pid);
                     let _ = c.kill();
                 }
             }
@@ -352,6 +373,27 @@ fn humanize_yt_dlp_error(raw: &str) -> String {
                 extract audio. Reinstall YTBR (or rerun scripts/fetch-binaries in dev) so the \
                 bundled ffprobe ships next to ffmpeg."
             .to_string();
+    }
+
+    // yt-dlp issue #10927: Chrome/Edge ≥127 protect their cookie store
+    // with App-Bound Encryption, which DPAPI from another process can't
+    // decrypt. Closing the browser doesn't help here — only a different
+    // cookie source does.
+    if trimmed.starts_with("Failed to decrypt with DPAPI") {
+        return "Can't read this browser's cookies — Chrome and Edge encrypt them so other apps                 can't decrypt them (yt-dlp issue #10927). Use 'Cookies file' (cookies.txt                 exported from a private window) or 'Cookies from browser' = Firefox in Settings."
+            .to_string();
+    }
+
+    // Account-gated content: YouTube Music Premium tracks, members-only
+    // videos, age gates and the bot check ("Sign in to confirm you're
+    // not a bot") all need a logged-in session, i.e. cookies.
+    if trimmed.contains("only available to Music Premium members")
+        || trimmed.contains("Sign in to confirm")
+        || trimmed.contains("members-only content")
+    {
+        return format!(
+            "{trimmed} — yt-dlp needs your logged-in YouTube session. Set 'Cookies file'              (cookies.txt exported from a private window) or 'Cookies from browser'              (Firefox works best) in Settings, then retry."
+        );
     }
 
     trimmed.to_string()
@@ -482,6 +524,24 @@ mod tests {
     fn unknown_errors_pass_through_without_prefix() {
         let msg = humanize_yt_dlp_error("ERROR: Unsupported URL: about:blank");
         assert_eq!(msg, "Unsupported URL: about:blank");
+    }
+
+    #[test]
+    fn humanizes_dpapi_failure() {
+        let msg = humanize_yt_dlp_error(
+            "ERROR: Failed to decrypt with DPAPI. See  https://github.com/yt-dlp/yt-dlp/issues/10927  for more info",
+        );
+        assert!(msg.contains("Cookies file"));
+        assert!(msg.contains("Firefox"));
+    }
+
+    #[test]
+    fn hints_cookies_for_premium_only() {
+        let msg = humanize_yt_dlp_error(
+            "ERROR: [youtube] qKO1zbp_e_s: This video is only available to Music Premium members",
+        );
+        assert!(msg.starts_with("[youtube] qKO1zbp_e_s"));
+        assert!(msg.contains("Cookies file"));
     }
 
     #[test]

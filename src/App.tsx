@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import {
   enqueueJob,
   listJobs,
+  queuePaused,
   probeUrl,
   type Format,
   type ProbeResult,
@@ -90,6 +91,7 @@ function App() {
   useEffect(() => {
     void startJobListeners();
     void listJobs().then((list) => useJobsStore.getState().hydrate(list));
+    void queuePaused().then((p) => useJobsStore.getState().setQueuePaused(p));
   }, []);
 
   useSettingsSync();

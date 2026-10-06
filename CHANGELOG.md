@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Queue-wide controls on the Queue tab: **Pause all** suspends every
+  running download and holds queued jobs back, so a batch stops as a
+  whole; **Resume all** continues it; **Cancel all** (two-step click)
+  cancels every queued, running and paused job.
+
+### Fixed
+
+- Pause and Cancel had no effect on the actual download. The bundled
+  yt-dlp is a PyInstaller one-file build whose spawned process is only a
+  bootloader; the worker doing the download is its child. Pause now
+  suspends, and Cancel kills, the whole process tree (worker and
+  ffmpeg included), so a cancelled job no longer keeps downloading in
+  the background.
+- Cancelling a job that is still waiting for a free download slot now
+  takes effect immediately instead of once a running download finishes.
+- A job could stay labeled "queued" while already downloading when its
+  first status event beat the enqueue response to the UI.
+- A `queue.json` that can't be read (corrupt, or written by a newer
+  YTBR after a downgrade) is now moved to `queue.json.bak` instead of
+  being silently overwritten on the first download.
+- Retry on a failed or cancelled job now shows why it was rejected
+  (e.g. output folder no longer exists) instead of doing nothing.
+- "Only available to Music Premium members", "Sign in to confirm" and
+  Chrome/Edge "Failed to decrypt with DPAPI" cookie errors now point to
+  the cookie setting that works (cookies.txt file or Firefox).
+
+### Security
+
+- yt-dlp is now always called with `--` before the URL, so a line in a
+  dropped `.txt` or a playlist entry starting with `-` can't be
+  interpreted as a yt-dlp option such as `--exec`.
+- The webview no longer has permission to run the yt-dlp / ffmpeg
+  sidecars with arbitrary arguments; all spawning happens in Rust.
+
 ## [1.0.1] - 2026-10-06
 
 ### Fixed

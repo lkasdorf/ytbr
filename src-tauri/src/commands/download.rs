@@ -64,3 +64,32 @@ pub async fn remove_job(
     queue.remove_job(&app, &id);
     Ok(())
 }
+
+#[tauri::command]
+pub async fn pause_all_jobs(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+) -> Result<usize, AppError> {
+    Ok(queue.pause_all(&app))
+}
+
+#[tauri::command]
+pub async fn resume_all_jobs(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+) -> Result<usize, AppError> {
+    Ok(queue.resume_all(&app))
+}
+
+#[tauri::command]
+pub async fn cancel_all_jobs(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+) -> Result<usize, AppError> {
+    Ok(queue.cancel_all(&app))
+}
+
+#[tauri::command]
+pub async fn queue_paused(queue: State<'_, QueueManager>) -> Result<bool, AppError> {
+    Ok(queue.is_paused())
+}

@@ -15,9 +15,12 @@ import {
   XCircle,
 } from "lucide-react";
 import {
+  cancelAllJobs,
   cancelJob,
   enqueueJob,
+  pauseAllJobs,
   pauseJob,
+  resumeAllJobs,
   resumeJob,
   revealInFolder,
   type JobState,
@@ -122,6 +125,7 @@ export function QueueView() {
 
   return (
     <div className="flex flex-col gap-3">
+      <QueueControls jobs={ordered} />
       <div className="flex items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Sort</span>
@@ -150,6 +154,82 @@ export function QueueView() {
   );
 }
 
+// Queue-wide Pause all / Resume all / Cancel all. "Pause all" also
+// holds queued jobs back (backend flag), so a running batch stops as a
+// whole instead of the next queued URL starting in the freed slot.
+// Cancel all is a two-step click: the first arms it, the second fires.
+function QueueControls({ jobs }: { jobs: JobState[] }) {
+  const queuePaused = useJobsStore((s) => s.queuePaused);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const queued = jobs.filter((j) => j.status === "queued").length;
+  const paused = jobs.filter((j) => j.status === "paused").length;
+  const showResume = queuePaused || paused > 0;
+
+  async function run(op: () => Promise<number>) {
+    setBusy(true);
+    try {
+      await op();
+    } catch (err) {
+      console.error("queue control failed", err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const btn =
+    "inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground disabled:opacity-50";
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+      <span className="mr-auto text-xs text-muted-foreground">
+        {queuePaused
+          ? `Queue paused${queued > 0 ? ` · ${queued} waiting` : ""}`
+          : `${jobs.length} active ${jobs.length === 1 ? "job" : "jobs"}`}
+      </span>
+      {showResume ? (
+        <button
+          className={cn(btn, "hover:bg-primary hover:text-primary-foreground")}
+          disabled={busy}
+          onClick={() => void run(resumeAllJobs)}
+        >
+          <Play className="size-3.5" /> Resume all
+        </button>
+      ) : (
+        <button
+          className={cn(btn, "hover:bg-accent")}
+          disabled={busy}
+          onClick={() => void run(pauseAllJobs)}
+        >
+          <Pause className="size-3.5" /> Pause all
+        </button>
+      )}
+      <button
+        className={cn(
+          btn,
+          confirmCancel
+            ? "border-destructive bg-destructive text-destructive-foreground"
+            : "hover:bg-destructive hover:text-destructive-foreground",
+        )}
+        disabled={busy}
+        onBlur={() => setConfirmCancel(false)}
+        onClick={() => {
+          if (!confirmCancel) {
+            setConfirmCancel(true);
+            return;
+          }
+          setConfirmCancel(false);
+          void run(cancelAllJobs);
+        }}
+      >
+        <StopCircle className="size-3.5" />
+        {confirmCancel ? `Cancel ${jobs.length} jobs?` : "Cancel all"}
+      </button>
+    </div>
+  );
+}
+
 export function isTerminal(status: JobStatus): boolean {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
@@ -158,6 +238,7 @@ export function JobCard({ job }: { job: JobState }) {
   const p = job.progress;
   const percent = p?.percent ?? 0;
   const showBar = isActive(job.status) || job.status === "completed";
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   return (
     <div
@@ -223,6 +304,12 @@ export function JobCard({ job }: { job: JobState }) {
             </pre>
           )}
 
+          {retryError && (
+            <p className="mt-2 text-xs text-destructive">
+              Retry failed: {retryError}
+            </p>
+          )}
+
           <LogsPanel id={job.id} />
         </div>
 
@@ -261,7 +348,10 @@ export function JobCard({ job }: { job: JobState }) {
             {(job.status === "failed" || job.status === "cancelled") && (
               <IconButton
                 title="Retry — re-queue this job with the same spec"
-                onClick={() => void retryJob(job)}
+                onClick={() => {
+                  setRetryError(null);
+                  void retryJob(job).then(setRetryError);
+                }}
                 icon={RotateCw}
               />
             )}
@@ -276,8 +366,10 @@ export function JobCard({ job }: { job: JobState }) {
 // The new job gets a fresh UUID from the backend; the original failed
 // or cancelled row stays in the queue so the user keeps the error
 // context (and can clear it manually via "Clear completed" once the
-// retry has settled).
-async function retryJob(job: JobState): Promise<void> {
+// retry has settled). Resolves to the backend's error message when the
+// re-queue is rejected (e.g. the output folder no longer exists), so the
+// card can show it instead of failing silently.
+async function retryJob(job: JobState): Promise<string | null> {
   try {
     const id = await enqueueJob(job.spec);
     useJobsStore.getState().upsert({
@@ -287,8 +379,9 @@ async function retryJob(job: JobState): Promise<void> {
       progress: null,
       error: null,
     });
+    return null;
   } catch (err) {
-    console.error("retry failed", err);
+    return String(err);
   }
 }
 

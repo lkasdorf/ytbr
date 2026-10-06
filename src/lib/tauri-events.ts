@@ -81,6 +81,12 @@ export async function startJobListeners(): Promise<void> {
   );
 
   unlisten.push(
+    await listen<boolean>("queue-paused", (e) => {
+      useJobsStore.getState().setQueuePaused(e.payload);
+    }),
+  );
+
+  unlisten.push(
     await listen<LogPayload>("job-log-line", (e) => {
       const { id, line, stream } = e.payload;
       useJobsStore.getState().appendLog(id, { line, stream });

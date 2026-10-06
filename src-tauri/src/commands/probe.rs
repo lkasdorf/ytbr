@@ -20,6 +20,7 @@ pub async fn probe_url(app: tauri::AppHandle, url: String) -> Result<ProbeResult
             "-J",
             "--no-playlist",
             "--no-warnings",
+            "--",
             url.as_str(),
         ])
         .output()
@@ -87,6 +88,7 @@ pub async fn expand_playlist(
             "--flat-playlist",
             "--dump-single-json",
             "--no-warnings",
+            "--",
             url.as_str(),
         ])
         .output()

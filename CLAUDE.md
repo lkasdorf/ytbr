@@ -36,7 +36,7 @@ Two processes, two languages, one strict boundary:
 - **Rust backend** (`src-tauri/`): owns the queue, spawns yt-dlp/ffmpeg sidecars, parses progress, holds all long-lived state. Single-process; uses `tauri::async_runtime` (tokio underneath).
 - **React frontend** (`src/`): pure UI + ephemeral state. Talks to Rust via two channels:
   - **Commands** (request/response): `invoke<T>(name, args)` — all wrappers typed in `src/lib/tauri-bridge.ts`. Names are snake_case to match Rust function names 1:1; arg keys are camelCase (Rust structs use `#[serde(rename_all = "camelCase")]`).
-  - **Events** (push from Rust): `app.emit("name", payload)` on the Rust side, `listen()` on the JS side. Registered exactly once on app mount in `src/lib/tauri-events.ts`. Three events flow today: `job-progress`, `job-status`, `job-log-line`.
+  - **Events** (push from Rust): `app.emit("name", payload)` on the Rust side, `listen()` on the JS side. Registered exactly once on app mount in `src/lib/tauri-events.ts`. Four events flow today: `job-progress`, `job-status`, `job-log-line`, `queue-paused` (queue-wide Pause all flag).
 
 ### The download pipeline (the heart of the app)
 
@@ -59,11 +59,15 @@ Solution lives in two files:
 - `src-tauri/build.rs` exports the cargo `TARGET` triple as a compile-time env via `cargo:rustc-env=TARGET=...`.
 - `ytdlp/runner.rs::ffmpeg_sidecar_path()` derives `ffmpeg-<TARGET>{.exe}` and tries (a) next-to-current_exe (production layout), then (b) walks up looking for `src-tauri/binaries/` (dev layout).
 
-If you ever need a path to yt-dlp itself (we don't yet), use the same trick.
+yt-dlp itself is never spawned via `sidecar("yt-dlp")` directly — always through `runner::ytdlp_command()`, which prefers the in-app updater's per-user copy (`<app_local_data_dir>/bin/`) over the bundled sidecar. Per-machine installs under `C:\Program Files` aren't writable, so the updater can't replace the sidecar in place. `ytdlp/user_copy.rs` drops the user copy at startup once the bundled one is at least as new.
+
+The release yt-dlp binaries are PyInstaller one-file builds: the spawned pid is a bootloader, the real worker is its child. Pause / resume / cancel must act on the whole tree — `ytdlp/process_tree.rs`.
 
 ### Capability model (Tauri 2 quirk)
 
-The shell sidecar scope **must** live in `src-tauri/capabilities/default.json` under `shell:allow-execute` / `shell:allow-spawn` / `shell:allow-kill`, with explicit allow-lists for each sidecar name. **Do not** put a `plugins.shell.scope` block in `tauri.conf.json` — in Tauri 2 the `plugins.shell` config only accepts `open` and the app panics on init with `PluginInitialization("shell", "unknown field 'scope'")`.
+All process spawning happens in Rust. `Shell::command` / `Shell::sidecar` from Rust are **not** scope-checked, so the webview gets **no** `shell:*` permissions in `src-tauri/capabilities/default.json` — granting `shell:allow-execute` with `args: true` would let any script in the webview run `yt-dlp --exec …`. Keep it that way; add a Rust command instead of a JS shell call. **Do not** put a `plugins.shell.scope` block in `tauri.conf.json` — in Tauri 2 the `plugins.shell` config only accepts `open` and the app panics on init with `PluginInitialization("shell", "unknown field 'scope'")`.
+
+Every yt-dlp invocation passes `--` before the URL so a "URL" starting with `-` (dropped .txt, remote playlist entry) can't be parsed as an option.
 
 ### Layout
 
@@ -75,7 +79,9 @@ src-tauri/src/
   ytdlp/
     format.rs             # yt-dlp -J deserializer (VideoInfo) + ProbeResult/Format wire shapes
     progress.rs           # PROG|... parser (TEMPLATE constant lives here)
-    runner.rs             # yt-dlp spawn loop, event drain, cancel, ffmpeg path derivation
+    runner.rs             # yt-dlp spawn loop, event drain, cancel, ffmpeg path derivation, ytdlp_command()
+    process_tree.rs       # suspend / resume / kill a pid plus all its descendants (PyInstaller worker, ffmpeg)
+    user_copy.rs          # startup pruning of the updater's per-user yt-dlp
   commands/
     {download,probe,settings,system}.rs   # Tauri #[command]s, one file per logical group
   build.rs                # surfaces TARGET as compile-time env (see Sidecar paths)

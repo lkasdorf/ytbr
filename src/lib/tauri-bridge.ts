@@ -178,6 +178,24 @@ export function resumeJob(id: string): Promise<void> {
   return invoke<void>("resume_job", { id });
 }
 
+// Queue-wide controls. Pause all suspends running downloads and holds
+// queued jobs back; each returns how many jobs it acted on.
+export function pauseAllJobs(): Promise<number> {
+  return invoke<number>("pause_all_jobs");
+}
+
+export function resumeAllJobs(): Promise<number> {
+  return invoke<number>("resume_all_jobs");
+}
+
+export function cancelAllJobs(): Promise<number> {
+  return invoke<number>("cancel_all_jobs");
+}
+
+export function queuePaused(): Promise<boolean> {
+  return invoke<boolean>("queue_paused");
+}
+
 export function listJobs(): Promise<JobState[]> {
   return invoke<JobState[]>("list_jobs");
 }

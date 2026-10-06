@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::sync::{oneshot, Semaphore};
+use tokio::sync::{oneshot, watch, Semaphore};
 
 use crate::error::AppError;
 use crate::ytdlp::progress::JobProgress;
@@ -170,6 +170,10 @@ struct QueueInner {
     /// semaphore — guarded together so concurrent set_parallel_limit
     /// calls don't compute a wrong delta.
     limit: Mutex<usize>,
+    /// Queue-wide pause ("Pause all"). While `true`, queued jobs don't
+    /// start; running ones were suspended by `pause_all`. Spawn tasks
+    /// subscribe and wait for it to flip back.
+    paused: watch::Sender<bool>,
 }
 
 /// Hard upper bound for parallel downloads. Mirrors `MAX_PARALLEL_LIMIT`
@@ -189,6 +193,7 @@ impl QueueManager {
                 jobs: Mutex::new(HashMap::new()),
                 semaphore: Arc::new(Semaphore::new(limit)),
                 limit: Mutex::new(limit),
+                paused: watch::Sender::new(false),
             }),
         }
     }
@@ -277,9 +282,42 @@ impl QueueManager {
         let task_id = id.clone();
         let pid_for_runner = pid.clone();
         tauri::async_runtime::spawn(async move {
-            let permit = match inner.semaphore.clone().acquire_owned().await {
-                Ok(p) => p,
-                Err(_) => return, // semaphore closed (shutdown)
+            // Race the permit against cancel so cancelling a job that is
+            // still waiting for a slot takes effect immediately instead
+            // of once a running download frees its permit.
+            let mut cancel_rx = cancel_rx;
+            let permit = loop {
+                // Hold off while the whole queue is paused, without
+                // occupying a download slot.
+                let mut paused_rx = inner.paused.subscribe();
+                tokio::select! {
+                    unpaused = paused_rx.wait_for(|p| !*p) => {
+                        if unpaused.is_err() {
+                            return; // sender dropped (shutdown)
+                        }
+                    }
+                    _ = &mut cancel_rx => {
+                        inner.transition(&app, &task_id, JobStatus::Cancelled, None);
+                        return;
+                    }
+                }
+                let permit = tokio::select! {
+                    acquired = inner.semaphore.clone().acquire_owned() => match acquired {
+                        Ok(p) => p,
+                        Err(_) => return, // semaphore closed (shutdown)
+                    },
+                    _ = &mut cancel_rx => {
+                        inner.transition(&app, &task_id, JobStatus::Cancelled, None);
+                        return;
+                    }
+                };
+                // "Pause all" may have landed while we waited for the
+                // slot: give it back and wait again.
+                if *inner.paused.borrow() {
+                    drop(permit);
+                    continue;
+                }
+                break permit;
             };
 
             inner.transition(&app, &task_id, JobStatus::Downloading, None);
@@ -321,7 +359,7 @@ impl QueueManager {
 
     pub fn pause(&self, app: &AppHandle, id: &str) -> Result<(), AppError> {
         let pid = self.pid_for_status_change(id, JobStatus::Downloading)?;
-        if !crate::ytdlp::process_pause::suspend(pid) {
+        if !crate::ytdlp::process_tree::suspend(pid) {
             return Err(AppError::InvalidInput(format!(
                 "OS-level suspend failed for pid {pid}"
             )));
@@ -333,7 +371,7 @@ impl QueueManager {
 
     pub fn resume(&self, app: &AppHandle, id: &str) -> Result<(), AppError> {
         let pid = self.pid_for_status_change(id, JobStatus::Paused)?;
-        if !crate::ytdlp::process_pause::resume(pid) {
+        if !crate::ytdlp::process_tree::resume(pid) {
             return Err(AppError::InvalidInput(format!(
                 "OS-level resume failed for pid {pid}"
             )));
@@ -341,6 +379,64 @@ impl QueueManager {
         self.inner
             .transition(app, id, JobStatus::Downloading, None);
         Ok(())
+    }
+
+    /// Pause the whole queue: queued jobs stop being started and every
+    /// running download is suspended. Returns how many downloads were
+    /// suspended. A job that is between taking its slot and spawning
+    /// yt-dlp has no pid yet and keeps running; the window is a few
+    /// milliseconds.
+    pub fn pause_all(&self, app: &AppHandle) -> usize {
+        self.inner.paused.send_replace(true);
+        emit_queue_paused(app, true);
+        self.ids_with_status(JobStatus::Downloading)
+            .iter()
+            .filter(|id| self.pause(app, id).is_ok())
+            .count()
+    }
+
+    /// Undo `pause_all`: resume every paused download and let queued
+    /// jobs start again. Also resumes jobs that were paused one by one.
+    pub fn resume_all(&self, app: &AppHandle) -> usize {
+        self.inner.paused.send_replace(false);
+        emit_queue_paused(app, false);
+        self.ids_with_status(JobStatus::Paused)
+            .iter()
+            .filter(|id| self.resume(app, id).is_ok())
+            .count()
+    }
+
+    /// Cancel every queued, downloading and paused job, then clear the
+    /// queue-wide pause so the next enqueue isn't silently held back.
+    /// Returns how many jobs were signalled.
+    pub fn cancel_all(&self, app: &AppHandle) -> usize {
+        let mut n = 0;
+        for entry in self.inner.jobs.lock().unwrap().values_mut() {
+            if is_active(entry.state.status) {
+                if let Some(tx) = entry.cancel_tx.take() {
+                    let _ = tx.send(());
+                    n += 1;
+                }
+            }
+        }
+        self.inner.paused.send_replace(false);
+        emit_queue_paused(app, false);
+        n
+    }
+
+    pub fn is_paused(&self) -> bool {
+        *self.inner.paused.borrow()
+    }
+
+    fn ids_with_status(&self, status: JobStatus) -> Vec<JobId> {
+        self.inner
+            .jobs
+            .lock()
+            .unwrap()
+            .values()
+            .filter(|e| e.state.status == status)
+            .map(|e| e.state.id.clone())
+            .collect()
     }
 
     /// Look up the running pid for a job, but only when its current
@@ -386,12 +482,12 @@ impl QueueManager {
     /// downloading, or paused). Used by the yt-dlp self-updater to
     /// refuse swapping the sidecar while it might be in flight.
     pub fn has_active_jobs(&self) -> bool {
-        self.inner.jobs.lock().unwrap().values().any(|entry| {
-            matches!(
-                entry.state.status,
-                JobStatus::Queued | JobStatus::Downloading | JobStatus::Paused
-            )
-        })
+        self.inner
+            .jobs
+            .lock()
+            .unwrap()
+            .values()
+            .any(|entry| is_active(entry.state.status))
     }
 
     pub fn clear_completed(&self, app: &AppHandle) {
@@ -431,11 +527,7 @@ impl QueueManager {
         }
         let mut jobs = self.inner.jobs.lock().unwrap();
         for mut state in persisted {
-            let needs_flip = matches!(
-                state.status,
-                JobStatus::Queued | JobStatus::Downloading | JobStatus::Paused
-            );
-            if needs_flip {
+            if is_active(state.status) {
                 state.status = JobStatus::Cancelled;
                 if state.error.is_none() {
                     state.error =
@@ -529,14 +621,28 @@ fn load_persisted_jobs(app: &AppHandle) -> Vec<JobState> {
         return Vec::new();
     };
     let parsed: Result<PersistedQueue, _> = serde_json::from_slice(&bytes);
-    let Ok(persisted) = parsed else {
-        return Vec::new();
-    };
-    if persisted.version > PERSIST_VERSION {
-        // Don't truncate forward-compat data we don't understand.
-        return Vec::new();
+    match parsed {
+        Ok(persisted) if persisted.version <= PERSIST_VERSION => persisted.jobs,
+        _ => {
+            // Unreadable or written by a newer YTBR. Move it aside rather
+            // than returning empty and letting the next persist_jobs
+            // overwrite it — that would silently drop the whole history
+            // (e.g. after a downgrade).
+            let _ = std::fs::rename(&path, path.with_extension("json.bak"));
+            Vec::new()
+        }
     }
-    persisted.jobs
+}
+
+fn is_active(status: JobStatus) -> bool {
+    matches!(
+        status,
+        JobStatus::Queued | JobStatus::Downloading | JobStatus::Paused
+    )
+}
+
+fn emit_queue_paused(app: &AppHandle, paused: bool) {
+    let _ = app.emit("queue-paused", paused);
 }
 
 fn emit_status(app: &AppHandle, id: &str, status: JobStatus, error: Option<String>) {

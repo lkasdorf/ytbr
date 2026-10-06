@@ -17,10 +17,21 @@ export interface LogLine {
 // while. Logs are session-local — backend doesn't persist them.
 const LOG_BUFFER_CAP = 500;
 
+// Status / progress events that arrived for an id the store doesn't
+// know yet. The backend emits from the spawned job task, so e.g.
+// "downloading" can reach the webview before the enqueue_job invoke
+// resolves and the caller upserts the job. Buffered here and applied by
+// `upsert` so the optimistic "queued" insert can't clobber them.
+type EarlyEvents = Partial<Pick<JobState, "status" | "error" | "progress">>;
+
 interface JobsStore {
   jobs: Record<string, JobState>;
   ids: string[];
   logs: Record<string, LogLine[]>;
+  early: Record<string, EarlyEvents>;
+  // Queue-wide "Pause all" flag, mirrored from the backend via the
+  // `queue-paused` event (and fetched once on mount).
+  queuePaused: boolean;
 
   upsert: (job: JobState) => void;
   patchProgress: (id: string, progress: JobProgress) => void;
@@ -29,6 +40,7 @@ interface JobsStore {
   remove: (id: string) => void;
   hydrate: (list: JobState[]) => void;
   clearTerminal: () => void;
+  setQueuePaused: (paused: boolean) => void;
 }
 
 const TERMINAL: ReadonlyArray<JobStatus> = ["completed", "failed", "cancelled"];
@@ -37,27 +49,43 @@ export const useJobsStore = create<JobsStore>((set) => ({
   jobs: {},
   ids: [],
   logs: {},
+  early: {},
+  queuePaused: false,
 
   upsert: (job) =>
     set((s) => {
       const exists = s.jobs[job.id] != null;
+      const pending = s.early[job.id];
+      if (!pending) {
+        return {
+          jobs: { ...s.jobs, [job.id]: job },
+          ids: exists ? s.ids : [...s.ids, job.id],
+        };
+      }
+      const early = { ...s.early };
+      delete early[job.id];
       return {
-        jobs: { ...s.jobs, [job.id]: job },
+        jobs: { ...s.jobs, [job.id]: { ...job, ...pending } },
         ids: exists ? s.ids : [...s.ids, job.id],
+        early,
       };
     }),
 
   patchProgress: (id, progress) =>
     set((s) => {
       const current = s.jobs[id];
-      if (!current) return s;
+      if (!current) {
+        return { early: { ...s.early, [id]: { ...s.early[id], progress } } };
+      }
       return { jobs: { ...s.jobs, [id]: { ...current, progress } } };
     }),
 
   patchStatus: (id, status, error) =>
     set((s) => {
       const current = s.jobs[id];
-      if (!current) return s;
+      if (!current) {
+        return { early: { ...s.early, [id]: { ...s.early[id], status, error } } };
+      }
       return { jobs: { ...s.jobs, [id]: { ...current, status, error } } };
     }),
 
@@ -93,6 +121,7 @@ export const useJobsStore = create<JobsStore>((set) => ({
         jobs: Object.fromEntries(list.map((j) => [j.id, j])),
         ids: list.map((j) => j.id),
         logs: nextLogs,
+        early: {},
       };
     }),
 
@@ -107,6 +136,8 @@ export const useJobsStore = create<JobsStore>((set) => ({
       }
       return { jobs, ids, logs };
     }),
+
+  setQueuePaused: (queuePaused) => set({ queuePaused }),
 }));
 
 export function isActive(status: JobStatus): boolean {
