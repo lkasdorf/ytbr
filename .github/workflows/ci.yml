@@ -92,11 +92,15 @@ jobs:
 
       - name: Fetch sidecar binaries (yt-dlp + LGPL ffmpeg, UPX-compressed)
         if: matrix.os == 'ubuntu-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/fetch-binaries.sh ${{ matrix.target }}
 
       - name: Fetch sidecar binaries (yt-dlp + LGPL ffmpeg, UPX-compressed)
         if: matrix.os == 'windows-latest'
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/fetch-binaries.ps1 -Target ${{ matrix.target }}
 
       - name: Frontend build (TypeScript strict + Vite)

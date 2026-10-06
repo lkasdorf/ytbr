@@ -38,8 +38,16 @@ UPX_VERSION="5.0.2"
 # the redirect resolve to two different tags — and the hash check
 # silently rejects a perfectly fine binary. Resolve "latest" to a
 # concrete tag once and pin every subsequent URL to it.
+#
+# Unauthenticated api.github.com calls share a 60 req/h limit per IP,
+# which shared CI runners regularly exhaust (HTTP 403). In CI the
+# workflow passes GITHUB_TOKEN; locally the header is simply omitted.
+api_auth=()
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  api_auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
 ytdlp_tag="$(
-  curl -fsSL --retry 3 --retry-delay 2 \
+  curl -fsSL --retry 3 --retry-delay 2 "${api_auth[@]}" \
     "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest" \
     | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
     | head -n 1

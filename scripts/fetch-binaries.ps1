@@ -42,7 +42,12 @@ $UpxVersion = "5.0.2"
 # the redirect resolve to two different tags — and the hash check
 # silently rejects a perfectly fine binary. Resolve "latest" to a
 # concrete tag once and pin every subsequent URL to it.
-$YtDlpTag = (Invoke-RestMethod -Uri "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest").tag_name
+# Unauthenticated api.github.com calls share a 60 req/h limit per IP,
+# which shared CI runners regularly exhaust (HTTP 403). In CI the
+# workflow passes GITHUB_TOKEN; locally the header is simply omitted.
+$ApiHeaders = @{}
+if ($env:GITHUB_TOKEN) { $ApiHeaders["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
+$YtDlpTag = (Invoke-RestMethod -Uri "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest" -Headers $ApiHeaders).tag_name
 if (-not $YtDlpTag) {
     throw "Failed to resolve yt-dlp latest tag from GitHub API"
 }
