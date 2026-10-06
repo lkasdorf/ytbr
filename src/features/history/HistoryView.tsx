@@ -11,7 +11,8 @@ import { History, Search, Trash2 } from "lucide-react";
 import { clearCompletedJobs, type JobState } from "@/lib/tauri-bridge";
 import { useJobsStore } from "@/stores/jobs";
 import { cn } from "@/lib/utils";
-import { isTerminal, JobCard } from "@/features/queue/QueueView";
+import { isTerminal } from "@/features/queue/QueueView";
+import { VirtualJobList } from "@/features/queue/VirtualJobList";
 
 type StatusFilter = "all" | "completed" | "failed" | "cancelled";
 
@@ -23,8 +24,9 @@ const FILTERS: { id: StatusFilter; label: string }[] = [
 ];
 
 export function HistoryView() {
-  const jobs = useJobsStore((s) => s.jobs);
-  const ids = useJobsStore((s) => s.ids);
+  // History rows don't get progress; only status / membership changes
+  // matter, so key the derived data on statusVersion.
+  const statusVersion = useJobsStore((s) => s.statusVersion);
   const clearTerminal = useJobsStore((s) => s.clearTerminal);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
@@ -32,6 +34,7 @@ export function HistoryView() {
   const [confirmClear, setConfirmClear] = useState(false);
 
   const terminal = useMemo(() => {
+    const { jobs, ids } = useJobsStore.getState();
     const indexOf = new Map(ids.map((id, i) => [id, i]));
     const list = ids
       .map((id) => jobs[id])
@@ -57,16 +60,21 @@ export function HistoryView() {
       const ib = indexOf.get(b.id) ?? 0;
       return sort === "newest" ? ib - ia : ia - ib;
     });
-  }, [ids, jobs, filter, query, sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusVersion, filter, query, sort]);
 
-  const totalTerminal = useMemo(
-    () =>
-      ids.reduce((n, id) => {
-        const j = jobs[id];
-        return j != null && isTerminal(j.status) ? n + 1 : n;
-      }, 0),
-    [ids, jobs],
-  );
+  const chipCounts = useMemo(() => {
+    const { jobs, ids } = useJobsStore.getState();
+    const counts: Record<StatusFilter, number> = { all: 0, completed: 0, failed: 0, cancelled: 0 };
+    for (const id of ids) {
+      const j = jobs[id];
+      if (j == null || !isTerminal(j.status)) continue;
+      counts.all += 1;
+      counts[j.status as Exclude<StatusFilter, "all">] += 1;
+    }
+    return counts;
+  }, [statusVersion]);
+  const totalTerminal = chipCounts.all;
 
   if (totalTerminal === 0) {
     return (
@@ -123,7 +131,7 @@ export function HistoryView() {
             <FilterChip
               key={f.id}
               label={f.label}
-              count={countFor(jobs, ids, f.id)}
+              count={chipCounts[f.id]}
               active={filter === f.id}
               onClick={() => setFilter(f.id)}
             />
@@ -165,24 +173,10 @@ export function HistoryView() {
           Nothing matches the current filter.
         </div>
       ) : (
-        terminal.map((job) => <JobCard key={job.id} job={job} />)
+        <VirtualJobList ids={terminal.map((j) => j.id)} />
       )}
     </div>
   );
-}
-
-function countFor(
-  jobs: Record<string, JobState | undefined>,
-  ids: string[],
-  filter: StatusFilter,
-): number {
-  let n = 0;
-  for (const id of ids) {
-    const j = jobs[id];
-    if (j == null || !isTerminal(j.status)) continue;
-    if (filter === "all" || j.status === filter) n += 1;
-  }
-  return n;
 }
 
 function FilterChip({

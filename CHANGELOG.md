@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The Queue tab now sorts "Active first, then queue order" by default:
+  running and paused downloads on top, then queued jobs in the order
+  they will start, instead of newest first.
+- Queue and History stay responsive with thousands of jobs:
+  - Only the cards in and near the viewport are rendered
+    (`@tanstack/react-virtual`); previously every card was mounted.
+  - Backend events are applied to the UI in one batch per 100 ms, and a
+    progress tick re-renders only that job's card instead of re-sorting
+    and re-rendering the whole list. "Cancel all" on ~3,600 jobs is now
+    a single UI update.
+  - `queue.json` is written by a background thread at most once per
+    second (and on exit) instead of on every status change, compact
+    instead of pretty-printed, without holding the queue lock while
+    serializing.
+
+### Fixed
+
+- Jobs came back from `queue.json` in arbitrary order after a restart
+  (the backend stored them in a hash map), which scrambled the newest /
+  oldest / queue-order sorts. Jobs now carry a creation sequence.
+
 ## [1.3.1] - 2026-10-06
 
 ### Fixed

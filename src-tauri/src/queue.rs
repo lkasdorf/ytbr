@@ -3,7 +3,9 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
@@ -157,6 +159,12 @@ pub struct JobState {
     pub progress: Option<JobProgress>,
     #[serde(default)]
     pub error: Option<String>,
+    /// Monotonic creation order. The job map is a HashMap, so without
+    /// this `list()` (and queue.json) come back in arbitrary order and
+    /// the UI's "queue order" / newest / oldest sorts break after a
+    /// restart. Old queue.json files lack it; hydration assigns one.
+    #[serde(default)]
+    pub seq: u64,
 }
 
 struct JobEntry {
@@ -184,7 +192,16 @@ struct QueueInner {
     /// start; running ones were suspended by `pause_all`. Spawn tasks
     /// subscribe and wait for it to flip back.
     paused: watch::Sender<bool>,
+    /// Set by every mutation; the persister thread writes queue.json at
+    /// most once per PERSIST_INTERVAL when it's set. Writing the whole
+    /// file on every transition was O(jobs) per job start/finish and
+    /// held the jobs lock while serializing megabytes at a few thousand
+    /// entries.
+    dirty: AtomicBool,
+    next_seq: AtomicU64,
 }
+
+const PERSIST_INTERVAL: Duration = Duration::from_secs(1);
 
 /// Hard upper bound for parallel downloads. Mirrors `MAX_PARALLEL_LIMIT`
 /// in `src/stores/settings.ts`. Bump both together if the UI slider
@@ -204,6 +221,8 @@ impl QueueManager {
                 semaphore: Arc::new(Semaphore::new(limit)),
                 limit: Mutex::new(limit),
                 paused: watch::Sender::new(false),
+                dirty: AtomicBool::new(false),
+                next_seq: AtomicU64::new(1),
             }),
         }
     }
@@ -270,6 +289,7 @@ impl QueueManager {
             status: JobStatus::Queued,
             progress: None,
             error: None,
+            seq: self.inner.next_seq.fetch_add(1, Ordering::Relaxed),
         };
 
         let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
@@ -284,8 +304,8 @@ impl QueueManager {
                     pid: pid.clone(),
                 },
             );
-            persist_jobs(&app, &jobs);
         }
+        self.inner.mark_dirty();
         emit_status(&app, &id, JobStatus::Queued, None);
 
         let inner = self.inner.clone();
@@ -478,14 +498,9 @@ impl QueueManager {
         pid.ok_or_else(|| AppError::InvalidInput("job has not spawned yet".into()))
     }
 
+    /// All jobs in creation order.
     pub fn list(&self) -> Vec<JobState> {
-        self.inner
-            .jobs
-            .lock()
-            .unwrap()
-            .values()
-            .map(|e| e.state.clone())
-            .collect()
+        self.inner.snapshot()
     }
 
     /// True iff any tracked job is in a non-terminal state (queued,
@@ -500,7 +515,7 @@ impl QueueManager {
             .any(|entry| is_active(entry.state.status))
     }
 
-    pub fn clear_completed(&self, app: &AppHandle) {
+    pub fn clear_completed(&self, _app: &AppHandle) {
         let mut jobs = self.inner.jobs.lock().unwrap();
         jobs.retain(|_, entry| {
             !matches!(
@@ -508,7 +523,8 @@ impl QueueManager {
                 JobStatus::Completed | JobStatus::Failed | JobStatus::Cancelled
             )
         });
-        persist_jobs(app, &jobs);
+        drop(jobs);
+        self.inner.mark_dirty();
     }
 
     /// Remove a single job by id. Idempotent: missing ids are ignored.
@@ -517,10 +533,29 @@ impl QueueManager {
     /// auto-clear path only fires on `completed`, the manual per-job
     /// button is currently surfaced only for terminal cards, so this
     /// stays an internal invariant rather than an Err return for now.
-    pub fn remove_job(&self, app: &AppHandle, id: &str) {
-        let mut jobs = self.inner.jobs.lock().unwrap();
-        if jobs.remove(id).is_some() {
-            persist_jobs(app, &jobs);
+    pub fn remove_job(&self, _app: &AppHandle, id: &str) {
+        if self.inner.jobs.lock().unwrap().remove(id).is_some() {
+            self.inner.mark_dirty();
+        }
+    }
+
+    /// Start the background thread that writes queue.json whenever the
+    /// queue changed, at most once per PERSIST_INTERVAL. Call once.
+    pub fn start_persister(&self, app: AppHandle) {
+        let inner = self.inner.clone();
+        std::thread::spawn(move || loop {
+            std::thread::sleep(PERSIST_INTERVAL);
+            if inner.dirty.swap(false, Ordering::AcqRel) {
+                write_states(&app, inner.snapshot());
+            }
+        });
+    }
+
+    /// Write queue.json now if anything changed since the last write.
+    /// Called on app exit so the last second of transitions isn't lost.
+    pub fn flush(&self, app: &AppHandle) {
+        if self.inner.dirty.swap(false, Ordering::AcqRel) {
+            write_states(app, self.inner.snapshot());
         }
     }
 
@@ -536,6 +571,16 @@ impl QueueManager {
             return;
         }
         let mut jobs = self.inner.jobs.lock().unwrap();
+        // Old files have no seq (all 0): keep their stored order. Either
+        // way, renumber densely and continue the counter after it.
+        let mut persisted = persisted;
+        persisted.sort_by_key(|s| s.seq);
+        for (i, state) in persisted.iter_mut().enumerate() {
+            state.seq = i as u64 + 1;
+        }
+        self.inner
+            .next_seq
+            .store(persisted.len() as u64 + 1, Ordering::Relaxed);
         for mut state in persisted {
             if is_active(state.status) {
                 state.status = JobStatus::Cancelled;
@@ -554,7 +599,8 @@ impl QueueManager {
                 },
             );
         }
-        persist_jobs(app, &jobs);
+        drop(jobs);
+        write_states(app, self.inner.snapshot());
     }
 }
 
@@ -566,11 +612,26 @@ impl QueueInner {
                 entry.state.error = error.clone();
             }
         }
-        // Persist after every transition. Cheap for typical queue sizes
-        // (low hundreds of entries) and means the on-disk view never
-        // lags behind the in-memory truth by more than one operation.
-        persist_jobs(app, &self.jobs.lock().unwrap());
+        self.mark_dirty();
         emit_status(app, id, status, error);
+    }
+
+    fn mark_dirty(&self) {
+        self.dirty.store(true, Ordering::Release);
+    }
+
+    /// Clone of every job's state in creation order. The lock is held
+    /// only for the clone; serializing happens outside it.
+    fn snapshot(&self) -> Vec<JobState> {
+        let mut states: Vec<JobState> = self
+            .jobs
+            .lock()
+            .unwrap()
+            .values()
+            .map(|e| e.state.clone())
+            .collect();
+        states.sort_by_key(|s| s.seq);
+        states
     }
 }
 
@@ -603,15 +664,17 @@ fn queue_file_path(app: &AppHandle) -> Option<PathBuf> {
     Some(dir.join("queue.json"))
 }
 
-fn persist_jobs(app: &AppHandle, jobs: &HashMap<JobId, JobEntry>) {
+fn write_states(app: &AppHandle, jobs: Vec<JobState>) {
     let Some(path) = queue_file_path(app) else {
         return;
     };
     let payload = PersistedQueue {
         version: PERSIST_VERSION,
-        jobs: jobs.values().map(|e| e.state.clone()).collect(),
+        jobs,
     };
-    let Ok(json) = serde_json::to_vec_pretty(&payload) else {
+    // Compact, not pretty: at thousands of jobs the indentation alone
+    // was a sizeable share of every write.
+    let Ok(json) = serde_json::to_vec(&payload) else {
         return;
     };
     // Serialize concurrent writes via a process-wide lock — torn JSON
@@ -635,7 +698,7 @@ fn load_persisted_jobs(app: &AppHandle) -> Vec<JobState> {
         Ok(persisted) if persisted.version <= PERSIST_VERSION => persisted.jobs,
         _ => {
             // Unreadable or written by a newer YTBR. Move it aside rather
-            // than returning empty and letting the next persist_jobs
+            // than returning empty and letting the next write_states
             // overwrite it — that would silently drop the whole history
             // (e.g. after a downgrade).
             let _ = std::fs::rename(&path, path.with_extension("json.bak"));
@@ -664,4 +727,47 @@ fn emit_status(app: &AppHandle, id: &str, status: JobStatus, error: Option<Strin
         error: Option<String>,
     }
     let _ = app.emit("job-status", Payload { id, status, error });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn state(id: &str, seq: u64) -> JobState {
+        JobState {
+            id: id.into(),
+            spec: serde_json::from_str(r#"{"url":"u","formatId":null,"outputDir":"."}"#).unwrap(),
+            status: JobStatus::Completed,
+            progress: None,
+            error: None,
+            seq,
+        }
+    }
+
+    #[test]
+    fn list_is_in_creation_order_not_hash_order() {
+        let q = QueueManager::new(1);
+        {
+            let mut jobs = q.inner.jobs.lock().unwrap();
+            for (id, seq) in [("c", 3), ("a", 1), ("e", 5), ("b", 2), ("d", 4)] {
+                jobs.insert(
+                    id.into(),
+                    JobEntry {
+                        state: state(id, seq),
+                        cancel_tx: None,
+                        pid: Arc::new(Mutex::new(None)),
+                    },
+                );
+            }
+        }
+        let ids: Vec<_> = q.list().into_iter().map(|s| s.id).collect();
+        assert_eq!(ids, ["a", "b", "c", "d", "e"]);
+    }
+
+    #[test]
+    fn old_queue_json_without_seq_still_parses() {
+        let raw = r#"{"version":1,"jobs":[{"id":"x","spec":{"url":"u","formatId":null,"outputDir":"."},"status":"completed"}]}"#;
+        let parsed: PersistedQueue = serde_json::from_str(raw).unwrap();
+        assert_eq!(parsed.jobs[0].seq, 0);
+    }
 }

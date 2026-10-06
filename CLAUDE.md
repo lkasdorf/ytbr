@@ -36,7 +36,7 @@ Two processes, two languages, one strict boundary:
 - **Rust backend** (`src-tauri/`): owns the queue, spawns yt-dlp/ffmpeg sidecars, parses progress, holds all long-lived state. Single-process; uses `tauri::async_runtime` (tokio underneath).
 - **React frontend** (`src/`): pure UI + ephemeral state. Talks to Rust via two channels:
   - **Commands** (request/response): `invoke<T>(name, args)` — all wrappers typed in `src/lib/tauri-bridge.ts`. Names are snake_case to match Rust function names 1:1; arg keys are camelCase (Rust structs use `#[serde(rename_all = "camelCase")]`).
-  - **Events** (push from Rust): `app.emit("name", payload)` on the Rust side, `listen()` on the JS side. Registered exactly once on app mount in `src/lib/tauri-events.ts`. Four events flow today: `job-progress`, `job-status`, `job-log-line`, `queue-paused` (queue-wide Pause all flag).
+  - **Events** (push from Rust): `app.emit("name", payload)` on the Rust side, `listen()` on the JS side. Registered exactly once on app mount in `src/lib/tauri-events.ts`, which buffers them and applies one `applyBatch` store update per 100 ms. Four events flow today: `job-progress`, `job-status`, `job-log-line`, `queue-paused` (queue-wide Pause all flag).
 
 ### The download pipeline (the heart of the app)
 
@@ -91,7 +91,8 @@ src/
   features/
     url-input/UrlInput.tsx
     format-picker/{FormatTable,PresetButtons}.tsx
-    queue/QueueView.tsx
+    queue/QueueView.tsx       # JobCard subscribes to its own job (memo); lists key on statusVersion
+    queue/VirtualJobList.tsx  # virtualized card list shared by Queue + History
     settings/OutputDirPicker.tsx
   lib/
     tauri-bridge.ts       # Typed invoke wrappers + TS shapes mirroring Rust serde structs
@@ -99,7 +100,7 @@ src/
     format-utils.ts       # classifyFormat, formatBytes/Bitrate/Duration/Resolution/Fps
     utils.ts              # cn() (clsx + tailwind-merge)
   stores/
-    jobs.ts               # zustand: jobs map, ids order, patchProgress/patchStatus
+    jobs.ts               # zustand: jobs map, ids order, upsert/applyBatch, statusVersion
     settings.ts           # zustand persist (localStorage): outputDir
   index.css               # Tailwind v4 import + slate theme tokens (oklch) + .dark variants
 ```

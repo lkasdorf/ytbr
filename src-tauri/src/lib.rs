@@ -39,6 +39,7 @@ pub fn run() {
             // of every prior job's history on each restart.
             let queue = app.state::<QueueManager>();
             queue.hydrate_from_disk(&app.handle());
+            queue.start_persister(app.handle().clone());
 
             // Drop the updater's per-user yt-dlp once the bundled sidecar
             // has caught up, so a newer YTBR release isn't shadowed by an
@@ -94,6 +95,13 @@ pub fn run() {
             commands::updater::update_ytdlp,
             commands::updater::check_app_update,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // queue.json is written by a debounced background thread;
+            // flush the last changes before the process goes away.
+            if let tauri::RunEvent::Exit = event {
+                app.state::<QueueManager>().flush(app);
+            }
+        });
 }

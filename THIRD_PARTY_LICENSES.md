@@ -40,12 +40,12 @@ The full LGPL 2.1 text appears at the end of this file.
 
 ---
 
-## Rust crates linked into the YTBR backend (579)
+## Rust crates linked into the YTBR backend (580)
 
 License distribution:
 
 - 256× `MIT OR Apache-2.0`
-- 131× `MIT`
+- 132× `MIT`
 - 55× `Apache-2.0 OR MIT`
 - 27× `MIT/Apache-2.0`
 - 18× `Unicode-3.0`
@@ -495,6 +495,7 @@ License distribution:
 | `tinyvec` | 1.11.0 | Zlib OR Apache-2.0 OR MIT | https://github.com/Lokathor/tinyvec |
 | `tinyvec_macros` | 0.1.1 | MIT OR Apache-2.0 OR Zlib | https://github.com/Soveu/tinyvec_macros |
 | `tokio` | 1.52.3 | MIT | https://github.com/tokio-rs/tokio |
+| `tokio-macros` | 2.7.0 | MIT | https://github.com/tokio-rs/tokio |
 | `tokio-rustls` | 0.26.4 | MIT OR Apache-2.0 | https://github.com/rustls/tokio-rustls |
 | `tokio-util` | 0.7.18 | MIT | https://github.com/tokio-rs/tokio |
 | `toml` | 0.8.2 | MIT OR Apache-2.0 | https://github.com/toml-rs/toml |
@@ -664,11 +665,11 @@ License distribution:
 
 ---
 
-## npm packages bundled into the YTBR frontend (18)
+## npm packages bundled into the YTBR frontend (20)
 
 License distribution:
 
-- 9× `MIT`
+- 11× `MIT`
 - 5× `MIT OR Apache-2.0`
 - 1× `Apache-2.0`
 - 1× `Apache-2.0 OR MIT`
@@ -678,6 +679,8 @@ License distribution:
 | Package | Version | License | Source |
 |---|---|---|---|
 | `@fontsource/jetbrains-mono` | 5.2.8 | OFL-1.1 | https://fontsource.org/fonts/jetbrains-mono |
+| `@tanstack/react-virtual` | 3.14.13 | MIT | https://tanstack.com/virtual |
+| `@tanstack/virtual-core` | 3.17.11 | MIT | https://tanstack.com/virtual |
 | `@tauri-apps/api` | 2.11.0 | Apache-2.0 OR MIT | https://github.com/tauri-apps/tauri#readme |
 | `@tauri-apps/plugin-clipboard-manager` | 2.3.2 | MIT OR Apache-2.0 | https://github.com/tauri-apps/plugins-workspace#readme |
 | `@tauri-apps/plugin-notification` | 2.3.3 | MIT OR Apache-2.0 | https://github.com/tauri-apps/plugins-workspace#readme |

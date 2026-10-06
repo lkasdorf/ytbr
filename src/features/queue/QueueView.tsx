@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   CheckCircle2,
   CircleDashed,
@@ -27,6 +27,7 @@ import {
   type JobStatus,
 } from "@/lib/tauri-bridge";
 import { isActive, useJobsStore, type LogLine } from "@/stores/jobs";
+import { VirtualJobList } from "@/features/queue/VirtualJobList";
 import { formatBytes } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 
@@ -43,9 +44,9 @@ interface SortOption {
 }
 
 const SORT_OPTIONS: readonly SortOption[] = [
+  { id: "status", label: "Active first, then queue order" },
   { id: "newest", label: "Newest first" },
   { id: "oldest", label: "Oldest first" },
-  { id: "status", label: "Status (active first)" },
   { id: "progress-desc", label: "Progress (high → low)" },
   { id: "progress-asc", label: "Progress (low → high)" },
 ];
@@ -62,14 +63,21 @@ const STATUS_RANK: Record<JobStatus, number> = {
 };
 
 export function QueueView() {
-  const jobs = useJobsStore((s) => s.jobs);
-  const ids = useJobsStore((s) => s.ids);
-  const [sort, setSort] = useState<SortMode>("newest");
+  // Recompute the list only when the job set or a status changes, not on
+  // every progress tick — unless the user sorts by progress.
+  const statusVersion = useJobsStore((s) => s.statusVersion);
+  // Default: running and paused downloads on top, then the queued jobs
+  // in the order they will start, so a long batch doesn't bury the
+  // jobs that are actually working under thousands of queued rows.
+  const [sort, setSort] = useState<SortMode>("status");
+  const byProgress = sort === "progress-desc" || sort === "progress-asc";
+  const progressVersion = useJobsStore((s) => (byProgress ? s.progressVersion : 0));
 
   // `ids` is insertion order — earlier index means older. Used both as
   // a created-at proxy and as the deterministic tie-breaker for sorts
   // that have ties (status, progress).
   const ordered = useMemo(() => {
+    const { jobs, ids } = useJobsStore.getState();
     const indexOf = new Map(ids.map((id, i) => [id, i]));
     // Queue tab shows live work only. Terminal jobs live in the
     // History tab so the queue stays focused on what's in flight.
@@ -87,9 +95,11 @@ export function QueueView() {
       case "oldest":
         return list.sort((a, b) => -newer(a, b));
       case "status":
+        // Oldest first within a status ≈ the order queued jobs start in
+        // (tokio's semaphore hands out permits in request order).
         return list.sort(
           (a, b) =>
-            STATUS_RANK[a.status] - STATUS_RANK[b.status] || newer(a, b),
+            STATUS_RANK[a.status] - STATUS_RANK[b.status] || -newer(a, b),
         );
       case "progress-desc":
         return list.sort(
@@ -104,7 +114,20 @@ export function QueueView() {
             newer(a, b),
         );
     }
-  }, [ids, jobs, sort]);
+    // statusVersion / progressVersion are the change signals; the data
+    // itself is read from getState() above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusVersion, progressVersion, sort]);
+
+  const orderedIds = useMemo(() => ordered.map((j) => j.id), [ordered]);
+  const counts = useMemo(
+    () => ({
+      total: ordered.length,
+      queued: ordered.filter((j) => j.status === "queued").length,
+      paused: ordered.filter((j) => j.status === "paused").length,
+    }),
+    [ordered],
+  );
 
   if (ordered.length === 0) {
     return (
@@ -125,7 +148,7 @@ export function QueueView() {
 
   return (
     <div className="flex flex-col gap-3">
-      <QueueControls jobs={ordered} />
+      <QueueControls counts={counts} />
       <div className="flex items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Sort</span>
@@ -147,9 +170,7 @@ export function QueueView() {
           </select>
         </label>
       </div>
-      {ordered.map((job) => (
-        <JobCard key={job.id} job={job} />
-      ))}
+      <VirtualJobList ids={orderedIds} />
     </div>
   );
 }
@@ -158,13 +179,15 @@ export function QueueView() {
 // holds queued jobs back (backend flag), so a running batch stops as a
 // whole instead of the next queued URL starting in the freed slot.
 // Cancel all is a two-step click: the first arms it, the second fires.
-function QueueControls({ jobs }: { jobs: JobState[] }) {
+function QueueControls({
+  counts: { total, queued, paused },
+}: {
+  counts: { total: number; queued: number; paused: number };
+}) {
   const queuePaused = useJobsStore((s) => s.queuePaused);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const queued = jobs.filter((j) => j.status === "queued").length;
-  const paused = jobs.filter((j) => j.status === "paused").length;
   const showResume = queuePaused || paused > 0;
 
   async function run(op: () => Promise<number>) {
@@ -186,7 +209,7 @@ function QueueControls({ jobs }: { jobs: JobState[] }) {
       <span className="mr-auto text-xs text-muted-foreground">
         {queuePaused
           ? `Queue paused${queued > 0 ? ` · ${queued} waiting` : ""}`
-          : `${jobs.length} active ${jobs.length === 1 ? "job" : "jobs"}`}
+          : `${total} active ${total === 1 ? "job" : "jobs"}`}
       </span>
       {showResume ? (
         <button
@@ -224,7 +247,7 @@ function QueueControls({ jobs }: { jobs: JobState[] }) {
         }}
       >
         <StopCircle className="size-3.5" />
-        {confirmCancel ? `Cancel ${jobs.length} jobs?` : "Cancel all"}
+        {confirmCancel ? `Cancel ${total} jobs?` : "Cancel all"}
       </button>
     </div>
   );
@@ -234,11 +257,15 @@ export function isTerminal(status: JobStatus): boolean {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-export function JobCard({ job }: { job: JobState }) {
+// Subscribes to its own job only, so a progress tick re-renders one
+// card instead of the whole list.
+export const JobCard = memo(function JobCard({ id }: { id: string }) {
+  const job = useJobsStore((s) => s.jobs[id]);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  if (!job) return null;
   const p = job.progress;
   const percent = p?.percent ?? 0;
   const showBar = isActive(job.status) || job.status === "completed";
-  const [retryError, setRetryError] = useState<string | null>(null);
 
   return (
     <div
@@ -360,7 +387,7 @@ export function JobCard({ job }: { job: JobState }) {
       </div>
     </div>
   );
-}
+});
 
 // Re-queue a previously failed or cancelled job with the same spec.
 // The new job gets a fresh UUID from the backend; the original failed

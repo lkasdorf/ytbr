@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   Download,
@@ -39,6 +39,7 @@ import { SettingsView } from "@/features/settings/SettingsView";
 import { QueueView } from "@/features/queue/QueueView";
 import { BatchView } from "@/features/batch/BatchView";
 import { HistoryView } from "@/features/history/HistoryView";
+import { ScrollContainerContext } from "@/features/queue/VirtualJobList";
 import { UpdateBanner } from "@/features/update-banner/UpdateBanner";
 
 type Route = "download" | "batch" | "queue" | "history" | "settings";
@@ -58,6 +59,8 @@ const NAV: NavItem[] = [
 ];
 
 function App() {
+  // Main content pane; the Queue / History lists virtualize against it.
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [route, setRoute] = useState<Route>("download");
   const [aboutOpen, setAboutOpen] = useState(false);
   // Ephemeral handoff: DownloadView calls onSwitchToBatch(url) when the
@@ -183,7 +186,8 @@ function App() {
             outputDir={headerOutputDir}
           />
         </header>
-        <div className="flex-1 overflow-auto p-6">
+        <ScrollContainerContext.Provider value={scrollRef}>
+        <div ref={scrollRef} className="flex-1 overflow-auto p-6">
           {route === "download" && (
             <DownloadView
               onSwitchToBatch={switchToBatch}
@@ -201,6 +205,7 @@ function App() {
           {route === "history" && <HistoryView />}
           {route === "settings" && <SettingsView />}
         </div>
+        </ScrollContainerContext.Provider>
       </main>
 
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}

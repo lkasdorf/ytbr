@@ -24,6 +24,20 @@ const LOG_BUFFER_CAP = 500;
 // `upsert` so the optimistic "queued" insert can't clobber them.
 type EarlyEvents = Partial<Pick<JobState, "status" | "error" | "progress">>;
 
+export interface StatusPatch {
+  id: string;
+  status: JobStatus;
+  error: string | null;
+}
+
+// One flush worth of backend events, applied in a single store update
+// (see tauri-events.ts). Progress keeps only the latest value per job.
+export interface EventBatch {
+  progress: Map<string, JobProgress>;
+  statuses: StatusPatch[];
+  logs: Map<string, LogLine[]>;
+}
+
 interface JobsStore {
   jobs: Record<string, JobState>;
   ids: string[];
@@ -32,11 +46,15 @@ interface JobsStore {
   // Queue-wide "Pause all" flag, mirrored from the backend via the
   // `queue-paused` event (and fetched once on mount).
   queuePaused: boolean;
+  // Bumped whenever the job set or any job's status changes — but not
+  // on progress. List views key their filtering / sorting on this so a
+  // progress tick re-renders only the affected card, not thousands.
+  statusVersion: number;
+  // Bumped on progress changes; only progress-based sorts subscribe.
+  progressVersion: number;
 
   upsert: (job: JobState) => void;
-  patchProgress: (id: string, progress: JobProgress) => void;
-  patchStatus: (id: string, status: JobStatus, error: string | null) => void;
-  appendLog: (id: string, log: LogLine) => void;
+  applyBatch: (batch: EventBatch) => void;
   remove: (id: string) => void;
   hydrate: (list: JobState[]) => void;
   clearTerminal: () => void;
@@ -45,56 +63,74 @@ interface JobsStore {
 
 const TERMINAL: ReadonlyArray<JobStatus> = ["completed", "failed", "cancelled"];
 
+function appendCapped(cur: LogLine[] | undefined, add: LogLine[]): LogLine[] {
+  const next = cur ? cur.concat(add) : add.slice();
+  return next.length > LOG_BUFFER_CAP ? next.slice(next.length - LOG_BUFFER_CAP) : next;
+}
+
 export const useJobsStore = create<JobsStore>((set) => ({
   jobs: {},
   ids: [],
   logs: {},
   early: {},
   queuePaused: false,
+  statusVersion: 0,
+  progressVersion: 0,
 
   upsert: (job) =>
     set((s) => {
       const exists = s.jobs[job.id] != null;
       const pending = s.early[job.id];
+      const ids = exists ? s.ids : [...s.ids, job.id];
       if (!pending) {
         return {
           jobs: { ...s.jobs, [job.id]: job },
-          ids: exists ? s.ids : [...s.ids, job.id],
+          ids,
+          statusVersion: s.statusVersion + 1,
         };
       }
       const early = { ...s.early };
       delete early[job.id];
       return {
         jobs: { ...s.jobs, [job.id]: { ...job, ...pending } },
-        ids: exists ? s.ids : [...s.ids, job.id],
+        ids,
         early,
+        statusVersion: s.statusVersion + 1,
       };
     }),
 
-  patchProgress: (id, progress) =>
+  applyBatch: ({ progress, statuses, logs }) =>
     set((s) => {
-      const current = s.jobs[id];
-      if (!current) {
-        return { early: { ...s.early, [id]: { ...s.early[id], progress } } };
-      }
-      return { jobs: { ...s.jobs, [id]: { ...current, progress } } };
-    }),
+      // Copy-on-first-write so an empty part of the batch costs nothing.
+      let jobs = s.jobs;
+      let early = s.early;
+      const touchJob = (id: string, patch: Partial<JobState>) => {
+        const current = jobs[id];
+        if (current) {
+          if (jobs === s.jobs) jobs = { ...s.jobs };
+          jobs[id] = { ...current, ...patch };
+        } else {
+          if (early === s.early) early = { ...s.early };
+          early[id] = { ...early[id], ...patch };
+        }
+      };
 
-  patchStatus: (id, status, error) =>
-    set((s) => {
-      const current = s.jobs[id];
-      if (!current) {
-        return { early: { ...s.early, [id]: { ...s.early[id], status, error } } };
-      }
-      return { jobs: { ...s.jobs, [id]: { ...current, status, error } } };
-    }),
+      for (const [id, p] of progress) touchJob(id, { progress: p });
+      for (const { id, status, error } of statuses) touchJob(id, { status, error });
 
-  appendLog: (id, log) =>
-    set((s) => {
-      const cur = s.logs[id] ?? [];
-      const next =
-        cur.length < LOG_BUFFER_CAP ? [...cur, log] : [...cur.slice(1), log];
-      return { logs: { ...s.logs, [id]: next } };
+      let nextLogs = s.logs;
+      if (logs.size > 0) {
+        nextLogs = { ...s.logs };
+        for (const [id, add] of logs) nextLogs[id] = appendCapped(nextLogs[id], add);
+      }
+
+      return {
+        jobs,
+        early,
+        logs: nextLogs,
+        statusVersion: s.statusVersion + (statuses.length > 0 ? 1 : 0),
+        progressVersion: s.progressVersion + (progress.size > 0 ? 1 : 0),
+      };
     }),
 
   remove: (id) =>
@@ -104,7 +140,12 @@ export const useJobsStore = create<JobsStore>((set) => ({
       delete nextJobs[id];
       const nextLogs = { ...s.logs };
       delete nextLogs[id];
-      return { jobs: nextJobs, ids: s.ids.filter((x) => x !== id), logs: nextLogs };
+      return {
+        jobs: nextJobs,
+        ids: s.ids.filter((x) => x !== id),
+        logs: nextLogs,
+        statusVersion: s.statusVersion + 1,
+      };
     }),
 
   hydrate: (list) =>
@@ -122,6 +163,7 @@ export const useJobsStore = create<JobsStore>((set) => ({
         ids: list.map((j) => j.id),
         logs: nextLogs,
         early: {},
+        statusVersion: s.statusVersion + 1,
       };
     }),
 
@@ -134,7 +176,7 @@ export const useJobsStore = create<JobsStore>((set) => ({
         jobs[id] = s.jobs[id];
         if (s.logs[id]) logs[id] = s.logs[id];
       }
-      return { jobs, ids, logs };
+      return { jobs, ids, logs, statusVersion: s.statusVersion + 1 };
     }),
 
   setQueuePaused: (queuePaused) => set({ queuePaused }),
