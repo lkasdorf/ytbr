@@ -83,11 +83,13 @@ mod imp {
     const SIGCONT: i32 = 18;
 
     extern "C" {
-        fn kill(pid: i32, sig: i32) -> i32;
+        // Renamed so it doesn't clash with our own `pub fn kill` below.
+        #[link_name = "kill"]
+        fn libc_kill(pid: i32, sig: i32) -> i32;
     }
 
     fn signal(pid: u32, sig: i32) -> bool {
-        unsafe { kill(pid as i32, sig) == 0 }
+        unsafe { libc_kill(pid as i32, sig) == 0 }
     }
 
     pub fn suspend(pid: u32) -> bool {
