@@ -158,6 +158,7 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
       writeAutoSubs: settings.writeAutoSubs,
       embedSubs: settings.embedSubs,
       embedThumbnail: settings.embedThumbnail,
+      squareThumbnail: settings.squareThumbnail,
       embedMetadata: settings.embedMetadata,
       writeThumbnail: settings.writeThumbnail,
       writeInfoJson: settings.writeInfoJson,

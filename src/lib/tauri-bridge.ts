@@ -61,6 +61,8 @@ export interface JobSpec {
   writeAutoSubs?: boolean;
   embedSubs?: boolean;
   embedThumbnail?: boolean;
+  /// Center-crop the cover to a square (audio / audiobook players).
+  squareThumbnail?: boolean;
   embedMetadata?: boolean;
   /// yt-dlp `--write-thumbnail`. Sidecar `.jpg`/`.webp`.
   writeThumbnail?: boolean;

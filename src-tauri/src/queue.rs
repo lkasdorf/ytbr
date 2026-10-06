@@ -76,6 +76,10 @@ pub struct JobSpec {
     pub embed_subs: bool,
     #[serde(default)]
     pub embed_thumbnail: bool,
+    /// Center-crop the cover art to a square before embedding / writing
+    /// it. Only meaningful with `embed_thumbnail` or `write_thumbnail`.
+    #[serde(default)]
+    pub square_thumbnail: bool,
     #[serde(default)]
     pub embed_metadata: bool,
     /// yt-dlp `--write-thumbnail`. Sidecar image next to the video.

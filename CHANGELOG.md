@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Settings → Download options → **Square cover**: center-crops the
+  16:9 YouTube thumbnail to a square before embedding it (and for the
+  sidecar), so music and audiobook apps show proper cover art.
+
+### Fixed
+
+- After an in-app update, YTBR could be relaunched with a stale PATH,
+  so yt-dlp didn't find deno and every YouTube download failed with
+  "Requested format is not available". yt-dlp now gets the machine +
+  user PATH re-read from the registry.
+- yt-dlp warnings are no longer suppressed, so they show up in the job
+  log; a failure caused by an unsolved YouTube JavaScript challenge now
+  says that a JS runtime (deno) is missing instead of only "Requested
+  format is not available".
+
 ## [1.2.0] - 2026-10-06
 
 ### Added

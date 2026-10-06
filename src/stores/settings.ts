@@ -113,6 +113,9 @@ interface SettingsStore {
   writeAutoSubs: boolean;
   embedSubs: boolean;
   embedThumbnail: boolean;
+  /// Center-crop the cover art to a square before embedding (and for
+  /// the sidecar). YouTube thumbnails are 16:9; audio apps show squares.
+  squareThumbnail: boolean;
   embedMetadata: boolean;
   /// yt-dlp `--write-thumbnail`. Writes the cover art as a sidecar
   /// `.jpg`/`.webp` next to the video. Independent of `embedThumbnail`
@@ -179,6 +182,7 @@ interface SettingsStore {
   setWriteAutoSubs: (v: boolean) => void;
   setEmbedSubs: (v: boolean) => void;
   setEmbedThumbnail: (v: boolean) => void;
+  setSquareThumbnail: (v: boolean) => void;
   setEmbedMetadata: (v: boolean) => void;
   setWriteThumbnail: (v: boolean) => void;
   setWriteInfoJson: (v: boolean) => void;
@@ -247,6 +251,7 @@ export const useSettingsStore = create<SettingsStore>()(
       writeAutoSubs: false,
       embedSubs: false,
       embedThumbnail: false,
+      squareThumbnail: false,
       embedMetadata: false,
       writeThumbnail: false,
       writeInfoJson: false,
@@ -302,6 +307,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setWriteAutoSubs: (v) => set({ writeAutoSubs: v }),
       setEmbedSubs: (v) => set({ embedSubs: v }),
       setEmbedThumbnail: (v) => set({ embedThumbnail: v }),
+      setSquareThumbnail: (v) => set({ squareThumbnail: v }),
       setEmbedMetadata: (v) => set({ embedMetadata: v }),
       setWriteThumbnail: (v) => set({ writeThumbnail: v }),
       setWriteInfoJson: (v) => set({ writeInfoJson: v }),

@@ -174,6 +174,7 @@ export function SettingsView() {
   const writeAutoSubs = useSettingsStore((s) => s.writeAutoSubs);
   const embedSubs = useSettingsStore((s) => s.embedSubs);
   const embedThumbnail = useSettingsStore((s) => s.embedThumbnail);
+  const squareThumbnail = useSettingsStore((s) => s.squareThumbnail);
   const embedMetadata = useSettingsStore((s) => s.embedMetadata);
   const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
   const restrictFilenames = useSettingsStore((s) => s.restrictFilenames);
@@ -214,6 +215,7 @@ export function SettingsView() {
   const setWriteAutoSubs = useSettingsStore((s) => s.setWriteAutoSubs);
   const setEmbedSubs = useSettingsStore((s) => s.setEmbedSubs);
   const setEmbedThumbnail = useSettingsStore((s) => s.setEmbedThumbnail);
+  const setSquareThumbnail = useSettingsStore((s) => s.setSquareThumbnail);
   const setEmbedMetadata = useSettingsStore((s) => s.setEmbedMetadata);
   const setUseDownloadArchive = useSettingsStore(
     (s) => s.setUseDownloadArchive,
@@ -841,10 +843,20 @@ export function SettingsView() {
           )}
           <ToggleRow
             label="Embed thumbnail"
-            desc="Bakes the cover art into the file (mp4, m4a, mkv supported). yt-dlp `--embed-thumbnail`."
+            desc="Bakes the cover art into the file (mp3, m4a, mp4, mkv). Audio and audiobook apps read it from there — no separate image file needed. yt-dlp `--embed-thumbnail`."
             checked={embedThumbnail}
             onChange={setEmbedThumbnail}
           />
+          {(embedThumbnail || writeThumbnail) && (
+            <div className="ml-7 flex flex-col gap-3 rounded-md border border-border bg-input/40 p-3">
+              <ToggleRow
+                label="Square cover"
+                desc="Center-crops the 16:9 YouTube thumbnail to a square, the way music and audiobook players display cover art. Saved as JPEG."
+                checked={squareThumbnail}
+                onChange={setSquareThumbnail}
+              />
+            </div>
+          )}
           <ToggleRow
             label="Embed metadata"
             desc="Bakes title, uploader, upload date, etc. into the file's container tags. yt-dlp `--embed-metadata`."

@@ -13,7 +13,7 @@ use tokio::sync::oneshot;
 
 use crate::error::AppError;
 use crate::queue::JobSpec;
-use crate::ytdlp::{process_tree, progress};
+use crate::ytdlp::{env_path, process_tree, progress};
 
 // Build-script-injected target triple (see build.rs). Used to locate
 // the `ffmpeg-<triple>{.exe}` sidecar at runtime so we can pass
@@ -54,7 +54,9 @@ pub async fn run(
     let mut args: Vec<String> = vec![
         "--newline".into(),
         "--no-color".into(),
-        "--no-warnings".into(),
+        // No --no-warnings: yt-dlp's warnings (e.g. "n challenge
+        // solving failed") are the only clue for several failures and
+        // belong in the job's log panel.
         "--no-playlist".into(), // TODO: support playlists in a future iteration
         "--progress".into(),
         "--progress-template".into(),
@@ -120,6 +122,19 @@ pub async fn run(
     }
     if spec.embed_thumbnail {
         args.push("--embed-thumbnail".into());
+    }
+    // Center-crop the cover to a square (YouTube thumbnails are 16:9,
+    // audio/audiobook players show square art). Needs an explicit
+    // --convert-thumbnails so the ThumbnailsConvertor PP runs and picks
+    // up the ffmpeg output args; also applies to the sidecar if written.
+    if spec.square_thumbnail && (spec.embed_thumbnail || spec.write_thumbnail) {
+        args.push("--convert-thumbnails".into());
+        args.push("jpg".into());
+        args.push("--ppa".into());
+        args.push(
+            "ThumbnailsConvertor+ffmpeg_o:-c:v mjpeg -vf crop=\"'min(iw,ih)':'min(iw,ih)'\""
+                .into(),
+        );
     }
     if spec.embed_metadata {
         args.push("--embed-metadata".into());
@@ -282,6 +297,9 @@ pub async fn run(
     // common upstream messages into hints the user can act on.
     let mut last_error: Option<String> = None;
     let mut last_stderr_error: Option<String> = None;
+    // Set when yt-dlp reports it couldn't solve YouTube's JS challenge,
+    // which usually turns into "Requested format is not available".
+    let mut js_challenge_failed = false;
     while let Some(event) = rx.recv().await {
         match event {
             CommandEvent::Stdout(bytes) => {
@@ -297,6 +315,10 @@ pub async fn run(
                 if !line.is_empty() {
                     if line.starts_with("ERROR:") {
                         last_stderr_error = Some(line.clone());
+                    } else if line.contains("n challenge solving failed")
+                        || line.contains("Only images are available")
+                    {
+                        js_challenge_failed = true;
                     }
                     emit_log(app, id, &line, "stderr");
                 }
@@ -313,7 +335,7 @@ pub async fn run(
                     Some(code) => {
                         let detail = last_stderr_error
                             .as_deref()
-                            .map(humanize_yt_dlp_error)
+                            .map(|raw| explain_failure(raw, js_challenge_failed))
                             .or_else(|| last_error.clone())
                             .unwrap_or_else(|| format!("yt-dlp exited with code {code}"));
                         RunOutcome::Failed(detail)
@@ -321,7 +343,7 @@ pub async fn run(
                     None => RunOutcome::Failed(
                         last_stderr_error
                             .as_deref()
-                            .map(humanize_yt_dlp_error)
+                            .map(|raw| explain_failure(raw, js_challenge_failed))
                             .or(last_error)
                             .unwrap_or_else(|| "yt-dlp terminated without exit code".into()),
                     ),
@@ -337,10 +359,25 @@ pub async fn run(
         Ok(RunOutcome::Failed(
             last_stderr_error
                 .as_deref()
-                .map(humanize_yt_dlp_error)
+                .map(|raw| explain_failure(raw, js_challenge_failed))
                 .or(last_error)
                 .unwrap_or_else(|| "yt-dlp event stream closed unexpectedly".into()),
         ))
+    }
+}
+
+// `humanize_yt_dlp_error` plus run-level context: when yt-dlp warned that
+// it couldn't solve YouTube's JavaScript challenge, the final error is
+// usually a misleading "Requested format is not available".
+fn explain_failure(raw: &str, js_challenge_failed: bool) -> String {
+    let msg = humanize_yt_dlp_error(raw);
+    if js_challenge_failed {
+        format!(
+            "{msg} — yt-dlp couldn't solve YouTube's JavaScript challenge because no JS runtime \
+             was found. Install deno (`winget install DenoLand.Deno`), restart YTBR, then retry."
+        )
+    } else {
+        msg
     }
 }
 
@@ -494,10 +531,16 @@ pub fn user_ytdlp_path(app: &AppHandle) -> Option<PathBuf> {
 /// not subject to the capability scope, so no extra allow-list entry is
 /// needed for the user copy.
 pub fn ytdlp_command(app: &AppHandle) -> Result<Command, String> {
-    if let Some(path) = user_ytdlp_path(app).filter(|p| p.is_file()) {
-        return Ok(app.shell().command(path));
-    }
-    app.shell().sidecar("yt-dlp").map_err(|e| e.to_string())
+    let cmd = match user_ytdlp_path(app).filter(|p| p.is_file()) {
+        Some(path) => app.shell().command(path),
+        None => app.shell().sidecar("yt-dlp").map_err(|e| e.to_string())?,
+    };
+    // Re-read PATH so yt-dlp finds the JS runtime (deno) even when YTBR
+    // was relaunched by its updater with a stale environment.
+    Ok(match env_path::for_child() {
+        Some(path) => cmd.env("PATH", path),
+        None => cmd,
+    })
 }
 
 #[derive(Serialize, Clone)]
@@ -519,7 +562,14 @@ fn emit_log(app: &AppHandle, id: &str, line: &str, stream: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::humanize_yt_dlp_error;
+    use super::{explain_failure, humanize_yt_dlp_error};
+
+    #[test]
+    fn explains_missing_js_runtime() {
+        let raw = "ERROR: [youtube] 8W7ih9-bj7M: Requested format is not available. Use --list-formats for a list of available formats";
+        assert!(explain_failure(raw, true).contains("no JS runtime"));
+        assert!(!explain_failure(raw, false).contains("JS runtime"));
+    }
 
     #[test]
     fn humanizes_chrome_cookie_lock() {
