@@ -88,6 +88,7 @@ pub fn run() {
             commands::download::resume_all_jobs,
             commands::download::cancel_all_jobs,
             commands::download::queue_paused,
+            commands::download::prepare_for_update,
             commands::settings::pick_output_dir,
             commands::settings::pick_cookies_file,
             commands::settings::set_parallel_limit,
@@ -98,10 +99,11 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // queue.json is written by a debounced background thread;
-            // flush the last changes before the process goes away.
+            // Persist the queue (debounced writer) and stop running
+            // downloads before the process goes away; see
+            // QueueManager::shutdown.
             if let tauri::RunEvent::Exit = event {
-                app.state::<QueueManager>().flush(app);
+                app.state::<QueueManager>().shutdown(app);
             }
         });
 }

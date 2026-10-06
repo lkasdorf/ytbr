@@ -10,6 +10,7 @@ import {
   checkAppUpdate,
   ffmpegVersion,
   ytdlpVersion,
+  prepareForUpdate,
   type AppUpdateCheck,
 } from "@/lib/tauri-bridge";
 import { cn } from "@/lib/utils";
@@ -185,7 +186,7 @@ function UpdateCheckRow() {
     setInstalling("Downloading…");
     setError(null);
     try {
-      await signed.downloadAndInstall((event) => {
+      await signed.download((event) => {
         if (event.event === "Started") {
           setInstalling(
             event.data.contentLength != null
@@ -196,6 +197,12 @@ function UpdateCheckRow() {
           setInstalling("Installing…");
         }
       });
+      // install() exits the app on Windows before RunEvent::Exit fires:
+      // save the queue (it resumes after the update) and stop running
+      // downloads first. Done after the download so a failed download
+      // leaves the running jobs alone.
+      await prepareForUpdate();
+      await signed.install();
       setInstalled(true);
       setInstalling(null);
       // Relaunch happens after a tiny pause so the user sees the

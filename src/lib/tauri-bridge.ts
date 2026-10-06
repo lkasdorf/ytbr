@@ -197,6 +197,12 @@ export function cancelAllJobs(): Promise<number> {
   return invoke<number>("cancel_all_jobs");
 }
 
+// Persist the queue for resuming and stop running downloads; call
+// right before the updater's install(), which exits the app.
+export function prepareForUpdate(): Promise<void> {
+  return invoke<void>("prepare_for_update");
+}
+
 export function queuePaused(): Promise<boolean> {
   return invoke<boolean>("queue_paused");
 }

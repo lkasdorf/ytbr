@@ -6,7 +6,7 @@ import { Download, ExternalLink, X } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
-import { checkAppUpdate, type AppUpdateCheck } from "@/lib/tauri-bridge";
+import { checkAppUpdate, prepareForUpdate, type AppUpdateCheck } from "@/lib/tauri-bridge";
 import { cn } from "@/lib/utils";
 
 // sessionStorage key — dismissing the banner sticks for the current
@@ -67,7 +67,7 @@ export function UpdateBanner() {
     setInstalling("Downloading…");
     setInstallError(null);
     try {
-      await state.update.downloadAndInstall((event) => {
+      await state.update.download((event) => {
         if (event.event === "Started") {
           setInstalling(
             event.data.contentLength != null
@@ -78,6 +78,12 @@ export function UpdateBanner() {
           setInstalling("Installing…");
         }
       });
+      // install() exits the app on Windows before RunEvent::Exit fires:
+      // save the queue (it resumes after the update) and stop running
+      // downloads first. Done after the download so a failed download
+      // leaves the running jobs alone.
+      await prepareForUpdate();
+      await state.update.install();
       setInstalled(true);
       setInstalling(null);
       setTimeout(() => void relaunch(), 600);

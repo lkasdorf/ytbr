@@ -93,3 +93,17 @@ pub async fn cancel_all_jobs(
 pub async fn queue_paused(queue: State<'_, QueueManager>) -> Result<bool, AppError> {
     Ok(queue.is_paused())
 }
+
+/// Called by the frontend right before running the updater's installer.
+/// On Windows the updater ends the process with `std::process::exit`, so
+/// RunEvent::Exit (and with it `QueueManager::shutdown`) never fires on
+/// that path; this does the same work explicitly: persist the queue for
+/// resuming after the update and stop the running downloads.
+#[tauri::command]
+pub async fn prepare_for_update(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+) -> Result<(), AppError> {
+    queue.shutdown(&app);
+    Ok(())
+}

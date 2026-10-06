@@ -43,6 +43,13 @@ pub fn kill_descendants(root: u32) {
     }
 }
 
+/// Kill `root` and all its descendants (deepest first). For processes
+/// whose `CommandChild` handle we're not going to use again (app exit).
+pub fn kill_tree(root: u32) {
+    kill_descendants(root);
+    imp::kill(root);
+}
+
 fn apply_to_tree(root: u32, op: fn(u32) -> bool) -> bool {
     // Snapshot before touching the root so a worker spawned in the
     // meantime is still found via its parent link.

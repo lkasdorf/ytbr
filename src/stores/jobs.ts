@@ -115,7 +115,18 @@ export const useJobsStore = create<JobsStore>((set) => ({
         }
       };
 
-      for (const [id, p] of progress) touchJob(id, { progress: p });
+      // A progress line means yt-dlp is running. If the job still reads
+      // "queued", its "downloading" event got lost (e.g. jobs resumed at
+      // startup before the listeners were registered) — fix it up.
+      let inferred = false;
+      for (const [id, p] of progress) {
+        if (jobs[id]?.status === "queued") {
+          touchJob(id, { progress: p, status: "downloading" });
+          inferred = true;
+        } else {
+          touchJob(id, { progress: p });
+        }
+      }
       for (const { id, status, error } of statuses) touchJob(id, { status, error });
 
       let nextLogs = s.logs;
@@ -128,7 +139,7 @@ export const useJobsStore = create<JobsStore>((set) => ({
         jobs,
         early,
         logs: nextLogs,
-        statusVersion: s.statusVersion + (statuses.length > 0 ? 1 : 0),
+        statusVersion: s.statusVersion + (statuses.length > 0 || inferred ? 1 : 0),
         progressVersion: s.progressVersion + (progress.size > 0 ? 1 : 0),
       };
     }),

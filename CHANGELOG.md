@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.0] - 2026-10-06
 
+### Added
+
+- Unfinished jobs survive a restart: queued, downloading and paused jobs
+  are put back in the queue in their original order when YTBR starts
+  (yt-dlp continues partial files), instead of being marked "Cancelled".
+  A queue paused with **Pause all** comes back paused. This includes
+  in-app updates: the update is downloaded first, then the queue is
+  saved and running downloads are stopped right before the installer
+  runs.
+
 ### Changed
 
 - The Queue tab now sorts "Active first, then queue order" by default:
@@ -31,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Jobs came back from `queue.json` in arbitrary order after a restart
   (the backend stored them in a hash map), which scrambled the newest /
   oldest / queue-order sorts. Jobs now carry a creation sequence.
+- Closing YTBR left running downloads going in the background (the
+  yt-dlp processes weren't stopped on exit). They are now killed, with
+  their worker and ffmpeg child processes, when the app exits.
 
 ## [1.3.1] - 2026-10-06
 
