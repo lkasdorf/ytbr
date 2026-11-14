@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-14
+
 ### Fixed
 
 - The window no longer flashes in the dark theme at startup when the
