@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A failed in-app update (declined elevation prompt, bad signature) no
+  longer leaves the queue dead until the next start. Running downloads
+  were killed and shown as "failed", and nothing was saved any more. The
+  interrupted jobs are now put back in the queue and continue.
+- Lowering **Parallel downloads** takes effect as soon as running
+  downloads finish. With jobs waiting it used to apply only once the
+  whole backlog had drained, and toggling the value could briefly allow
+  more downloads than the limit.
+- Finished jobs no longer keep a background task and the yt-dlp process
+  handle alive for as long as they stay in the history.
+- A job could stay on a stale status ("downloading" forever) when it
+  changed state while the window was still loading at startup.
+- The cookie hints for "Failed to decrypt with DPAPI" and for
+  login-only videos contained long runs of spaces.
+- The update fallback check offered an "update" whenever the installed
+  version differed from the latest release, including when it was newer.
+- Errors when queueing a download, pausing, resuming or cancelling a
+  job, or opening its folder are now shown instead of doing nothing.
+- The yt-dlp updater's checksum lookup stopped at the first blank line
+  in `SHA2-256SUMS`.
+- Non-ASCII characters in yt-dlp output (error messages, titles, file
+  paths) showed up as `�` on Windows; yt-dlp is now always run with
+  `--encoding utf-8`.
+
+### Changed
+
+- **Enqueue all** on the Batch tab queues the whole list in one step
+  (`enqueue_jobs`). Thousands of URLs no longer freeze the window. It is
+  all-or-nothing: if the output folder is gone, nothing is queued and
+  the list stays in place.
+- The sidebar job counters are recomputed on status changes only, not on
+  every progress tick.
+
+### Security
+
+- "Open in folder" only opens existing directories; the command could
+  be asked to launch any file.
+- The webview now runs under a Content Security Policy (own assets,
+  remote thumbnails, Tauri IPC — nothing else).
+
 ## [1.4.1] - 2026-10-07
 
 ### Fixed

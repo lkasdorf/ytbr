@@ -4,9 +4,9 @@
 import { useEffect, useState } from "react";
 import { Download, ExternalLink, X } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
-import { checkAppUpdate, prepareForUpdate, type AppUpdateCheck } from "@/lib/tauri-bridge";
+import { checkAppUpdate, type AppUpdateCheck } from "@/lib/tauri-bridge";
+import { useUpdateInstall } from "@/lib/use-update-install";
 import { cn } from "@/lib/utils";
 
 // sessionStorage key — dismissing the banner sticks for the current
@@ -31,9 +31,12 @@ export function UpdateBanner() {
     typeof window !== "undefined" &&
     window.sessionStorage.getItem(DISMISS_KEY) === "1"
   );
-  const [installing, setInstalling] = useState<string | null>(null);
-  const [installed, setInstalled] = useState(false);
-  const [installError, setInstallError] = useState<string | null>(null);
+  const {
+    installing,
+    installed,
+    error: installError,
+    install,
+  } = useUpdateInstall(state.kind === "signed" ? state.update : null);
 
   useEffect(() => {
     if (dismissed) return;
@@ -59,37 +62,6 @@ export function UpdateBanner() {
       // sessionStorage can be unavailable in some sandboxed contexts.
       // The in-memory dismissed flag still hides the banner for the
       // rest of this session, just without persistence.
-    }
-  }
-
-  async function install() {
-    if (state.kind !== "signed") return;
-    setInstalling("Downloading…");
-    setInstallError(null);
-    try {
-      await state.update.download((event) => {
-        if (event.event === "Started") {
-          setInstalling(
-            event.data.contentLength != null
-              ? `Downloading (${formatBytes(event.data.contentLength)})…`
-              : "Downloading…",
-          );
-        } else if (event.event === "Finished") {
-          setInstalling("Installing…");
-        }
-      });
-      // install() exits the app on Windows before RunEvent::Exit fires:
-      // save the queue (it resumes after the update) and stop running
-      // downloads first. Done after the download so a failed download
-      // leaves the running jobs alone.
-      await prepareForUpdate();
-      await state.update.install();
-      setInstalled(true);
-      setInstalling(null);
-      setTimeout(() => void relaunch(), 600);
-    } catch (e: unknown) {
-      setInstallError(String(e));
-      setInstalling(null);
     }
   }
 
@@ -172,10 +144,4 @@ async function runCheck(): Promise<State | null> {
       return null;
     }
   }
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }

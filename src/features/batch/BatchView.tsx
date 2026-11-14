@@ -7,7 +7,8 @@ import {
   DEFAULT_BATCH_SELECTOR,
   PRESETS,
 } from "@/features/format-picker/PresetButtons";
-import { enqueueJob, expandPlaylist, type JobSpec } from "@/lib/tauri-bridge";
+import { buildJobSpec } from "@/lib/job-spec";
+import { enqueueJobs, expandPlaylist } from "@/lib/tauri-bridge";
 import { useJobsStore } from "@/stores/jobs";
 import { probeOptions, useSettingsStore, type PresetId } from "@/stores/settings";
 import { cn } from "@/lib/utils";
@@ -38,10 +39,9 @@ const CHOICES: readonly ChoiceOption[] = [
   ),
 ];
 
-interface BatchResult {
-  succeeded: number;
-  failed: { url: string; reason: string }[];
-}
+type BatchResult =
+  | { kind: "queued"; count: number }
+  | { kind: "error"; message: string };
 
 interface PlaylistState {
   open: boolean;
@@ -98,8 +98,8 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
   async function importFile(file: File) {
     if (!file.name.toLowerCase().endsWith(".txt")) {
       setResult({
-        succeeded: 0,
-        failed: [{ url: file.name, reason: "Only .txt files are accepted" }],
+        kind: "error",
+        message: `${file.name} — only .txt files are accepted`,
       });
       return;
     }
@@ -142,69 +142,31 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
     setBusy(true);
     setResult(null);
 
-    // Snapshot once. Mid-batch Settings changes shouldn't disturb the
-    // jobs that are already being queued.
-    const settings = useSettingsStore.getState();
-    const baseSpec: Omit<JobSpec, "url"> = {
+    // One spec per URL from a single settings snapshot, then one IPC
+    // call and one store update for the whole list. Queueing URL by URL
+    // re-copied the job map on every insert — quadratic, and a few
+    // thousand playlist entries froze the window.
+    const base = buildJobSpec({
+      url: "",
       formatId: selectedSelector,
       formatLabel: selectedLabel,
       outputDir,
-      outputTemplate: settings.outputTemplate,
-      cookiesFromBrowser: settings.cookiesFromBrowser,
-      cookiesFile: settings.cookiesFile,
-      ffmpegLocation: settings.ffmpegPath,
-      writeSubs: settings.writeSubs,
-      subLangs: settings.subLangs,
-      writeAutoSubs: settings.writeAutoSubs,
-      embedSubs: settings.embedSubs,
-      embedThumbnail: settings.embedThumbnail,
-      squareThumbnail: settings.squareThumbnail,
-      embedMetadata: settings.embedMetadata,
-      writeThumbnail: settings.writeThumbnail,
-      writeInfoJson: settings.writeInfoJson,
-      downloadArchive: settings.useDownloadArchive,
-      restrictFilenames: settings.restrictFilenames,
-      rateLimit: settings.rateLimit,
-      proxy: settings.proxy,
-      extractorArgs: settings.extractorArgs,
-      concurrentFragments: settings.concurrentFragments,
-      retries: settings.retries,
-      fragmentRetries: settings.fragmentRetries,
       // The Batch tab only knows the user's preset id; only the
       // "audio-best" choice is audio-only, the rest are video.
-      audioFormat:
-        choice === "audio-best" && settings.audioFormat !== "default"
-          ? settings.audioFormat
-          : null,
-      sponsorblockMode: settings.sponsorblockMode,
-      sponsorblockCategories: settings.sponsorblockCategories,
-    };
-
-    let succeeded = 0;
-    const failed: { url: string; reason: string }[] = [];
-
-    for (const url of urls) {
-      const spec: JobSpec = { ...baseSpec, url };
-      try {
-        const id = await enqueueJob(spec);
-        useJobsStore.getState().upsert({
-          id,
-          spec,
-          status: "queued",
-          progress: null,
-          error: null,
-        });
-        succeeded += 1;
-      } catch (err) {
-        failed.push({ url, reason: String(err) });
-      }
-    }
-
-    setResult({ succeeded, failed });
-    if (failed.length === 0) {
+      audioOnly: choice === "audio-best",
+    });
+    try {
+      const jobs = await enqueueJobs(urls.map((url) => ({ ...base, url })));
+      useJobsStore.getState().upsertMany(jobs);
+      setResult({ kind: "queued", count: jobs.length });
       setText("");
+    } catch (err) {
+      // All-or-nothing on the backend: nothing was queued, the list
+      // stays in the textarea for another try.
+      setResult({ kind: "error", message: `Nothing was queued — ${String(err)}` });
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   const canEnqueue = !busy && outputDir && urls.length > 0;
@@ -436,32 +398,20 @@ export function BatchView({ pendingUrl, onConsumePending }: BatchViewProps = {})
         <div
           className={cn(
             "flex items-start gap-2 rounded-lg border p-3 text-sm",
-            result.failed.length === 0
+            result.kind === "queued"
               ? "border-primary/40 bg-primary/5"
               : "border-destructive/40 bg-destructive/10",
           )}
         >
-          {result.failed.length === 0 ? (
+          {result.kind === "queued" ? (
             <CheckCircle2 className="size-4 shrink-0 text-primary" />
           ) : (
             <AlertCircle className="size-4 shrink-0 text-destructive" />
           )}
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-medium">
-              Queued {result.succeeded} of{" "}
-              {result.succeeded + result.failed.length}
-              {result.failed.length > 0 && ` (${result.failed.length} failed)`}
-            </div>
-            {result.failed.length > 0 && (
-              <ul className="mt-2 space-y-1 font-mono text-[11px]">
-                {result.failed.map((f) => (
-                  <li key={f.url} className="break-all">
-                    <span className="text-muted-foreground">{f.url}</span>{" "}
-                    <span className="text-destructive">— {f.reason}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="min-w-0 flex-1 break-words text-xs font-medium">
+            {result.kind === "queued"
+              ? `Queued ${result.count} ${result.count === 1 ? "job" : "jobs"}`
+              : result.message}
           </div>
         </div>
       )}

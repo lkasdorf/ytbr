@@ -96,7 +96,9 @@ src/
     settings/OutputDirPicker.tsx
   lib/
     tauri-bridge.ts       # Typed invoke wrappers + TS shapes mirroring Rust serde structs
-    tauri-events.ts       # listen() registration (idempotent)
+    tauri-events.ts       # listen() registration (idempotent; await it before listJobs)
+    job-spec.ts           # buildJobSpec(): request + Settings snapshot → JobSpec (Download + Batch)
+    use-update-install.ts # signed-update download/install flow (UpdateBanner + AboutDialog)
     format-utils.ts       # classifyFormat, formatBytes/Bitrate/Duration/Resolution/Fps
     utils.ts              # cn() (clsx + tailwind-merge)
   stores/

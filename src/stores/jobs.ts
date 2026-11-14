@@ -54,6 +54,9 @@ interface JobsStore {
   progressVersion: number;
 
   upsert: (job: JobState) => void;
+  // Insert a whole batch in one store update. Adding N jobs one by one
+  // copied the job map and id list N times.
+  upsertMany: (list: JobState[]) => void;
   applyBatch: (batch: EventBatch) => void;
   remove: (id: string) => void;
   hydrate: (list: JobState[]) => void;
@@ -68,7 +71,7 @@ function appendCapped(cur: LogLine[] | undefined, add: LogLine[]): LogLine[] {
   return next.length > LOG_BUFFER_CAP ? next.slice(next.length - LOG_BUFFER_CAP) : next;
 }
 
-export const useJobsStore = create<JobsStore>((set) => ({
+export const useJobsStore = create<JobsStore>((set, get) => ({
   jobs: {},
   ids: [],
   logs: {},
@@ -77,26 +80,26 @@ export const useJobsStore = create<JobsStore>((set) => ({
   statusVersion: 0,
   progressVersion: 0,
 
-  upsert: (job) =>
+  upsert: (job) => get().upsertMany([job]),
+
+  upsertMany: (list) =>
     set((s) => {
-      const exists = s.jobs[job.id] != null;
-      const pending = s.early[job.id];
-      const ids = exists ? s.ids : [...s.ids, job.id];
-      if (!pending) {
-        return {
-          jobs: { ...s.jobs, [job.id]: job },
-          ids,
-          statusVersion: s.statusVersion + 1,
-        };
+      if (list.length === 0) return s;
+      const jobs = { ...s.jobs };
+      const ids = s.ids.slice();
+      let early = s.early;
+      for (const job of list) {
+        if (jobs[job.id] == null) ids.push(job.id);
+        const pending = early[job.id];
+        if (pending) {
+          if (early === s.early) early = { ...s.early };
+          delete early[job.id];
+          jobs[job.id] = { ...job, ...pending };
+        } else {
+          jobs[job.id] = job;
+        }
       }
-      const early = { ...s.early };
-      delete early[job.id];
-      return {
-        jobs: { ...s.jobs, [job.id]: { ...job, ...pending } },
-        ids,
-        early,
-        statusVersion: s.statusVersion + 1,
-      };
+      return { jobs, ids, early, statusVersion: s.statusVersion + 1 };
     }),
 
   applyBatch: ({ progress, statuses, logs }) =>
@@ -127,7 +130,11 @@ export const useJobsStore = create<JobsStore>((set) => ({
           touchJob(id, { progress: p });
         }
       }
-      for (const { id, status, error } of statuses) touchJob(id, { status, error });
+      for (const { id, status, error } of statuses) {
+        // Back to "queued" means the job starts over (requeued after an
+        // aborted update install): its old progress no longer applies.
+        touchJob(id, status === "queued" ? { status, error, progress: null } : { status, error });
+      }
 
       let nextLogs = s.logs;
       if (logs.size > 0) {
@@ -169,11 +176,25 @@ export const useJobsStore = create<JobsStore>((set) => ({
       for (const id of Object.keys(s.logs)) {
         if (surviving.has(id)) nextLogs[id] = s.logs[id];
       }
+      // Events that arrived while the snapshot was in flight sit in
+      // `early` (their ids were unknown until now). They are newer than
+      // the snapshot or equal to it, so they go on top — discarding
+      // them left a job that finished in that window stuck on its
+      // snapshot status forever.
+      const jobs: Record<string, JobState> = {};
+      const early: Record<string, EarlyEvents> = {};
+      for (const j of list) {
+        const pending = s.early[j.id];
+        jobs[j.id] = pending ? { ...j, ...pending } : j;
+      }
+      for (const id of Object.keys(s.early)) {
+        if (!surviving.has(id)) early[id] = s.early[id];
+      }
       return {
-        jobs: Object.fromEntries(list.map((j) => [j.id, j])),
+        jobs,
         ids: list.map((j) => j.id),
         logs: nextLogs,
-        early: {},
+        early,
         statusVersion: s.statusVersion + 1,
       };
     }),
@@ -192,6 +213,27 @@ export const useJobsStore = create<JobsStore>((set) => ({
 
   setQueuePaused: (queuePaused) => set({ queuePaused }),
 }));
+
+export interface JobCounts {
+  /// queued + downloading + paused
+  active: number;
+  queued: number;
+  /// completed + failed + cancelled
+  done: number;
+}
+
+// One pass over the job map. Callers recompute on `statusVersion`, not
+// on every store update — progress ticks don't change any count.
+export function countJobs(jobs: Record<string, JobState>): JobCounts {
+  const counts: JobCounts = { active: 0, queued: 0, done: 0 };
+  for (const id in jobs) {
+    const { status } = jobs[id];
+    if (isActive(status)) counts.active += 1;
+    else counts.done += 1;
+    if (status === "queued") counts.queued += 1;
+  }
+  return counts;
+}
 
 export function isActive(status: JobStatus): boolean {
   // Paused counts as active: the OS process still exists, the queue

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Download,
@@ -27,7 +27,8 @@ import { useSettingsSync } from "@/lib/settings-sync";
 import { useThemeEffect } from "@/lib/theme";
 import { useUrlDrop } from "@/lib/url-drop";
 import { AboutDialog } from "@/features/about/AboutDialog";
-import { isActive, useJobsStore } from "@/stores/jobs";
+import { buildJobSpec } from "@/lib/job-spec";
+import { countJobs, useJobsStore } from "@/stores/jobs";
 import { probeOptions, useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
 import { ClipboardSuggestion } from "@/features/url-input/ClipboardSuggestion";
@@ -92,27 +93,32 @@ function App() {
   const dropActive = useUrlDrop(onDroppedUrls);
 
   useEffect(() => {
-    void startJobListeners();
-    void listJobs().then((list) => useJobsStore.getState().hydrate(list));
-    void queuePaused().then((p) => useJobsStore.getState().setQueuePaused(p));
+    // Listeners first, snapshot second. The backend resumes unfinished
+    // jobs at startup, so status events are already flowing; anything
+    // emitted between a snapshot and a later listener registration
+    // would be gone for good (a job stuck on "downloading").
+    void startJobListeners().then(() => {
+      void listJobs().then((list) => useJobsStore.getState().hydrate(list));
+      void queuePaused().then((p) => useJobsStore.getState().setQueuePaused(p));
+    });
   }, []);
 
   useSettingsSync();
   useThemeEffect();
 
-  const activeCount = useJobsStore((s) =>
-    Object.values(s.jobs).filter((j) => isActive(j.status)).length,
-  );
-  const queuedCount = useJobsStore((s) =>
-    Object.values(s.jobs).filter((j) => j.status === "queued").length,
-  );
-  const doneCount = useJobsStore((s) =>
-    Object.values(s.jobs).filter(
-      (j) =>
-        j.status === "completed" ||
-        j.status === "failed" ||
-        j.status === "cancelled",
-    ).length,
+  // Counted once per status change. As plain selectors these ran three
+  // full passes over the job map on every store update, progress ticks
+  // included.
+  const statusVersion = useJobsStore((s) => s.statusVersion);
+  const {
+    active: activeCount,
+    queued: queuedCount,
+    done: doneCount,
+  } = useMemo(
+    () => countJobs(useJobsStore.getState().jobs),
+    // statusVersion is the change signal; the data is read from getState().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [statusVersion],
   );
   const headerOutputDir = useSettingsStore((s) => s.outputDir);
 
@@ -312,9 +318,11 @@ function DownloadView({
 }) {
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [url, setUrl] = useState("");
+  const [enqueueError, setEnqueueError] = useState<string | null>(null);
   const outputDir = useSettingsStore((s) => s.outputDir);
 
   async function onProbe(url: string) {
+    setEnqueueError(null);
     setProbe({ status: "loading", url });
     try {
       const result = await probeUrl(url, probeOptions());
@@ -341,43 +349,14 @@ function DownloadView({
     kind: "audio" | "video",
   ) {
     if (!outputDir || probe.status !== "ok") return;
-    // Snapshot the settings at enqueue time. Mid-flight setting
-    // changes never disturb running jobs.
-    const settings = useSettingsStore.getState();
-    const audioFormat =
-      kind === "audio" && settings.audioFormat !== "default"
-        ? settings.audioFormat
-        : null;
-    const spec = {
+    const spec = buildJobSpec({
       url: probe.url,
       formatId,
       formatLabel,
       outputDir,
-      outputTemplate: settings.outputTemplate,
-      cookiesFromBrowser: settings.cookiesFromBrowser,
-      cookiesFile: settings.cookiesFile,
-      ffmpegLocation: settings.ffmpegPath,
-      writeSubs: settings.writeSubs,
-      subLangs: settings.subLangs,
-      writeAutoSubs: settings.writeAutoSubs,
-      embedSubs: settings.embedSubs,
-      embedThumbnail: settings.embedThumbnail,
-      squareThumbnail: settings.squareThumbnail,
-      embedMetadata: settings.embedMetadata,
-      writeThumbnail: settings.writeThumbnail,
-      writeInfoJson: settings.writeInfoJson,
-      downloadArchive: settings.useDownloadArchive,
-      restrictFilenames: settings.restrictFilenames,
-      rateLimit: settings.rateLimit,
-      proxy: settings.proxy,
-      extractorArgs: settings.extractorArgs,
-      concurrentFragments: settings.concurrentFragments,
-      retries: settings.retries,
-      fragmentRetries: settings.fragmentRetries,
-      audioFormat,
-      sponsorblockMode: settings.sponsorblockMode,
-      sponsorblockCategories: settings.sponsorblockCategories,
-    };
+      audioOnly: kind === "audio",
+    });
+    setEnqueueError(null);
     try {
       const id = await enqueueJob(spec);
       // Optimistic insert so the Queue tab shows the row before the
@@ -390,7 +369,9 @@ function DownloadView({
         error: null,
       });
     } catch (err) {
-      console.error("enqueue failed", err);
+      // E.g. the output folder was deleted or its drive unplugged. Used
+      // to go to the console only — the click simply did nothing.
+      setEnqueueError(String(err));
     }
   }
 
@@ -436,6 +417,19 @@ function DownloadView({
         >
           <AlertCircle className="size-4 shrink-0 text-destructive" />
           <code className="break-all font-mono text-xs">{probe.message}</code>
+        </div>
+      )}
+
+      {enqueueError && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm"
+        >
+          <AlertCircle className="size-4 shrink-0 text-destructive" />
+          <p className="min-w-0 break-words text-xs">
+            Couldn't queue the download: {enqueueError}
+          </p>
         </div>
       )}
 

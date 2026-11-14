@@ -187,15 +187,17 @@ function QueueControls({
   const queuePaused = useJobsStore((s) => s.queuePaused);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const showResume = queuePaused || paused > 0;
 
-  async function run(op: () => Promise<number>) {
+  async function run(label: string, op: () => Promise<number>) {
     setBusy(true);
+    setError(null);
     try {
       await op();
     } catch (err) {
-      console.error("queue control failed", err);
+      setError(`${label} failed: ${String(err)}`);
     } finally {
       setBusy(false);
     }
@@ -215,7 +217,7 @@ function QueueControls({
         <button
           className={cn(btn, "hover:bg-primary hover:text-primary-foreground")}
           disabled={busy}
-          onClick={() => void run(resumeAllJobs)}
+          onClick={() => void run("Resume all", resumeAllJobs)}
         >
           <Play className="size-3.5" /> Resume all
         </button>
@@ -223,7 +225,7 @@ function QueueControls({
         <button
           className={cn(btn, "hover:bg-accent")}
           disabled={busy}
-          onClick={() => void run(pauseAllJobs)}
+          onClick={() => void run("Pause all", pauseAllJobs)}
         >
           <Pause className="size-3.5" /> Pause all
         </button>
@@ -243,12 +245,17 @@ function QueueControls({
             return;
           }
           setConfirmCancel(false);
-          void run(cancelAllJobs);
+          void run("Cancel all", cancelAllJobs);
         }}
       >
         <StopCircle className="size-3.5" />
         {confirmCancel ? `Cancel ${total} jobs?` : "Cancel all"}
       </button>
+      {error && (
+        <p role="alert" className="w-full break-words text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -261,8 +268,15 @@ export function isTerminal(status: JobStatus): boolean {
 // card instead of the whole list.
 export const JobCard = memo(function JobCard({ id }: { id: string }) {
   const job = useJobsStore((s) => s.jobs[id]);
-  const [retryError, setRetryError] = useState<string | null>(null);
+  // Last failed card action ("Pause failed: …"). The backend rejects
+  // e.g. a pause on a job that hasn't spawned yet or a folder that no
+  // longer exists; without this the button just did nothing.
+  const [actionError, setActionError] = useState<string | null>(null);
   if (!job) return null;
+  const act = (label: string, op: () => Promise<unknown>) => {
+    setActionError(null);
+    op().catch((err: unknown) => setActionError(`${label} failed: ${String(err)}`));
+  };
   const p = job.progress;
   const percent = p?.percent ?? 0;
   const showBar = isActive(job.status) || job.status === "completed";
@@ -331,9 +345,9 @@ export const JobCard = memo(function JobCard({ id }: { id: string }) {
             </pre>
           )}
 
-          {retryError && (
-            <p className="mt-2 text-xs text-destructive">
-              Retry failed: {retryError}
+          {actionError && (
+            <p role="alert" className="mt-2 break-words text-xs text-destructive">
+              {actionError}
             </p>
           )}
 
@@ -345,19 +359,19 @@ export const JobCard = memo(function JobCard({ id }: { id: string }) {
             {job.status === "downloading" && (
               <IconButton
                 title="Pause"
-                onClick={() => void pauseJob(job.id)}
+                onClick={() => act("Pause", () => pauseJob(job.id))}
                 icon={Pause}
               />
             )}
             {job.status === "paused" && (
               <IconButton
                 title="Resume"
-                onClick={() => void resumeJob(job.id)}
+                onClick={() => act("Resume", () => resumeJob(job.id))}
                 icon={Play}
               />
             )}
             <button
-              onClick={() => void cancelJob(job.id)}
+              onClick={() => act("Cancel", () => cancelJob(job.id))}
               className="rounded-md border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground hover:bg-destructive hover:text-destructive-foreground"
             >
               Cancel
@@ -369,16 +383,15 @@ export const JobCard = memo(function JobCard({ id }: { id: string }) {
           <div className="flex shrink-0 flex-col gap-1.5">
             <IconButton
               title="Open in folder"
-              onClick={() => void revealInFolder(job.spec.outputDir)}
+              onClick={() =>
+                act("Open folder", () => revealInFolder(job.spec.outputDir))
+              }
               icon={FolderOpen}
             />
             {(job.status === "failed" || job.status === "cancelled") && (
               <IconButton
                 title="Retry — re-queue this job with the same spec"
-                onClick={() => {
-                  setRetryError(null);
-                  void retryJob(job).then(setRetryError);
-                }}
+                onClick={() => act("Retry", () => retryJob(job))}
                 icon={RotateCw}
               />
             )}
@@ -393,23 +406,18 @@ export const JobCard = memo(function JobCard({ id }: { id: string }) {
 // The new job gets a fresh UUID from the backend; the original failed
 // or cancelled row stays in the queue so the user keeps the error
 // context (and can clear it manually via "Clear completed" once the
-// retry has settled). Resolves to the backend's error message when the
-// re-queue is rejected (e.g. the output folder no longer exists), so the
-// card can show it instead of failing silently.
-async function retryJob(job: JobState): Promise<string | null> {
-  try {
-    const id = await enqueueJob(job.spec);
-    useJobsStore.getState().upsert({
-      id,
-      spec: job.spec,
-      status: "queued",
-      progress: null,
-      error: null,
-    });
-    return null;
-  } catch (err) {
-    return String(err);
-  }
+// retry has settled). Rejects with the backend's error message when the
+// re-queue is refused (e.g. the output folder no longer exists); the
+// card shows it.
+async function retryJob(job: JobState): Promise<void> {
+  const id = await enqueueJob(job.spec);
+  useJobsStore.getState().upsert({
+    id,
+    spec: job.spec,
+    status: "queued",
+    progress: null,
+    error: null,
+  });
 }
 
 function IconButton({

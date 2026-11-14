@@ -184,6 +184,12 @@ export function enqueueJob(spec: JobSpec): Promise<string> {
   return invoke<string>("enqueue_job", { spec });
 }
 
+// Batch enqueue: one IPC call for the whole list. All-or-nothing — a
+// spec that fails validation rejects the call before anything queues.
+export function enqueueJobs(specs: JobSpec[]): Promise<JobState[]> {
+  return invoke<JobState[]>("enqueue_jobs", { specs });
+}
+
 export function cancelJob(id: string): Promise<void> {
   return invoke<void>("cancel_job", { id });
 }
@@ -214,6 +220,13 @@ export function cancelAllJobs(): Promise<number> {
 // right before the updater's install(), which exits the app.
 export function prepareForUpdate(): Promise<void> {
   return invoke<void>("prepare_for_update");
+}
+
+// Undo prepareForUpdate when the installer didn't take over and the app
+// keeps running: persistence resumes and the interrupted jobs are queued
+// again. Resolves to how many jobs were requeued.
+export function resumeAfterFailedUpdate(): Promise<number> {
+  return invoke<number>("resume_after_failed_update");
 }
 
 export function queuePaused(): Promise<boolean> {

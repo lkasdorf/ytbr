@@ -12,7 +12,19 @@ pub async fn enqueue_job(
     queue: State<'_, QueueManager>,
     spec: JobSpec,
 ) -> Result<JobId, AppError> {
-    queue.enqueue(app, spec)
+    queue.enqueue(app, spec).map(|state| state.id)
+}
+
+/// Batch variant of `enqueue_job` for playlists and pasted URL lists:
+/// one IPC round trip and one store update on the JS side instead of
+/// one per URL. Returns the created jobs in the order given.
+#[tauri::command]
+pub async fn enqueue_jobs(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+    specs: Vec<JobSpec>,
+) -> Result<Vec<JobState>, AppError> {
+    queue.enqueue_many(&app, specs)
 }
 
 #[tauri::command]
@@ -106,4 +118,16 @@ pub async fn prepare_for_update(
 ) -> Result<(), AppError> {
     queue.shutdown(&app);
     Ok(())
+}
+
+/// Counterpart to `prepare_for_update` for when the installer did not
+/// take over (signature mismatch, declined elevation prompt, ...): the
+/// app keeps running, so the queue has to work again. Returns how many
+/// interrupted jobs were put back in the queue.
+#[tauri::command]
+pub async fn resume_after_failed_update(
+    app: tauri::AppHandle,
+    queue: State<'_, QueueManager>,
+) -> Result<usize, AppError> {
+    Ok(queue.resume_after_shutdown(&app))
 }
