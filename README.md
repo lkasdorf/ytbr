@@ -1,14 +1,43 @@
-# YTBR
+<h1 align="center">YTBR</h1>
 
-A fast, cross-platform desktop frontend for
-[yt-dlp](https://github.com/yt-dlp/yt-dlp). Built with
-[Tauri 2](https://tauri.app/), React, and TypeScript. Targets Windows
-11 and Linux (Ubuntu/Debian, AppImage, RPM). Small binary, fast cold
-start, predictable behavior.
+<p align="center">
+  <strong>A fast, lightweight yt-dlp GUI for Windows and Linux.</strong><br>
+  Paste a link, pick a format, download — video or audio, one URL or a whole playlist.
+</p>
 
-[Releases](https://github.com/lkasdorf/ytbr/releases) ·
-[Changelog](CHANGELOG.md) ·
-[Third-party licenses](THIRD_PARTY_LICENSES.md)
+<p align="center">
+  <a href="https://github.com/lkasdorf/ytbr/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/lkasdorf/ytbr?label=release"></a>
+  <a href="https://github.com/lkasdorf/ytbr/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/lkasdorf/ytbr/total"></a>
+  <a href="https://github.com/lkasdorf/ytbr/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/lkasdorf/ytbr/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/github/license/lkasdorf/ytbr"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/lkasdorf/ytbr/releases/latest"><strong>Download for Windows or Linux</strong></a> ·
+  <a href="#features">Features</a> ·
+  <a href="#installation">Installation</a> ·
+  <a href="#faq">FAQ</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <img alt="YTBR Download tab: a probed video with quick presets and the full format table" src="docs/screenshots/download.png" width="820">
+</p>
+
+YTBR is a free, open-source desktop app that puts a clean interface on
+top of [yt-dlp](https://github.com/yt-dlp/yt-dlp) — the command-line
+downloader that supports
+[thousands of sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
+No terminal, no Python, no separate ffmpeg install: the installer
+ships everything it needs.
+
+It is built with [Tauri 2](https://tauri.app/), Rust, React and
+TypeScript instead of Electron, so the download is small, the app
+starts quickly and it stays out of the way while it works.
+
+- **Windows 11** — `.msi` and `.exe` installers
+- **Linux** — `.deb` (Ubuntu / Debian), `.rpm` (Fedora / RHEL) and AppImage
+- **No telemetry, no ads, no account**
 
 ---
 
@@ -24,7 +53,7 @@ start, predictable behavior.
   Download tab, multiple URLs land in Batch.
 - **Live queue.** Pause, resume, cancel jobs; configurable parallel
   download limit; per-job logs panel; retry button on failed and
-  cancelled jobs.
+  cancelled jobs. Cards show the video title, progress, speed and ETA.
 - **History tab.** Completed, failed, and cancelled jobs move to a
   dedicated tab with search, status filter, and bulk clear.
 - **Queue persistence.** Queue and history survive app restarts.
@@ -47,7 +76,12 @@ start, predictable behavior.
 
 ## Screenshots
 
-_Screenshots are attached to each [release](https://github.com/lkasdorf/ytbr/releases)._
+| Queue with live progress | Batch and playlist downloads |
+| --- | --- |
+| ![YTBR queue: two running downloads with progress, speed and ETA, one waiting](docs/screenshots/queue.png) | ![YTBR Batch tab: a list of URLs and the format presets](docs/screenshots/batch.png) |
+
+The videos in the screenshots are the Blender open movies
+(Creative Commons).
 
 ---
 
@@ -90,6 +124,40 @@ chmod +x YTBR_x.y.z_amd64.AppImage
 
 The installer bundles matching `yt-dlp`, `ffmpeg`, and `ffprobe`
 binaries — no extra setup required.
+
+---
+
+## FAQ
+
+**Do I need to install yt-dlp, Python or ffmpeg?**
+No. The installer bundles `yt-dlp`, `ffmpeg` and `ffprobe`. yt-dlp can
+be updated from Settings without reinstalling YTBR.
+
+**Which sites work?**
+Everything yt-dlp supports — see its
+[list of supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
+When a site changes and downloads start failing, update yt-dlp from
+Settings first.
+
+**Can it download audio only (MP3, M4A, Opus)?**
+Yes. Use the *Best Audio* preset or pick an audio row in the format
+table; the target audio format is a setting.
+
+**Can it download whole playlists or channels?**
+Yes. Paste the playlist or channel URL into the Batch tab and expand
+it, or paste a list of URLs, one per line.
+
+**A download says I have to sign in. What now?**
+Some videos are only served to logged-in sessions. Point YTBR at your
+browser's cookies or at an exported `cookies.txt` under
+Settings → Cookies.
+
+**Is it free?**
+Yes — Apache-2.0, no ads, no telemetry, no paid tier.
+
+**macOS?**
+Not packaged at the moment. Building from source may work but is
+untested.
 
 ---
 
