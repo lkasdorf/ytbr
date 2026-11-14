@@ -36,6 +36,10 @@ export type JobStatus =
 
 export interface JobSpec {
   url: string;
+  /// Video title for the queue / history cards. Sent from the probe
+  /// result by the Download tab; otherwise filled in by the backend
+  /// (`job-title` event) once yt-dlp has resolved the URL.
+  title?: string | null;
   /// Raw yt-dlp `-f` argument. May be a single format id, a composite
   /// selector ("137+bestaudio/best"), or a preset expression.
   formatId: string | null;

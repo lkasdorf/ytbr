@@ -4,9 +4,21 @@
 use serde::{Deserialize, Serialize};
 
 // yt-dlp `--progress-template` line we ask for:
-//   PROG|<downloaded>|<total>|<speed>|<eta>|<status>
-// Unknown numeric fields render as "NA".
-pub const TEMPLATE: &str = "PROG|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s|%(progress.status)s";
+//   PROG|<downloaded>|<total>|<speed>|<eta>|<status>|<title as JSON>
+// Unknown numeric fields render as "NA". The title comes last and as a
+// JSON string (`j` conversion: quoted, ASCII-escaped), so a `|` or line
+// break inside it can't shift the other fields.
+pub const TEMPLATE: &str = "PROG|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.speed)s|%(progress.eta)s|%(progress.status)s|%(info.title)j";
+
+/// The video title carried on a progress line, if any. This is how the
+/// queue learns the title of jobs that were never probed (Batch tab,
+/// dropped URL lists).
+pub fn title(line: &str) -> Option<String> {
+    let raw = line.strip_prefix("PROG|")?.splitn(6, '|').nth(5)?;
+    let title: String = serde_json::from_str(raw).ok()?;
+    let title = title.trim();
+    (!title.is_empty()).then(|| title.to_string())
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -98,6 +110,23 @@ mod tests {
         assert!(parse("[download] Destination: file.mp4").is_none());
         assert!(parse("").is_none());
         assert!(parse("PROG|").is_none()); // too few fields
+    }
+
+    #[test]
+    fn reads_the_title_from_a_progress_line() {
+        let line = r#"PROG|1024|2048|NA|NA|downloading|"Café | part 1""#;
+        assert_eq!(title(line).as_deref(), Some("Café | part 1"));
+        // The extra field doesn't disturb the numbers.
+        assert_eq!(parse(line).unwrap().downloaded_bytes, Some(1024));
+    }
+
+    #[test]
+    fn title_is_none_when_missing_or_unknown() {
+        assert_eq!(title("PROG|1024|2048|NA|NA|downloading"), None);
+        assert_eq!(title("PROG|1024|2048|NA|NA|downloading|NA"), None);
+        assert_eq!(title("PROG|1024|2048|NA|NA|downloading|null"), None);
+        assert_eq!(title(r#"PROG|1024|2048|NA|NA|downloading|"  ""#), None);
+        assert_eq!(title("[download] Destination: file.mp4"), None);
     }
 
     #[test]

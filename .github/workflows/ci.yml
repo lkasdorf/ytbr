@@ -4,8 +4,9 @@
 # CI for YTBR — runs on every push to main and on every PR.
 #
 # What it covers per OS (Windows + Ubuntu):
-#   - frontend: TypeScript strict + Vite production build
-#   - backend:  cargo check + cargo test --lib
+#   - frontend: ESLint (no warnings allowed) + TypeScript strict + Vite
+#               production build
+#   - backend:  cargo clippy (warnings are errors) + cargo test --lib
 #   - sidecars: yt-dlp + LGPL ffmpeg fetched via the same scripts
 #               developers run locally (so we exercise the full pipeline,
 #               UPX compression included)
@@ -64,6 +65,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+          components: clippy
 
       - name: Cargo cache
         uses: Swatinem/rust-cache@v2
@@ -103,11 +105,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./scripts/fetch-binaries.ps1 -Target ${{ matrix.target }}
 
+      - name: Frontend lint (ESLint, no warnings allowed)
+        run: pnpm lint
+
       - name: Frontend build (TypeScript strict + Vite)
         run: pnpm build
 
-      - name: Cargo check
-        run: cargo check --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }}
+      # Clippy runs the same compiler passes as `cargo check`, so it
+      # replaces that step rather than adding to it.
+      - name: Cargo clippy (warnings are errors)
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }} --all-targets -- -D warnings
 
       - name: Cargo unit tests
         run: cargo test --lib --manifest-path src-tauri/Cargo.toml --target ${{ matrix.target }}

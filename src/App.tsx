@@ -17,7 +17,6 @@ import {
   enqueueJob,
   listJobs,
   queuePaused,
-  probeUrl,
   type Format,
   type ProbeResult,
 } from "@/lib/tauri-bridge";
@@ -29,7 +28,8 @@ import { useUrlDrop } from "@/lib/url-drop";
 import { AboutDialog } from "@/features/about/AboutDialog";
 import { buildJobSpec } from "@/lib/job-spec";
 import { countJobs, useJobsStore } from "@/stores/jobs";
-import { probeOptions, useSettingsStore } from "@/stores/settings";
+import { useProbeStore } from "@/stores/probe";
+import { useSettingsStore } from "@/stores/settings";
 import { UrlInput } from "@/features/url-input/UrlInput";
 import { ClipboardSuggestion } from "@/features/url-input/ClipboardSuggestion";
 import { PlaylistRedirect } from "@/features/url-input/PlaylistRedirect";
@@ -301,12 +301,6 @@ function RouteHeaderInfo({
   return null;
 }
 
-type ProbeState =
-  | { status: "idle" }
-  | { status: "loading"; url: string }
-  | { status: "ok"; url: string; result: ProbeResult }
-  | { status: "error"; url: string; message: string };
-
 function DownloadView({
   onSwitchToBatch,
   pendingUrl,
@@ -316,20 +310,16 @@ function DownloadView({
   pendingUrl?: string | null;
   onConsumePending?: () => void;
 }) {
-  const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
-  const [url, setUrl] = useState("");
-  const [enqueueError, setEnqueueError] = useState<string | null>(null);
+  // URL and probe result live in a store so they survive a tab switch.
+  const probe = useProbeStore((s) => s.probe);
+  const url = useProbeStore((s) => s.url);
+  const enqueueError = useProbeStore((s) => s.enqueueError);
+  const setUrl = useProbeStore((s) => s.setUrl);
+  const setEnqueueError = useProbeStore((s) => s.setEnqueueError);
   const outputDir = useSettingsStore((s) => s.outputDir);
 
-  async function onProbe(url: string) {
-    setEnqueueError(null);
-    setProbe({ status: "loading", url });
-    try {
-      const result = await probeUrl(url, probeOptions());
-      setProbe({ status: "ok", url, result });
-    } catch (err) {
-      setProbe({ status: "error", url, message: String(err) });
-    }
+  function onProbe(url: string) {
+    void useProbeStore.getState().run(url);
   }
 
   // Drag-dropped single-URL handoff. Fill the input and kick off a
@@ -339,9 +329,9 @@ function DownloadView({
     if (pendingUrl == null || pendingUrl.trim().length === 0) return;
     const trimmed = pendingUrl.trim();
     setUrl(trimmed);
-    void onProbe(trimmed);
+    void useProbeStore.getState().run(trimmed);
     onConsumePending?.();
-  }, [pendingUrl, onConsumePending]);
+  }, [pendingUrl, onConsumePending, setUrl]);
 
   async function enqueue(
     formatId: string,
@@ -351,6 +341,7 @@ function DownloadView({
     if (!outputDir || probe.status !== "ok") return;
     const spec = buildJobSpec({
       url: probe.url,
+      title: probe.result.title,
       formatId,
       formatLabel,
       outputDir,
@@ -416,7 +407,7 @@ function DownloadView({
           className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm"
         >
           <AlertCircle className="size-4 shrink-0 text-destructive" />
-          <code className="break-all font-mono text-xs">{probe.message}</code>
+          <p className="min-w-0 break-words text-xs">{probe.message}</p>
         </div>
       )}
 

@@ -23,6 +23,10 @@ interface StatusPayload {
   status: JobStatus;
   error?: string | null;
 }
+interface TitlePayload {
+  id: string;
+  title: string;
+}
 interface LogPayload {
   id: string;
   line: string;
@@ -64,7 +68,9 @@ function flush() {
     const prev = seen.get(id) ?? store.jobs[id]?.status;
     seen.set(id, status);
     const job = store.jobs[id];
-    if (job != null && prev !== status) onStatusChange(id, status, job.spec.url);
+    if (job != null && prev !== status) {
+      onStatusChange(id, status, job.spec.title ?? job.spec.url);
+    }
   }
 
   store.applyBatch({ progress, statuses, logs });
@@ -73,14 +79,14 @@ function flush() {
 // Fire OS notification only on actual transition into a terminal state.
 // Each terminal status is gated by its own opt-in toggle so a user who
 // wants failure-only toasts can have exactly that.
-function onStatusChange(id: string, status: JobStatus, url: string) {
+function onStatusChange(id: string, status: JobStatus, name: string) {
   const s = useSettingsStore.getState();
   const shouldNotify =
     (status === "completed" && s.notifyOnSuccess) ||
     (status === "failed" && s.notifyOnFailure) ||
     (status === "cancelled" && s.notifyOnCancel);
   if (shouldNotify) {
-    void notifyJobFinished(status, url);
+    void notifyJobFinished(status, name);
   }
 
   // Schedule auto-clear of a successful download. Failed and cancelled
@@ -124,6 +130,12 @@ async function registerListeners(): Promise<void> {
       const { id, status, error } = e.payload;
       pendingStatuses.push({ id, status, error: error ?? null });
       scheduleFlush();
+    }),
+  );
+
+  unlisten.push(
+    await listen<TitlePayload>("job-title", (e) => {
+      useJobsStore.getState().setTitle(e.payload.id, e.payload.title);
     }),
   );
 

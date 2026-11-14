@@ -8,7 +8,10 @@ pub enum AppError {
     #[error("sidecar invocation failed: {0}")]
     Sidecar(String),
 
-    #[error("yt-dlp exited non-zero: {0}")]
+    /// yt-dlp ran and reported a failure. Carries the message already
+    /// translated for the user (see `runner::explain_stderr`), so it is
+    /// shown as is, without a technical prefix.
+    #[error("{0}")]
     YtdlpExit(String),
 
     #[error("failed to parse yt-dlp output: {0}")]

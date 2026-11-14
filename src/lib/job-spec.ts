@@ -6,6 +6,8 @@ import { useSettingsStore } from "@/stores/settings";
 
 export interface JobRequest {
   url: string;
+  /// Known video title (from a probe), if any.
+  title?: string | null;
   /// Raw yt-dlp `-f` selector.
   formatId: string;
   /// What the queue card shows instead of the selector.
@@ -23,6 +25,7 @@ export interface JobRequest {
 // that are already queued.
 export function buildJobSpec({
   url,
+  title,
   formatId,
   formatLabel,
   outputDir,
@@ -31,6 +34,7 @@ export function buildJobSpec({
   const s = useSettingsStore.getState();
   return {
     url,
+    title: title ?? null,
     formatId,
     formatLabel,
     outputDir,

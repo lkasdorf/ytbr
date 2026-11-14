@@ -26,7 +26,8 @@ async function ensurePermission(): Promise<boolean> {
 
 export async function notifyJobFinished(
   status: JobStatus,
-  url: string,
+  // Video title, or the URL while the title isn't known.
+  name: string,
 ): Promise<void> {
   if (
     status !== "completed" &&
@@ -43,5 +44,5 @@ export async function notifyJobFinished(
       : status === "failed"
         ? "Download failed"
         : "Download cancelled";
-  sendNotification({ title, body: url });
+  sendNotification({ title, body: name });
 }

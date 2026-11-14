@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 use crate::ytdlp::format::{ProbeResult, VideoInfo};
-use crate::ytdlp::runner::{access_args, ytdlp_command, AccessOptions};
+use crate::ytdlp::runner::{access_args, explain_stderr, ytdlp_command, AccessOptions};
 
 /// Login / network settings for probing, mirrored from the user's
 /// Settings by the frontend. All optional; `None` behaves as before.
@@ -54,11 +54,9 @@ pub async fn probe_url(
         .map_err(|e| AppError::Sidecar(e.to_string()))?;
 
     if !output.status.success() {
-        return Err(AppError::YtdlpExit(
-            String::from_utf8_lossy(&output.stderr)
-                .trim()
-                .to_string(),
-        ));
+        return Err(AppError::YtdlpExit(explain_stderr(
+            &String::from_utf8_lossy(&output.stderr),
+        )));
     }
 
     let info: VideoInfo = serde_json::from_slice(&output.stdout)?;
@@ -119,9 +117,9 @@ pub async fn expand_playlist(
         .map_err(|e| AppError::Sidecar(e.to_string()))?;
 
     if !output.status.success() {
-        return Err(AppError::YtdlpExit(
-            String::from_utf8_lossy(&output.stderr).trim().to_string(),
-        ));
+        return Err(AppError::YtdlpExit(explain_stderr(
+            &String::from_utf8_lossy(&output.stderr),
+        )));
     }
 
     let info: FlatPlaylist = serde_json::from_slice(&output.stdout)?;

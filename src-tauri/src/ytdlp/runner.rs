@@ -44,6 +44,8 @@ pub async fn run(
     spec: &JobSpec,
     cancel_rx: oneshot::Receiver<()>,
     pid_slot: Arc<Mutex<Option<u32>>>,
+    // Called once, as soon as yt-dlp has resolved the video's title.
+    on_title: impl Fn(&str),
 ) -> Result<RunOutcome, AppError> {
     let output_template = spec
         .output_dir
@@ -269,11 +271,18 @@ pub async fn run(
     // Set when yt-dlp reports it couldn't solve YouTube's JS challenge,
     // which usually turns into "Requested format is not available".
     let mut js_challenge_failed = false;
+    let mut title_reported = false;
     while let Some(event) = rx.recv().await {
         match event {
             CommandEvent::Stdout(bytes) => {
                 let line = trim_line(&bytes);
                 if let Some(prog) = progress::parse(&line) {
+                    if !title_reported {
+                        if let Some(title) = progress::title(&line) {
+                            title_reported = true;
+                            on_title(&title);
+                        }
+                    }
                     let _ = app.emit("job-progress", ProgressPayload { id, progress: &prog });
                 } else if !line.is_empty() {
                     emit_log(app, id, &line, "stdout");
@@ -370,6 +379,22 @@ pub fn access_args(o: &AccessOptions) -> Vec<String> {
     args
 }
 
+/// User-facing message for a yt-dlp run that only produced captured
+/// stderr (probe, playlist expansion): the last `ERROR:` line, run
+/// through the same translation as download failures. Falls back to the
+/// whole output when yt-dlp printed no `ERROR:` line.
+pub fn explain_stderr(stderr: &str) -> String {
+    let stderr = stderr.trim();
+    let js_challenge_failed = stderr.lines().any(|l| {
+        l.contains("n challenge solving failed") || l.contains("Only images are available")
+    });
+    match stderr.lines().rev().map(str::trim).find(|l| l.starts_with("ERROR:")) {
+        Some(line) => explain_failure(line, js_challenge_failed),
+        None if stderr.is_empty() => "yt-dlp failed without an error message".to_string(),
+        None => stderr.to_string(),
+    }
+}
+
 // `humanize_yt_dlp_error` plus run-level context: when yt-dlp warned that
 // it couldn't solve YouTube's JavaScript challenge, the final error is
 // usually a misleading "Requested format is not available".
@@ -452,6 +477,9 @@ fn humanize_yt_dlp_error(raw: &str) -> String {
         || trimmed.contains("Sign in to confirm")
         || trimmed.contains("members-only content")
     {
+        // yt-dlp appends its own CLI advice ("Use --cookies-from-browser
+        // or --cookies … See <wiki links>"), which means nothing in a GUI.
+        let trimmed = trimmed.split(". Use --cookies").next().unwrap_or(trimmed);
         return format!(
             "{trimmed} — yt-dlp needs your logged-in YouTube session. Set 'Cookies file' \
              (cookies.txt exported from a private window) or 'Cookies from browser' \
@@ -575,7 +603,31 @@ fn emit_log(app: &AppHandle, id: &str, line: &str, stream: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{access_args, explain_failure, humanize_yt_dlp_error, AccessOptions};
+    use super::{
+        access_args, explain_failure, explain_stderr, humanize_yt_dlp_error, AccessOptions,
+    };
+
+    #[test]
+    fn explain_stderr_translates_the_last_error_line() {
+        let stderr = "WARNING: [youtube] something minor\n\
+            ERROR: [youtube] abc: Sign in to confirm you’re not a bot. Use --cookies-from-browser \
+            or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ  for more\n";
+        let msg = explain_stderr(stderr);
+        assert!(msg.starts_with("[youtube] abc: Sign in to confirm you’re not a bot —"), "{msg}");
+        assert!(msg.contains("Cookies file"));
+        assert!(!msg.contains("--cookies-from-browser"), "{msg}");
+        assert!(!msg.contains("WARNING"), "{msg}");
+    }
+
+    #[test]
+    fn explain_stderr_falls_back_to_the_raw_output() {
+        assert_eq!(explain_stderr("  something odd happened \n"), "something odd happened");
+        assert_eq!(explain_stderr(""), "yt-dlp failed without an error message");
+        assert_eq!(
+            explain_stderr("ERROR: Unsupported URL: https://example.com"),
+            "Unsupported URL: https://example.com"
+        );
+    }
 
     #[test]
     fn access_args_prefer_cookie_file_and_skip_blanks() {

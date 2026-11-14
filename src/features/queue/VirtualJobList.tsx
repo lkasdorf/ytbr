@@ -30,6 +30,10 @@ export function VirtualJobList({ ids }: { ids: string[] }) {
   // the controls rendered above it scroll along with the cards.
   const [scrollMargin, setScrollMargin] = useState(0);
 
+  // Re-measured after every render on purpose (no dependency list): the
+  // controls above the list change height without any state this
+  // component can subscribe to. The 1px threshold stops the loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const list = listRef.current;
     const scroller = scrollRef?.current;

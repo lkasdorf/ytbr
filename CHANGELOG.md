@@ -7,7 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Queue and history cards show the video title, with the URL underneath.
+  Downloads started from the Download tab have it right away; Batch jobs
+  get it as soon as their download starts. The history search matches
+  titles, and finish notifications name the title instead of the URL.
+
 ### Fixed
+
+- The Download tab keeps its URL and format list when you look at
+  another tab and come back. A probe that was still running is no longer
+  lost either.
+- Probe and playlist errors get the same plain-language hints as failed
+  downloads (cookies for the "Sign in to confirm you're not a bot"
+  check, locked cookie database, …) instead of the raw
+  `yt-dlp exited non-zero: ERROR: …` text.
+- Direct media file URLs (`…/video.mp4`) could not be probed: yt-dlp
+  reports their codecs as unknown, which failed the whole probe with a
+  parse error.
 
 - A failed in-app update (declined elevation prompt, bad signature) no
   longer leaves the queue dead until the next start. Running downloads
@@ -41,6 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the list stays in place.
 - The sidebar job counters are recomputed on status changes only, not on
   every progress tick.
+- CI fails on ESLint and Clippy warnings (`pnpm lint`,
+  `cargo clippy -- -D warnings`).
 
 ### Security
 

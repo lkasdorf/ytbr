@@ -62,6 +62,8 @@ interface JobsStore {
   hydrate: (list: JobState[]) => void;
   clearTerminal: () => void;
   setQueuePaused: (paused: boolean) => void;
+  // Title resolved by the backend for a job that was queued without one.
+  setTitle: (id: string, title: string) => void;
 }
 
 const TERMINAL: ReadonlyArray<JobStatus> = ["completed", "failed", "cancelled"];
@@ -212,6 +214,19 @@ export const useJobsStore = create<JobsStore>((set, get) => ({
     }),
 
   setQueuePaused: (queuePaused) => set({ queuePaused }),
+
+  setTitle: (id, title) =>
+    set((s) => {
+      const job = s.jobs[id];
+      // Unknown id: the job reaches the store through upsert / hydrate,
+      // which carry the title the backend has stored by then.
+      if (job == null || job.spec.title === title) return s;
+      return {
+        jobs: { ...s.jobs, [id]: { ...job, spec: { ...job.spec, title } } },
+        // The title is part of what the history search matches.
+        statusVersion: s.statusVersion + 1,
+      };
+    }),
 }));
 
 export interface JobCounts {
