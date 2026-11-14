@@ -7,7 +7,9 @@
 # Output: a draft GitHub Release named `YTBR <tag>` with platform
 #         installers attached:
 #           - Windows: .msi (Wix) + .exe (NSIS)
-#           - Linux:   .deb + .AppImage
+#           - Linux:   .deb + .rpm + .AppImage
+#         plus a `.sig` per installer and `latest.json` for the in-app
+#         updater.
 # The user reviews the draft and clicks Publish manually.
 #
 # Pre-flight (run locally before tagging):
@@ -131,6 +133,24 @@ jobs:
       # `latest.json` at the URL configured in tauri.conf.json's
       # `plugins.updater.endpoints` (latest/download/latest.json).
       #
+      # Behavior since tauri-action v1 (it was v0.6.x up to YTBR v1.5.2):
+      #   - The download URLs inside `latest.json` point at the GitHub
+      #     API (`api.github.com/repos/<owner>/<repo>/releases/assets/<id>`)
+      #     instead of `github.com/.../releases/download/<tag>/<file>`.
+      #     tauri-plugin-updater downloads with
+      #     `Accept: application/octet-stream`, which the API answers
+      #     with a redirect to the file, so updates keep working. The
+      #     API allows 60 anonymous requests per hour and IP address; a
+      #     user behind a shared address can see an update download
+      #     fail and succeed on a later try.
+      #   - Every build job rewrites the name and body of the existing
+      #     draft with `releaseName` / `releaseBody` below. Hand-written
+      #     release notes go into the draft only after BOTH jobs have
+      #     finished, or the slower job overwrites them.
+      #   - The action fails when `releaseDraft: true` meets a release
+      #     that is no longer a draft. Re-running this workflow for a
+      #     tag whose release is already published does not work.
+      #
       # Both env vars come from GitHub repo secrets — see CLAUDE.md for
       # the keypair-generation steps. If they're empty the build still
       # works but no signatures land in latest.json, and the in-app
@@ -146,7 +166,7 @@ jobs:
           releaseBody: |
             See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for the entry corresponding to ${{ github.ref_name }}.
 
-            Installers: `.msi` / `.exe` (Windows), `.deb` / `.AppImage` (Linux).
+            Installers: `.msi` / `.exe` (Windows), `.deb` / `.rpm` / `.AppImage` (Linux).
 
             Each YTBR installer bundles `yt-dlp` (Unlicense) and a UPX-compressed LGPL build of `ffmpeg`. Per LGPL Section 6 the `ffmpeg` sidecar inside the install directory may be replaced by the end user with a compatible build.
           releaseDraft: true
