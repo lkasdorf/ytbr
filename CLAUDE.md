@@ -93,6 +93,7 @@ src/
   App.tsx                 # Routing, sidebar, mounts startJobListeners + listJobs hydration
   components/
     Placeholder.tsx       # empty-state card shared by Download / Queue / History
+    UpdateProgress.tsx    # bar + "x MB of y MB" for the app-update download (banner + About dialog)
   features/
     url-input/UrlInput.tsx
     format-picker/{FormatTable,PresetButtons}.tsx
@@ -104,6 +105,7 @@ src/
     tauri-events.ts       # listen() registration (idempotent; await it before listJobs)
     job-spec.ts           # buildJobSpec(): request + Settings snapshot → JobSpec (Download + Batch)
     use-update-install.ts # signed-update download/install flow (UpdateBanner + AboutDialog)
+    update-progress.ts    # pure helpers for the update download: fraction, button label, detail text
     format-utils.ts       # classifyFormat, formatBytes/Bitrate/Duration/Eta/Resolution/Fps
     utils.ts              # cn() (clsx + tailwind-merge)
   stores/

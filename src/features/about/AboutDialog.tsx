@@ -11,6 +11,7 @@ import {
   ytdlpVersion,
   type AppUpdateCheck,
 } from "@/lib/tauri-bridge";
+import { UpdateProgress } from "@/components/UpdateProgress";
 import { useUpdateInstall } from "@/lib/use-update-install";
 import { cn } from "@/lib/utils";
 
@@ -147,7 +148,7 @@ function UpdateCheckRow() {
   const [signed, setSigned] = useState<Update | null>(null);
   const [fallback, setFallback] = useState<AppUpdateCheck | null>(null);
   const [checkError, setError] = useState<string | null>(null);
-  const { installing, installed, error: installError, install } =
+  const { installing, progress, installed, error: installError, install } =
     useUpdateInstall(signed);
   const error = checkError ?? installError;
 
@@ -217,7 +218,7 @@ function UpdateCheckRow() {
               onClick={() => void install()}
               disabled={installing != null || installed}
               className={cn(
-                "flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground",
+                "flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground tabular-nums",
                 "transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
               )}
             >
@@ -228,6 +229,7 @@ function UpdateCheckRow() {
                 : (installing ?? "Download & install")}
             </button>
           </div>
+          {progress && <UpdateProgress progress={progress} />}
         </div>
       )}
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The app update download shows its progress in the update banner and
+  the About dialog: a bar, "42.0 MB of 109 MB", the current speed and
+  the time left, plus the percentage on the button. When no data has
+  arrived for 20 seconds it says so. The installer is over 100 MB, and
+  until now the button just read "Downloading (109 MB)…" for the whole
+  time — on a slow line that was indistinguishable from a hang.
+
 ## [1.5.2] - 2026-11-14
 
 ### Fixed
