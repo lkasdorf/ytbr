@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-11-14
+
 ### Fixed
 
 - Finished downloads keep their size line ("770 KB / 770 KB") after an
