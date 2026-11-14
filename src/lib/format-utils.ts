@@ -54,6 +54,19 @@ export function formatDuration(seconds: number | null | undefined): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// Remaining time of a download: "42s", "3m 5s", "1h 37m". Past an hour
+// the seconds are noise.
+export function formatEta(secs: number | null | undefined): string {
+  if (secs == null) return "—";
+  const total = Math.max(0, Math.floor(secs));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export function shortCodec(codec: string): string {
   if (codec === "none" || codec === "") return "—";
   // Strip the `.profileinfo` suffix for tighter table cells.

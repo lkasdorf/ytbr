@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { History, Search, Trash2 } from "lucide-react";
 import { clearCompletedJobs, type JobState } from "@/lib/tauri-bridge";
 import { useJobsStore } from "@/stores/jobs";
+import { Placeholder } from "@/components/Placeholder";
 import { cn } from "@/lib/utils";
 import { isTerminal } from "@/features/queue/QueueView";
 import { VirtualJobList } from "@/features/queue/VirtualJobList";
@@ -86,17 +87,11 @@ export function HistoryView() {
 
   if (totalTerminal === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-6 py-12 text-card-foreground">
-        <History
-          className="size-10 text-muted-foreground/40"
-          strokeWidth={1.5}
-        />
-        <p className="text-sm font-medium text-foreground">No history yet</p>
-        <p className="max-w-xs text-center text-xs text-muted-foreground">
-          Finished, failed, and cancelled downloads land here. Use the Retry
-          button on any failed entry to re-queue with the same spec.
-        </p>
-      </div>
+      <Placeholder
+        icon={History}
+        title="No history yet"
+        text="Finished, failed, and cancelled downloads land here. Use the Retry button on any failed entry to re-queue with the same spec."
+      />
     );
   }
 

@@ -163,89 +163,79 @@ const SPONSORBLOCK_CATEGORY_LABELS: Record<SponsorblockCategory, string> = {
 };
 
 export function SettingsView() {
-  const parallelLimit = useSettingsStore((s) => s.parallelLimit);
-  const cookiesFromBrowser = useSettingsStore((s) => s.cookiesFromBrowser);
-  const cookiesFile = useSettingsStore((s) => s.cookiesFile);
-  const ffmpegPath = useSettingsStore((s) => s.ffmpegPath);
-  const outputTemplate = useSettingsStore((s) => s.outputTemplate);
-  const defaultPreset = useSettingsStore((s) => s.defaultPreset);
-  const writeSubs = useSettingsStore((s) => s.writeSubs);
-  const subLangs = useSettingsStore((s) => s.subLangs);
-  const writeAutoSubs = useSettingsStore((s) => s.writeAutoSubs);
-  const embedSubs = useSettingsStore((s) => s.embedSubs);
-  const embedThumbnail = useSettingsStore((s) => s.embedThumbnail);
-  const squareThumbnail = useSettingsStore((s) => s.squareThumbnail);
-  const embedMetadata = useSettingsStore((s) => s.embedMetadata);
-  const useDownloadArchive = useSettingsStore((s) => s.useDownloadArchive);
-  const restrictFilenames = useSettingsStore((s) => s.restrictFilenames);
-  const writeThumbnail = useSettingsStore((s) => s.writeThumbnail);
-  const writeInfoJson = useSettingsStore((s) => s.writeInfoJson);
-  const rateLimit = useSettingsStore((s) => s.rateLimit);
-  const proxy = useSettingsStore((s) => s.proxy);
-  const extractorArgs = useSettingsStore((s) => s.extractorArgs);
-  const theme = useSettingsStore((s) => s.theme);
-  const notifyOnSuccess = useSettingsStore((s) => s.notifyOnSuccess);
-  const notifyOnFailure = useSettingsStore((s) => s.notifyOnFailure);
-  const notifyOnCancel = useSettingsStore((s) => s.notifyOnCancel);
-  const watchClipboard = useSettingsStore((s) => s.watchClipboard);
-  const autoClearSuccess = useSettingsStore((s) => s.autoClearSuccess);
-  const autoClearSuccessAfterSeconds = useSettingsStore(
-    (s) => s.autoClearSuccessAfterSeconds,
-  );
-  const concurrentFragments = useSettingsStore((s) => s.concurrentFragments);
-  const retries = useSettingsStore((s) => s.retries);
-  const fragmentRetries = useSettingsStore((s) => s.fragmentRetries);
-  const audioFormat = useSettingsStore((s) => s.audioFormat);
-  const sponsorblockMode = useSettingsStore((s) => s.sponsorblockMode);
-  const sponsorblockCategories = useSettingsStore(
-    (s) => s.sponsorblockCategories,
-  );
-  const closeToTray = useSettingsStore((s) => s.closeToTray);
-
-  const setParallelLimit = useSettingsStore((s) => s.setParallelLimit);
-  const setCookiesFromBrowser = useSettingsStore(
-    (s) => s.setCookiesFromBrowser,
-  );
-  const setCookiesFile = useSettingsStore((s) => s.setCookiesFile);
-  const setFfmpegPath = useSettingsStore((s) => s.setFfmpegPath);
-  const setOutputTemplate = useSettingsStore((s) => s.setOutputTemplate);
-  const setDefaultPreset = useSettingsStore((s) => s.setDefaultPreset);
-  const setWriteSubs = useSettingsStore((s) => s.setWriteSubs);
-  const setSubLangs = useSettingsStore((s) => s.setSubLangs);
-  const setWriteAutoSubs = useSettingsStore((s) => s.setWriteAutoSubs);
-  const setEmbedSubs = useSettingsStore((s) => s.setEmbedSubs);
-  const setEmbedThumbnail = useSettingsStore((s) => s.setEmbedThumbnail);
-  const setSquareThumbnail = useSettingsStore((s) => s.setSquareThumbnail);
-  const setEmbedMetadata = useSettingsStore((s) => s.setEmbedMetadata);
-  const setUseDownloadArchive = useSettingsStore(
-    (s) => s.setUseDownloadArchive,
-  );
-  const setRestrictFilenames = useSettingsStore(
-    (s) => s.setRestrictFilenames,
-  );
-  const setWriteThumbnail = useSettingsStore((s) => s.setWriteThumbnail);
-  const setWriteInfoJson = useSettingsStore((s) => s.setWriteInfoJson);
-  const setRateLimit = useSettingsStore((s) => s.setRateLimit);
-  const setProxy = useSettingsStore((s) => s.setProxy);
-  const setExtractorArgs = useSettingsStore((s) => s.setExtractorArgs);
-  const setTheme = useSettingsStore((s) => s.setTheme);
-  const setNotifyOnSuccess = useSettingsStore((s) => s.setNotifyOnSuccess);
-  const setNotifyOnFailure = useSettingsStore((s) => s.setNotifyOnFailure);
-  const setNotifyOnCancel = useSettingsStore((s) => s.setNotifyOnCancel);
-  const setWatchClipboard = useSettingsStore((s) => s.setWatchClipboard);
-  const setAutoClearSuccess = useSettingsStore((s) => s.setAutoClearSuccess);
-  const setAutoClearSuccessAfterSeconds = useSettingsStore(
-    (s) => s.setAutoClearSuccessAfterSeconds,
-  );
-  const setConcurrentFragments = useSettingsStore((s) => s.setConcurrentFragments);
-  const setRetries = useSettingsStore((s) => s.setRetries);
-  const setFragmentRetries = useSettingsStore((s) => s.setFragmentRetries);
-  const setAudioFormat = useSettingsStore((s) => s.setAudioFormat);
-  const setSponsorblockMode = useSettingsStore((s) => s.setSponsorblockMode);
-  const setSponsorblockCategories = useSettingsStore(
-    (s) => s.setSponsorblockCategories,
-  );
-  const setCloseToTray = useSettingsStore((s) => s.setCloseToTray);
+  // One subscription for the whole store. This view shows every setting,
+  // so any change re-renders it anyway; a selector per field only added
+  // 68 subscriptions that each ran on every store update.
+  const {
+    parallelLimit,
+    cookiesFromBrowser,
+    cookiesFile,
+    ffmpegPath,
+    outputTemplate,
+    defaultPreset,
+    writeSubs,
+    subLangs,
+    writeAutoSubs,
+    embedSubs,
+    embedThumbnail,
+    squareThumbnail,
+    embedMetadata,
+    useDownloadArchive,
+    restrictFilenames,
+    writeThumbnail,
+    writeInfoJson,
+    rateLimit,
+    proxy,
+    extractorArgs,
+    theme,
+    notifyOnSuccess,
+    notifyOnFailure,
+    notifyOnCancel,
+    watchClipboard,
+    autoClearSuccess,
+    autoClearSuccessAfterSeconds,
+    concurrentFragments,
+    retries,
+    fragmentRetries,
+    audioFormat,
+    sponsorblockMode,
+    sponsorblockCategories,
+    closeToTray,
+    setParallelLimit,
+    setCookiesFromBrowser,
+    setCookiesFile,
+    setFfmpegPath,
+    setOutputTemplate,
+    setDefaultPreset,
+    setWriteSubs,
+    setSubLangs,
+    setWriteAutoSubs,
+    setEmbedSubs,
+    setEmbedThumbnail,
+    setSquareThumbnail,
+    setEmbedMetadata,
+    setUseDownloadArchive,
+    setRestrictFilenames,
+    setWriteThumbnail,
+    setWriteInfoJson,
+    setRateLimit,
+    setProxy,
+    setExtractorArgs,
+    setTheme,
+    setNotifyOnSuccess,
+    setNotifyOnFailure,
+    setNotifyOnCancel,
+    setWatchClipboard,
+    setAutoClearSuccess,
+    setAutoClearSuccessAfterSeconds,
+    setConcurrentFragments,
+    setRetries,
+    setFragmentRetries,
+    setAudioFormat,
+    setSponsorblockMode,
+    setSponsorblockCategories,
+    setCloseToTray,
+  } = useSettingsStore();
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">

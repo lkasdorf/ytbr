@@ -164,7 +164,7 @@ try {
     # (muxing video+audio, --extract-audio, --embed-metadata, ...).
     # When yt-dlp gets --ffmpeg-location <file>, it auto-discovers
     # ffprobe in the same directory under the literal name "ffprobe"
-    # (or ".exe"). So we stage two copies: the triple-suffixed one
+    # (or ".exe"). So we stage it under two names: the triple-suffixed one
     # for the Tauri sidecar manifest, and a bare-named sibling for
     # yt-dlp's auto-discover to pick up at runtime.
     $FfprobeFound = Get-ChildItem -Path $ExtractDir -Recurse -Filter $Spec.FfprobeName |
@@ -205,13 +205,20 @@ try {
     Copy-Item -Path $Found.FullName `
               -Destination (Join-Path $BinDir "ffmpeg-$Target$($Spec.Suffix)") `
               -Force
-    # Stage ffprobe twice — see the comment next to the extract step.
-    Copy-Item -Path $FfprobeFound.FullName `
-              -Destination (Join-Path $BinDir "ffprobe-$Target$($Spec.Suffix)") `
-              -Force
-    Copy-Item -Path $FfprobeFound.FullName `
-              -Destination (Join-Path $BinDir $Spec.FfprobeName) `
-              -Force
+    # Stage ffprobe under both names — see the comment next to the
+    # extract step. The bare-named sibling is a hard link to the
+    # triple-suffixed file, so the binary takes up disk space once.
+    # Where the volume can't hard-link (FAT, some network shares) it
+    # falls back to a second copy.
+    $ProbeTriple = Join-Path $BinDir "ffprobe-$Target$($Spec.Suffix)"
+    $ProbeBare   = Join-Path $BinDir $Spec.FfprobeName
+    Remove-Item -Path $ProbeBare -Force -ErrorAction SilentlyContinue
+    Copy-Item -Path $FfprobeFound.FullName -Destination $ProbeTriple -Force
+    try {
+        New-Item -ItemType HardLink -Path $ProbeBare -Target $ProbeTriple -ErrorAction Stop | Out-Null
+    } catch {
+        Copy-Item -Path $ProbeTriple -Destination $ProbeBare -Force
+    }
 
     Write-Host ""
     Write-Host "Staged in $BinDir for triple $Target :"

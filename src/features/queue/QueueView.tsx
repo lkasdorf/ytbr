@@ -28,7 +28,8 @@ import {
 } from "@/lib/tauri-bridge";
 import { isActive, useJobsStore, type LogLine } from "@/stores/jobs";
 import { VirtualJobList } from "@/features/queue/VirtualJobList";
-import { formatBytes } from "@/lib/format-utils";
+import { formatBytes, formatEta } from "@/lib/format-utils";
+import { Placeholder } from "@/components/Placeholder";
 import { cn } from "@/lib/utils";
 
 type SortMode =
@@ -131,18 +132,11 @@ export function QueueView() {
 
   if (ordered.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-6 py-12 text-card-foreground">
-        <ListVideo
-          className="size-10 text-muted-foreground/40"
-          strokeWidth={1.5}
-        />
-        <p className="text-sm font-medium text-foreground">No active jobs</p>
-        <p className="max-w-xs text-center text-xs text-muted-foreground">
-          Probe a URL on the Download tab and click the download icon next to a
-          format, or paste a list on the Batch tab. Finished jobs move to the
-          History tab.
-        </p>
-      </div>
+      <Placeholder
+        icon={ListVideo}
+        title="No active jobs"
+        text="Probe a URL on the Download tab and click the download icon next to a format, or paste a list on the Batch tab. Finished jobs move to the History tab."
+      />
     );
   }
 
@@ -339,7 +333,7 @@ export const JobCard = memo(function JobCard({ id }: { id: string }) {
                 <span>{formatBytesPair(p?.downloadedBytes, p?.totalBytes)}</span>
                 <span>
                   {job.status === "downloading" && p
-                    ? `${formatSpeed(p.speedBps)} · ETA ${etaDisplay(p.etaSecs)}`
+                    ? `${formatSpeed(p.speedBps)} · ETA ${formatEta(p.etaSecs)}`
                     : job.status === "paused"
                       ? "paused"
                       : job.status === "completed"
@@ -590,18 +584,6 @@ function formatBytesPair(downloaded: number | null | undefined, total: number | 
   const d = formatBytes(downloaded);
   const t = total != null ? formatBytes(total) : "?";
   return `${d} / ${t}`;
-}
-
-function etaDisplay(secs: number | null | undefined): string {
-  if (secs == null) return "—";
-  const total = Math.max(0, Math.floor(secs));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  // Past an hour the seconds are noise: "1h 37m", not "97m 57s".
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
 }
 
 function formatSpeed(bytesPerSec: number | null | undefined): string {

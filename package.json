@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --max-warnings 0",
+    "test": "vitest run --dir src",
     "preview": "vite preview",
     "tauri": "tauri",
     "version:check": "node scripts/version-sync.mjs",
@@ -45,6 +46,7 @@
     "tailwindcss": "^4.3.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.72.2",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^5.1.0"
   }
 }

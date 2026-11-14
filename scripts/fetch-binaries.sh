@@ -164,7 +164,7 @@ fi
 # video+audio, --extract-audio, --embed-metadata, ...). When yt-dlp
 # gets --ffmpeg-location <file>, it auto-discovers ffprobe in the same
 # directory under the literal name "ffprobe" (or ".exe"). So we stage
-# two copies: the triple-suffixed one for the Tauri sidecar manifest,
+# it under two names: the triple-suffixed one for the Tauri sidecar manifest,
 # and a bare-named sibling for yt-dlp's auto-discover to pick up at
 # runtime.
 ffprobe_path="$(find "$extract_dir" -type f -name "$ffprobe_name" | head -n 1)"
@@ -207,10 +207,15 @@ echo "[upx] $((probe_before_bytes / 1024 / 1024)) MB -> $((probe_after_bytes / 1
 
 cp -f "$ffmpeg_path" "$BIN_DIR/ffmpeg-${target}${suffix}"
 chmod +x "$BIN_DIR/ffmpeg-${target}${suffix}" || true
-# Stage ffprobe twice — see the comment next to the extract step.
+# Stage ffprobe under both names — see the comment next to the extract
+# step. The bare-named sibling is a hard link to the triple-suffixed
+# file, so the binary takes up disk space once. Where the filesystem
+# can't hard-link it falls back to a second copy.
+rm -f "${BIN_DIR:?}/${ffprobe_name:?}"
 cp -f "$ffprobe_path" "$BIN_DIR/ffprobe-${target}${suffix}"
 chmod +x "$BIN_DIR/ffprobe-${target}${suffix}" || true
-cp -f "$ffprobe_path" "$BIN_DIR/$ffprobe_name"
+ln "$BIN_DIR/ffprobe-${target}${suffix}" "$BIN_DIR/$ffprobe_name" 2>/dev/null \
+  || cp -f "$BIN_DIR/ffprobe-${target}${suffix}" "$BIN_DIR/$ffprobe_name"
 chmod +x "$BIN_DIR/$ffprobe_name" || true
 
 echo ""
