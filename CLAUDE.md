@@ -108,6 +108,10 @@ src/
     probe.ts              # zustand (session-only): Download tab URL + probe result, survives tab switches
     settings.ts           # zustand persist (localStorage): outputDir
   index.css               # Tailwind v4 import + slate theme tokens (oklch) + .dark variants
+
+public/
+  theme-init.js           # blocking script from index.html: sets the `dark` class before first paint
+                          # (external file because the CSP only allows scripts from 'self')
 ```
 
 ## Conventions

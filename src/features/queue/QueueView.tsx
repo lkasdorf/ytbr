@@ -416,7 +416,7 @@ export const JobCard = memo(function JobCard({ id }: { id: string }) {
 // Re-queue a previously failed or cancelled job with the same spec.
 // The new job gets a fresh UUID from the backend; the original failed
 // or cancelled row stays in the queue so the user keeps the error
-// context (and can clear it manually via "Clear completed" once the
+// context (and can clear it manually via "Clear history" once the
 // retry has settled). Rejects with the backend's error message when the
 // re-queue is refused (e.g. the output folder no longer exists); the
 // card shows it.
@@ -546,11 +546,18 @@ function LogsPanel({ id }: { id: string }) {
   // a log line yet (most queued / fresh jobs); empty buffer means we
   // hide the disclosure entirely to keep the card compact.
   const lines = useJobsStore((s) => s.logs[id]);
+  // The lines are only mounted while the panel is open. A closed
+  // <details> still keeps its children in the DOM, so every card used to
+  // carry up to 500 hidden spans and re-render them on each log batch.
+  const [open, setOpen] = useState(false);
   if (!lines || lines.length === 0) return null;
   const last: LogLine = lines[lines.length - 1];
 
   return (
-    <details className="group mt-3 rounded-md border border-border/60 bg-muted/30">
+    <details
+      className="group mt-3 rounded-md border border-border/60 bg-muted/30"
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted/60">
         <span className="flex items-center gap-1.5">
           <span className="text-foreground/70">Logs</span>
@@ -563,16 +570,18 @@ function LogsPanel({ id }: { id: string }) {
         </span>
         <span className="text-muted-foreground/60 group-open:rotate-90 transition-transform">▸</span>
       </summary>
-      <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-all border-t border-border/60 bg-background/40 p-2 font-mono text-[11px] leading-snug">
-        {lines.map((l, i) => (
-          <span
-            key={i}
-            className={cn("block", l.stream === "stderr" && "text-destructive/90")}
-          >
-            {l.line}
-          </span>
-        ))}
-      </pre>
+      {open && (
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-all border-t border-border/60 bg-background/40 p-2 font-mono text-[11px] leading-snug">
+          {lines.map((l, i) => (
+            <span
+              key={i}
+              className={cn("block", l.stream === "stderr" && "text-destructive/90")}
+            >
+              {l.line}
+            </span>
+          ))}
+        </pre>
+      )}
     </details>
   );
 }
@@ -585,8 +594,12 @@ function formatBytesPair(downloaded: number | null | undefined, total: number | 
 
 function etaDisplay(secs: number | null | undefined): string {
   if (secs == null) return "—";
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
+  const total = Math.max(0, Math.floor(secs));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  // Past an hour the seconds are noise: "1h 37m", not "97m 57s".
+  if (h > 0) return `${h}h ${m}m`;
   if (m > 0) return `${m}m ${s}s`;
   return `${s}s`;
 }

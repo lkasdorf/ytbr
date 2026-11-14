@@ -15,6 +15,14 @@ edition = "2021"
 name = "ytbr_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# Release builds are made once per release on CI, so build time is
+# traded for a smaller, better-optimized binary. `panic` stays at the
+# default (unwind): a panic in one job task must not take the app down.
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
