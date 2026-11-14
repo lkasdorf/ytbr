@@ -46,6 +46,8 @@ pub async fn run(
     pid_slot: Arc<Mutex<Option<u32>>>,
     // Called once, as soon as yt-dlp has resolved the video's title.
     on_title: impl Fn(&str),
+    // Called for every progress line, before it is emitted to the UI.
+    on_progress: impl Fn(&progress::JobProgress),
 ) -> Result<RunOutcome, AppError> {
     let output_template = spec
         .output_dir
@@ -283,6 +285,7 @@ pub async fn run(
                             on_title(&title);
                         }
                     }
+                    on_progress(&prog);
                     let _ = app.emit("job-progress", ProgressPayload { id, progress: &prog });
                 } else if !line.is_empty() {
                     emit_log(app, id, &line, "stdout");

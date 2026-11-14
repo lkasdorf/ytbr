@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Finished downloads keep their size line ("770 KB / 770 KB") after an
+  app restart. The backend never stored a job's progress, so the
+  history lost it as soon as the window's own copy was gone.
+
+### Changed
+
+- CI runs frontend unit tests (Vitest, `pnpm test`) for the format
+  helpers and the jobs store.
+- All GitHub Actions in the CI and release workflows are pinned to
+  commit SHAs instead of movable tags; Dependabot proposes the updates
+  once a month.
+- `scripts/fetch-binaries` stages the bare-named `ffprobe` (needed by
+  yt-dlp in dev runs) as a hard link to the sidecar file instead of a
+  second 40 MB copy.
+- The Settings view subscribes to the settings store once instead of
+  68 times, and the three identical empty-state blocks share one
+  component.
+
 ## [1.5.1] - 2026-11-14
 
 ### Fixed

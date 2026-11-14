@@ -759,9 +759,15 @@ fn spawn_job(inner: Arc<QueueInner>, app: AppHandle, generation: u64, job: Pendi
 
         inner.transition(&app, &id, JobStatus::Downloading, None);
 
-        let outcome = runner::run(&app, &id, &spec, cancel_rx, pid, |title| {
-            inner.set_title(&app, &id, title)
-        })
+        let outcome = runner::run(
+            &app,
+            &id,
+            &spec,
+            cancel_rx,
+            pid,
+            |title| inner.set_title(&app, &id, title),
+            |progress| inner.set_progress(&id, progress),
+        )
         .await;
 
         // An orphaned task's download was killed by `shutdown`; that is
@@ -819,6 +825,19 @@ impl QueueInner {
         }
         self.mark_dirty();
         let _ = app.emit("job-title", TitlePayload { id, title });
+    }
+
+    /// Keep the latest progress on the job, so `list_jobs` (a webview
+    /// reload) and queue.json (the history after a restart) carry it.
+    /// The field existed but nothing ever wrote it: a finished job lost
+    /// its size line as soon as the frontend copy was gone.
+    ///
+    /// Deliberately not marked dirty: this runs several times a second
+    /// per download, and the next status change persists the value.
+    fn set_progress(&self, id: &str, progress: &JobProgress) {
+        if let Some(entry) = self.jobs.lock().unwrap().get_mut(id) {
+            entry.state.progress = Some(progress.clone());
+        }
     }
 
     fn is_current(&self, generation: u64) -> bool {
@@ -1004,6 +1023,39 @@ mod tests {
         }
         let ids: Vec<_> = q.list().into_iter().map(|s| s.id).collect();
         assert_eq!(ids, ["a", "b", "c", "d", "e"]);
+    }
+
+    #[test]
+    fn progress_is_kept_on_the_job_and_survives_persistence() {
+        let q = QueueManager::new(1);
+        q.inner.jobs.lock().unwrap().insert(
+            "a".into(),
+            JobEntry {
+                state: state("a", 1),
+                cancel_tx: None,
+                pid: Arc::new(Mutex::new(None)),
+                generation: 0,
+            },
+        );
+        let progress = JobProgress {
+            percent: 100.0,
+            speed_bps: None,
+            eta_secs: None,
+            downloaded_bytes: Some(788_493),
+            total_bytes: Some(788_493),
+        };
+        q.inner.set_progress("a", &progress);
+        // Unknown ids are ignored (the job may have been removed).
+        q.inner.set_progress("gone", &progress);
+
+        let listed = q.list();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].progress.as_ref().unwrap().total_bytes, Some(788_493));
+
+        let file = PersistedQueue { version: 1, jobs: listed, paused: false };
+        let back: PersistedQueue =
+            serde_json::from_str(&serde_json::to_string(&file).unwrap()).unwrap();
+        assert_eq!(back.jobs[0].progress.as_ref().unwrap().downloaded_bytes, Some(788_493));
     }
 
     fn take_slot(q: &QueueManager) -> OwnedSemaphorePermit {

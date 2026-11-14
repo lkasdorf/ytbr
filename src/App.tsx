@@ -25,6 +25,7 @@ import { startJobListeners } from "@/lib/tauri-events";
 import { useSettingsSync } from "@/lib/settings-sync";
 import { useThemeEffect } from "@/lib/theme";
 import { useUrlDrop } from "@/lib/url-drop";
+import { Placeholder } from "@/components/Placeholder";
 import { AboutDialog } from "@/features/about/AboutDialog";
 import { buildJobSpec } from "@/lib/job-spec";
 import { countJobs, useJobsStore } from "@/stores/jobs";
@@ -233,26 +234,6 @@ function DropOverlay() {
           One URL goes to the Download tab. Multiple URLs land in Batch.
         </p>
       </div>
-    </div>
-  );
-}
-
-function Placeholder({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  title?: string;
-  text: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-6 py-12 text-card-foreground">
-      {Icon && (
-        <Icon className="size-10 text-muted-foreground/40" strokeWidth={1.5} />
-      )}
-      {title && <p className="text-sm font-medium text-foreground">{title}</p>}
-      <p className="max-w-xs text-center text-xs text-muted-foreground">{text}</p>
     </div>
   );
 }

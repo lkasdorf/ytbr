@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 Leon Kasdorf
+#
+# The workflows pin every action to a commit SHA, so a moved tag can't
+# change what runs in CI or in a release build. Pins don't update
+# themselves; Dependabot proposes the bump (SHA and version comment
+# together) as a pull request once a month.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]

@@ -16,6 +16,7 @@ All commands run from the project root (`ytbr/`).
 pnpm install                                 # JS deps (auto-runs esbuild postinstall thanks to pnpm-workspace.yaml)
 pnpm build                                   # tsc strict-check + Vite bundle (no Rust)
 pnpm lint                                    # ESLint, zero warnings allowed (CI gate)
+pnpm test                                    # Vitest unit tests, src/**/*.test.ts (CI gate)
 pnpm tauri dev --no-watch                    # dev window — use --no-watch ALWAYS (see Gotchas)
 pnpm tauri build                             # full release bundle (.msi/.exe on Win, .deb/.AppImage on Linux)
 
@@ -90,6 +91,8 @@ src-tauri/src/
 
 src/
   App.tsx                 # Routing, sidebar, mounts startJobListeners + listJobs hydration
+  components/
+    Placeholder.tsx       # empty-state card shared by Download / Queue / History
   features/
     url-input/UrlInput.tsx
     format-picker/{FormatTable,PresetButtons}.tsx
@@ -101,7 +104,7 @@ src/
     tauri-events.ts       # listen() registration (idempotent; await it before listJobs)
     job-spec.ts           # buildJobSpec(): request + Settings snapshot → JobSpec (Download + Batch)
     use-update-install.ts # signed-update download/install flow (UpdateBanner + AboutDialog)
-    format-utils.ts       # classifyFormat, formatBytes/Bitrate/Duration/Resolution/Fps
+    format-utils.ts       # classifyFormat, formatBytes/Bitrate/Duration/Eta/Resolution/Fps
     utils.ts              # cn() (clsx + tailwind-merge)
   stores/
     jobs.ts               # zustand: jobs map, ids order, upsert/applyBatch, statusVersion
@@ -120,6 +123,7 @@ public/
 - Conventional commits. Commit messages explain *why* and call out behavior surprises (see existing log for tone). When Claude authors a commit, append the `Co-Authored-By:` trailer its current session specifies — the model name changes between sessions, so do not copy an older commit's trailer verbatim.
 - Rust modules over fat files. New Tauri commands go in `commands/<group>.rs`, registered in `commands/mod.rs` + the `invoke_handler!` macro in `lib.rs`.
 - Frontend TS strict mode (`noUnusedLocals`, `noUnusedParameters`, etc.). Path alias `@/*` → `src/*`.
+- GitHub Actions are pinned to commit SHAs with the version in a trailing comment (`uses: owner/action@<sha> # v1.2.3`). Dependabot (`.github/dependabot.yml`) proposes the bumps monthly. `dtolnay/rust-toolchain` reads the channel from its ref name, so the pinned form needs `toolchain: stable` passed explicitly.
 - shadcn/ui set up manually (CLI hangs in non-interactive shells); add components by hand into `src/components/ui/` if you need them, with `style: new-york`, slate base.
 - **`CHANGELOG.md` is updated alongside meaningful commits**, not only at session end. Keep a Changelog 1.1.0 categories under `[Unreleased]`. The `/end-session` skill is the safety net.
 - App version is sourced from `package.json#version` and injected as `__APP_VERSION__` via `vite.config.ts` → shown in the sidebar header. Bump `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json` together when cutting a release — `pnpm version:check` asserts they match and `pnpm version:set <semver>` (`scripts/version-sync.mjs`) bumps all three at once.
