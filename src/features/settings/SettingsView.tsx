@@ -325,7 +325,7 @@ export function SettingsView() {
           />
           <ToggleRow
             label="Auto-clear successful downloads"
-            desc="Hide completed jobs from the queue view after the delay below. Only applies to clean successes — failed and cancelled jobs stay around so you can review them. Use the Clear completed button in the Queue header to flush those manually."
+            desc="Remove finished downloads from the History tab after the delay below. Only applies to clean successes — failed and cancelled jobs stay so you can review or retry them; Clear history on the History tab removes those."
             checked={autoClearSuccess}
             onChange={setAutoClearSuccess}
           />

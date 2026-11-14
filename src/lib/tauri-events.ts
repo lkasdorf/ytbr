@@ -98,7 +98,7 @@ function onStatusChange(id: string, status: JobStatus, name: string) {
     setTimeout(() => {
       void removeJob(id).catch(() => {
         // Backend removal can fail if the queue manager has already
-        // evicted the entry (e.g. via Clear completed racing the
+        // evicted the entry (e.g. via Clear history racing the
         // timer). Frontend remove is still safe.
       });
       useJobsStore.getState().remove(id);

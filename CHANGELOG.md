@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The window no longer flashes in the dark theme at startup when the
+  light theme (or a light system theme) is active. The theme is now
+  applied before the first paint.
+- The ETA of long downloads shows hours ("1h 37m" instead of
+  "97m 57s").
+- The **Auto-clear successful downloads** description in Settings
+  pointed to a "Clear completed" button in the Queue header that no
+  longer exists; it now names **Clear history** on the History tab.
+
+### Changed
+
+- Job cards only render their log lines while the Logs panel is open.
+  Closed panels used to keep up to 500 hidden lines per card in the
+  page and update them on every log batch.
+- Release builds use link-time optimization, a single codegen unit and
+  stripped symbols. The Windows app binary shrinks from 18.6 MB to
+  16.4 MB; the release build takes longer.
+
 ## [1.5.0] - 2026-11-14
 
 ### Added

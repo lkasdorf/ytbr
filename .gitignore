@@ -8,6 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# pnpm project: an npm lockfile left behind by a stray `npm install`
+# must not end up in a commit.
+package-lock.json
 dist
 dist-ssr
 *.local
