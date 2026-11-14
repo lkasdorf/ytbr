@@ -14,12 +14,20 @@ use crate::ytdlp::runner::ytdlp_command;
 /// can't blow up memory while we wait for the parse to fail.
 const READ_TXT_MAX_BYTES: u64 = 1024 * 1024;
 
-/// Open a path in the OS file manager. Called from Rust so we don't
+/// Open a folder in the OS file manager. Called from Rust so we don't
 /// have to widen the JS-side `opener:allow-open-path` scope to cover
 /// every possible user-chosen output directory; the Rust plugin call
 /// has no such scope check.
+///
+/// Precisely because there is no scope check, the path must be an
+/// existing directory: `open_path` hands the path to the OS shell,
+/// which would otherwise launch any executable or script the webview
+/// names.
 #[tauri::command]
 pub async fn reveal_in_folder(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    if !Path::new(&path).is_dir() {
+        return Err(format!("not a folder: {path}"));
+    }
     app.opener()
         .open_path(&path, None::<&str>)
         .map_err(|e| format!("open_path failed: {e}"))

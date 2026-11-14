@@ -3,16 +3,15 @@
 
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { Download, ExternalLink, Loader2, X } from "lucide-react";
 import {
   checkAppUpdate,
   ffmpegVersion,
   ytdlpVersion,
-  prepareForUpdate,
   type AppUpdateCheck,
 } from "@/lib/tauri-bridge";
+import { useUpdateInstall } from "@/lib/use-update-install";
 import { cn } from "@/lib/utils";
 
 const REPO_URL = "https://github.com/lkasdorf/ytbr";
@@ -147,16 +146,16 @@ function UpdateCheckRow() {
   const [busy, setBusy] = useState(false);
   const [signed, setSigned] = useState<Update | null>(null);
   const [fallback, setFallback] = useState<AppUpdateCheck | null>(null);
-  const [installing, setInstalling] = useState<string | null>(null);
-  const [installed, setInstalled] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [checkError, setError] = useState<string | null>(null);
+  const { installing, installed, error: installError, install } =
+    useUpdateInstall(signed);
+  const error = checkError ?? installError;
 
   async function run() {
     setBusy(true);
     setError(null);
     setSigned(null);
     setFallback(null);
-    setInstalled(false);
     try {
       const update = await check();
       if (update != null) {
@@ -178,39 +177,6 @@ function UpdateCheckRow() {
       }
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function install() {
-    if (signed == null) return;
-    setInstalling("Downloading…");
-    setError(null);
-    try {
-      await signed.download((event) => {
-        if (event.event === "Started") {
-          setInstalling(
-            event.data.contentLength != null
-              ? `Downloading (${formatBytes(event.data.contentLength)})…`
-              : "Downloading…",
-          );
-        } else if (event.event === "Finished") {
-          setInstalling("Installing…");
-        }
-      });
-      // install() exits the app on Windows before RunEvent::Exit fires:
-      // save the queue (it resumes after the update) and stop running
-      // downloads first. Done after the download so a failed download
-      // leaves the running jobs alone.
-      await prepareForUpdate();
-      await signed.install();
-      setInstalled(true);
-      setInstalling(null);
-      // Relaunch happens after a tiny pause so the user sees the
-      // "Installed — restarting" line for a beat.
-      setTimeout(() => void relaunch(), 600);
-    } catch (e: unknown) {
-      setError(String(e));
-      setInstalling(null);
     }
   }
 
@@ -293,12 +259,6 @@ function UpdateCheckRow() {
       )}
     </div>
   );
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

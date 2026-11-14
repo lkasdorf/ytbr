@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::sync::{oneshot, watch, Semaphore};
+use tokio::sync::{oneshot, watch, OwnedSemaphorePermit, Semaphore};
 
 use crate::error::AppError;
 use crate::ytdlp::progress::JobProgress;
@@ -175,6 +175,28 @@ struct JobEntry {
     /// is rejected in that window. Wrapped in an Arc so the runner
     /// task can write to it independently of `jobs` lock contention.
     pid: Arc<Mutex<Option<u32>>>,
+    /// `QueueInner::generation` at the time this job's task was spawned.
+    /// A task from an older generation was orphaned by `shutdown` and
+    /// must not touch the job any more.
+    generation: u64,
+}
+
+/// What `spawn_job` needs to start (or restart) one job's task.
+struct PendingSpawn {
+    id: JobId,
+    spec: JobSpec,
+    cancel_rx: oneshot::Receiver<()>,
+    pid: Arc<Mutex<Option<u32>>>,
+}
+
+/// Download-slot accounting next to the semaphore.
+struct Slots {
+    /// Current target permit count.
+    limit: usize,
+    /// Permits that still have to leave the pool after the limit was
+    /// lowered while they were held by running downloads. Each one is
+    /// forgotten instead of returned when its download ends.
+    debt: usize,
 }
 
 pub struct QueueManager {
@@ -184,10 +206,10 @@ pub struct QueueManager {
 struct QueueInner {
     jobs: Mutex<HashMap<JobId, JobEntry>>,
     semaphore: Arc<Semaphore>,
-    /// Current target permit count. Source of truth alongside the
-    /// semaphore — guarded together so concurrent set_parallel_limit
-    /// calls don't compute a wrong delta.
-    limit: Mutex<usize>,
+    /// Source of truth alongside the semaphore — guarded together so
+    /// concurrent set_parallel_limit calls and permit releases don't
+    /// compute a wrong delta.
+    slots: Mutex<Slots>,
     /// Queue-wide pause ("Pause all"). While `true`, queued jobs don't
     /// start; running ones were suspended by `pause_all`. Spawn tasks
     /// subscribe and wait for it to flip back.
@@ -201,8 +223,14 @@ struct QueueInner {
     next_seq: AtomicU64,
     /// Set by `shutdown`. From then on nothing is persisted, so the
     /// failures caused by killing the running downloads on exit don't
-    /// overwrite their resumable state in queue.json.
+    /// overwrite their resumable state in queue.json. Cleared again by
+    /// `resume_after_shutdown` when the app keeps running after all.
     shutting_down: AtomicBool,
+    /// Bumped by `shutdown`. Every job task remembers the value it was
+    /// spawned under and stops reporting once it no longer matches, so
+    /// the tasks orphaned by a shutdown neither start new downloads nor
+    /// mark their killed ones as failed.
+    generation: AtomicU64,
 }
 
 const PERSIST_INTERVAL: Duration = Duration::from_secs(1);
@@ -223,11 +251,12 @@ impl QueueManager {
             inner: Arc::new(QueueInner {
                 jobs: Mutex::new(HashMap::new()),
                 semaphore: Arc::new(Semaphore::new(limit)),
-                limit: Mutex::new(limit),
+                slots: Mutex::new(Slots { limit, debt: 0 }),
                 paused: watch::Sender::new(false),
                 dirty: AtomicBool::new(false),
                 next_seq: AtomicU64::new(1),
                 shutting_down: AtomicBool::new(false),
+                generation: AtomicU64::new(0),
             }),
         }
     }
@@ -237,56 +266,58 @@ impl QueueManager {
     /// Growing is instant: extra permits are released onto the
     /// semaphore and any queued jobs unblock immediately.
     ///
-    /// Shrinking has to wait for currently-running jobs to drop their
-    /// permits, so it's done in a background task that absorbs
-    /// `old - new` permits via `permit.forget()`. While the task
-    /// runs the effective limit transitions smoothly: new jobs see
-    /// the new limit (because the absorbed permits never return to
-    /// the pool) without disturbing in-flight downloads.
+    /// Shrinking never disturbs in-flight downloads. Idle permits are
+    /// removed from the pool right away; the ones held by running jobs
+    /// are booked as `debt` and forgotten when those jobs end (see
+    /// `QueueInner::release`). An earlier version queued an "absorber"
+    /// on the semaphore instead — the semaphore is FIFO, so it sat
+    /// behind every waiting job and the lower limit only took effect
+    /// once the whole backlog had drained.
     ///
     /// Returns the clamped, accepted limit.
     pub fn set_parallel_limit(&self, requested: usize) -> usize {
         let new_limit = clamp_limit(requested);
-        let mut current = self.inner.limit.lock().unwrap();
-        let old_limit = *current;
-
-        if new_limit == old_limit {
-            return new_limit;
-        }
+        let mut slots = self.inner.slots.lock().unwrap();
+        let old_limit = slots.limit;
 
         if new_limit > old_limit {
-            self.inner.semaphore.add_permits(new_limit - old_limit);
-        } else {
-            let to_absorb = old_limit - new_limit;
-            let semaphore = self.inner.semaphore.clone();
-            tauri::async_runtime::spawn(async move {
-                for _ in 0..to_absorb {
-                    match semaphore.acquire().await {
-                        Ok(permit) => permit.forget(),
-                        Err(_) => break, // semaphore closed (shutdown)
-                    }
-                }
-            });
+            // Permits still owed from an earlier shrink cancel out first.
+            let grow = new_limit - old_limit;
+            let settled = grow.min(slots.debt);
+            slots.debt -= settled;
+            self.inner.semaphore.add_permits(grow - settled);
+        } else if new_limit < old_limit {
+            let shrink = old_limit - new_limit;
+            let removed = self.inner.semaphore.forget_permits(shrink);
+            slots.debt += shrink - removed;
         }
 
-        *current = new_limit;
+        slots.limit = new_limit;
         new_limit
     }
 
-    pub fn enqueue(&self, app: AppHandle, spec: JobSpec) -> Result<JobId, AppError> {
-        if spec.url.trim().is_empty() {
-            return Err(AppError::InvalidInput("url is empty".into()));
-        }
-        if spec.output_dir.as_os_str().is_empty() {
-            return Err(AppError::InvalidInput("output_dir is empty".into()));
-        }
-        if !spec.output_dir.is_dir() {
-            return Err(AppError::InvalidInput(format!(
-                "output_dir does not exist: {}",
-                spec.output_dir.display()
-            )));
-        }
+    pub fn enqueue(&self, app: AppHandle, spec: JobSpec) -> Result<JobState, AppError> {
+        validate_spec(&spec)?;
+        Ok(self.insert_and_spawn(&app, spec))
+    }
 
+    /// Enqueue a whole batch in one call. All-or-nothing on validation:
+    /// one bad spec rejects the batch before anything is queued, so the
+    /// caller never has to clean up half a playlist. Jobs start in the
+    /// order given.
+    pub fn enqueue_many(
+        &self,
+        app: &AppHandle,
+        specs: Vec<JobSpec>,
+    ) -> Result<Vec<JobState>, AppError> {
+        specs.iter().try_for_each(validate_spec)?;
+        Ok(specs
+            .into_iter()
+            .map(|spec| self.insert_and_spawn(app, spec))
+            .collect())
+    }
+
+    fn insert_and_spawn(&self, app: &AppHandle, spec: JobSpec) -> JobState {
         let id: JobId = uuid::Uuid::new_v4().to_string();
         let state = JobState {
             id: id.clone(),
@@ -299,21 +330,25 @@ impl QueueManager {
 
         let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
         let pid = Arc::new(Mutex::new(None::<u32>));
-        {
-            let mut jobs = self.inner.jobs.lock().unwrap();
-            jobs.insert(
-                id.clone(),
-                JobEntry {
-                    state: state.clone(),
-                    cancel_tx: Some(cancel_tx),
-                    pid: pid.clone(),
-                },
-            );
-        }
+        let generation = self.inner.generation.load(Ordering::Acquire);
+        self.inner.jobs.lock().unwrap().insert(
+            id.clone(),
+            JobEntry {
+                state: state.clone(),
+                cancel_tx: Some(cancel_tx),
+                pid: pid.clone(),
+                generation,
+            },
+        );
         self.inner.mark_dirty();
-        emit_status(&app, &id, JobStatus::Queued, None);
-        spawn_job(self.inner.clone(), app, id.clone(), spec, cancel_rx, pid);
-        Ok(id)
+        emit_status(app, &id, JobStatus::Queued, None);
+        spawn_job(
+            self.inner.clone(),
+            app.clone(),
+            generation,
+            PendingSpawn { id, spec, cancel_rx, pid },
+        );
+        state
     }
 
 
@@ -502,12 +537,17 @@ impl QueueManager {
     /// spawned from JS, so without this the downloads (PyInstaller
     /// worker + ffmpeg) kept running after exit and collided with their
     /// resumed copies on the next start. Idempotent.
+    ///
+    /// Bumping the generation orphans every job task: the killed
+    /// downloads are not reported as failed and waiting jobs don't grab
+    /// the freed slots to start new yt-dlp processes on the way out.
     pub fn shutdown(&self, app: &AppHandle) {
         if self.inner.shutting_down.load(Ordering::Acquire) {
             return;
         }
         self.inner.persist_now(app);
         self.inner.shutting_down.store(true, Ordering::Release);
+        self.inner.generation.fetch_add(1, Ordering::AcqRel);
         let pids: Vec<u32> = self
             .inner
             .jobs
@@ -519,6 +559,52 @@ impl QueueManager {
         for pid in pids {
             crate::ytdlp::process_tree::kill_tree(pid);
         }
+    }
+
+    /// Undo `shutdown` when the app keeps running after all — the update
+    /// installer failed or was declined (e.g. a cancelled pkexec prompt
+    /// on Linux). Persistence is switched back on and every job that was
+    /// unfinished at shutdown is queued again, in creation order; yt-dlp
+    /// continues their partial files. Returns how many jobs were
+    /// requeued. No-op unless `shutdown` ran before.
+    pub fn resume_after_shutdown(&self, app: &AppHandle) -> usize {
+        if !self.inner.shutting_down.swap(false, Ordering::AcqRel) {
+            return 0;
+        }
+        let generation = self.inner.generation.load(Ordering::Acquire);
+        let mut restart: Vec<PendingSpawn> = Vec::new();
+        {
+            let mut jobs = self.inner.jobs.lock().unwrap();
+            let mut orphaned: Vec<&mut JobEntry> = jobs
+                .values_mut()
+                .filter(|e| e.generation != generation && is_active(e.state.status))
+                .collect();
+            orphaned.sort_by_key(|e| e.state.seq);
+            for entry in orphaned {
+                let (tx, cancel_rx) = oneshot::channel::<()>();
+                // Fresh handles: the orphaned task still owns the old
+                // ones and may not have wound down yet.
+                entry.cancel_tx = Some(tx);
+                entry.pid = Arc::new(Mutex::new(None));
+                entry.generation = generation;
+                entry.state.status = JobStatus::Queued;
+                entry.state.progress = None;
+                entry.state.error = None;
+                restart.push(PendingSpawn {
+                    id: entry.state.id.clone(),
+                    spec: entry.state.spec.clone(),
+                    cancel_rx,
+                    pid: entry.pid.clone(),
+                });
+            }
+        }
+        self.inner.mark_dirty();
+        let requeued = restart.len();
+        for pending in restart {
+            emit_status(app, &pending.id, JobStatus::Queued, None);
+            spawn_job(self.inner.clone(), app.clone(), generation, pending);
+        }
+        requeued
     }
 
     /// Read `queue.json` on app startup and seed the in-memory map.
@@ -533,20 +619,25 @@ impl QueueManager {
         }
         // Before any task is spawned, so resumed jobs wait if needed.
         self.inner.paused.send_replace(was_paused);
-        let mut resume: Vec<(JobId, JobSpec, oneshot::Receiver<()>, Arc<Mutex<Option<u32>>>)> =
-            Vec::new();
+        let mut resume: Vec<PendingSpawn> = Vec::new();
         let persisted = prepare_for_resume(persisted);
         self.inner
             .next_seq
             .store(persisted.len() as u64 + 1, Ordering::Relaxed);
+        let generation = self.inner.generation.load(Ordering::Acquire);
         let mut jobs = self.inner.jobs.lock().unwrap();
         for state in persisted {
             let pid = Arc::new(Mutex::new(None));
             let mut cancel_tx = None;
             if state.status == JobStatus::Queued {
-                let (tx, rx) = oneshot::channel::<()>();
+                let (tx, cancel_rx) = oneshot::channel::<()>();
                 cancel_tx = Some(tx);
-                resume.push((state.id.clone(), state.spec.clone(), rx, pid.clone()));
+                resume.push(PendingSpawn {
+                    id: state.id.clone(),
+                    spec: state.spec.clone(),
+                    cancel_rx,
+                    pid: pid.clone(),
+                });
             }
             jobs.insert(
                 state.id.clone(),
@@ -554,16 +645,33 @@ impl QueueManager {
                     state,
                     cancel_tx,
                     pid,
+                    generation,
                 },
             );
         }
         drop(jobs);
         self.inner.persist_now(app);
         // In creation order, so the FIFO semaphore keeps queue order.
-        for (id, spec, rx, pid) in resume {
-            spawn_job(self.inner.clone(), app.clone(), id, spec, rx, pid);
+        for pending in resume {
+            spawn_job(self.inner.clone(), app.clone(), generation, pending);
         }
     }
+}
+
+fn validate_spec(spec: &JobSpec) -> Result<(), AppError> {
+    if spec.url.trim().is_empty() {
+        return Err(AppError::InvalidInput("url is empty".into()));
+    }
+    if spec.output_dir.as_os_str().is_empty() {
+        return Err(AppError::InvalidInput("output_dir is empty".into()));
+    }
+    if !spec.output_dir.is_dir() {
+        return Err(AppError::InvalidInput(format!(
+            "output_dir does not exist: {}",
+            spec.output_dir.display()
+        )));
+    }
+    Ok(())
 }
 
 /// Startup view of persisted jobs: sorted by creation order and
@@ -586,15 +694,15 @@ fn prepare_for_resume(mut persisted: Vec<JobState>) -> Vec<JobState> {
 
 /// Run one job to completion: wait while the queue is paused, take a
 /// download slot (or bail out on cancel), run yt-dlp, record the outcome.
-/// Shared by `enqueue` and the restart path in `hydrate_from_disk`.
-fn spawn_job(
-    inner: Arc<QueueInner>,
-    app: AppHandle,
-    id: JobId,
-    spec: JobSpec,
-    cancel_rx: oneshot::Receiver<()>,
-    pid_for_runner: Arc<Mutex<Option<u32>>>,
-) {
+/// Shared by `enqueue`, the restart path in `hydrate_from_disk` and
+/// `resume_after_shutdown`.
+///
+/// `generation` is the queue generation the task belongs to. Once
+/// `shutdown` has moved on to the next one the task is orphaned: it
+/// returns its slot and leaves the job's state alone, so the job can be
+/// persisted as resumable and picked up again by a fresh task.
+fn spawn_job(inner: Arc<QueueInner>, app: AppHandle, generation: u64, job: PendingSpawn) {
+    let PendingSpawn { id, spec, cancel_rx, pid } = job;
     tauri::async_runtime::spawn(async move {
         // Race the permit against cancel so cancelling a job that is
         // still waiting for a slot takes effect immediately instead
@@ -610,8 +718,12 @@ fn spawn_job(
                         return; // sender dropped (shutdown)
                     }
                 }
+                // Also fires when the sender is dropped, which is what
+                // resume_after_shutdown does to an orphaned task.
                 _ = &mut cancel_rx => {
-                    inner.transition(&app, &id, JobStatus::Cancelled, None);
+                    if inner.is_current(generation) {
+                        inner.transition(&app, &id, JobStatus::Cancelled, None);
+                    }
                     return;
                 }
             }
@@ -621,14 +733,20 @@ fn spawn_job(
                     Err(_) => return, // semaphore closed (shutdown)
                 },
                 _ = &mut cancel_rx => {
-                    inner.transition(&app, &id, JobStatus::Cancelled, None);
+                    if inner.is_current(generation) {
+                        inner.transition(&app, &id, JobStatus::Cancelled, None);
+                    }
                     return;
                 }
             };
+            if !inner.is_current(generation) {
+                inner.release(permit);
+                return;
+            }
             // "Pause all" may have landed while we waited for the
             // slot: give it back and wait again.
             if *inner.paused.borrow() {
-                drop(permit);
+                inner.release(permit);
                 continue;
             }
             break permit;
@@ -636,25 +754,28 @@ fn spawn_job(
 
         inner.transition(&app, &id, JobStatus::Downloading, None);
 
-        let outcome =
-            runner::run(&app, &id, &spec, cancel_rx, pid_for_runner).await;
+        let outcome = runner::run(&app, &id, &spec, cancel_rx, pid).await;
 
-        match outcome {
-            Ok(RunOutcome::Completed) => {
-                inner.transition(&app, &id, JobStatus::Completed, None);
-            }
-            Ok(RunOutcome::Cancelled) => {
-                inner.transition(&app, &id, JobStatus::Cancelled, None);
-            }
-            Ok(RunOutcome::Failed(msg)) | Err(AppError::YtdlpExit(msg)) => {
-                inner.transition(&app, &id, JobStatus::Failed, Some(msg));
-            }
-            Err(e) => {
-                inner.transition(&app, &id, JobStatus::Failed, Some(e.to_string()));
+        // An orphaned task's download was killed by `shutdown`; that is
+        // not a failure of the job.
+        if inner.is_current(generation) {
+            match outcome {
+                Ok(RunOutcome::Completed) => {
+                    inner.transition(&app, &id, JobStatus::Completed, None);
+                }
+                Ok(RunOutcome::Cancelled) => {
+                    inner.transition(&app, &id, JobStatus::Cancelled, None);
+                }
+                Ok(RunOutcome::Failed(msg)) | Err(AppError::YtdlpExit(msg)) => {
+                    inner.transition(&app, &id, JobStatus::Failed, Some(msg));
+                }
+                Err(e) => {
+                    inner.transition(&app, &id, JobStatus::Failed, Some(e.to_string()));
+                }
             }
         }
 
-        drop(permit);
+        inner.release(permit);
     });
 }
 
@@ -665,9 +786,35 @@ impl QueueInner {
             if error.is_some() {
                 entry.state.error = error.clone();
             }
+            // A finished job can't be cancelled any more. Dropping the
+            // sender also ends the runner's cancel watcher, which would
+            // otherwise sit on the yt-dlp process handle for as long as
+            // the job stays in the history.
+            if !is_active(status) {
+                entry.cancel_tx = None;
+            }
         }
         self.mark_dirty();
         emit_status(app, id, status, error);
+    }
+
+    fn is_current(&self, generation: u64) -> bool {
+        self.generation.load(Ordering::Acquire) == generation
+    }
+
+    /// Give a download slot back. Every permit must come back through
+    /// here rather than being dropped: after the limit was lowered, the
+    /// permits still owed are taken out of the pool at this point.
+    fn release(&self, permit: OwnedSemaphorePermit) {
+        let mut slots = self.slots.lock().unwrap();
+        if slots.debt > 0 {
+            slots.debt -= 1;
+            permit.forget();
+        } else {
+            // Under the lock, so a concurrent set_parallel_limit sees
+            // the permit either still held or already back in the pool.
+            drop(permit);
+        }
     }
 
     fn mark_dirty(&self) {
@@ -704,8 +851,8 @@ impl QueueInner {
 //
 // We don't persist logs (session-local, can be megabytes per failed
 // job) or the cancel/pid handles (process-local, meaningless across
-// restarts). On hydration anything that was running flips to
-// Cancelled — the OS process is gone, no way to resume.
+// restarts). On hydration every unfinished job goes back to Queued
+// and runs again (see `prepare_for_resume`).
 
 #[derive(Serialize, Deserialize)]
 struct PersistedQueue {
@@ -821,12 +968,58 @@ mod tests {
                         state: state(id, seq),
                         cancel_tx: None,
                         pid: Arc::new(Mutex::new(None)),
+                        generation: 0,
                     },
                 );
             }
         }
         let ids: Vec<_> = q.list().into_iter().map(|s| s.id).collect();
         assert_eq!(ids, ["a", "b", "c", "d", "e"]);
+    }
+
+    fn take_slot(q: &QueueManager) -> OwnedSemaphorePermit {
+        q.inner.semaphore.clone().try_acquire_owned().expect("free slot")
+    }
+
+    #[test]
+    fn lowering_the_limit_applies_as_running_jobs_finish() {
+        let q = QueueManager::new(3);
+        let (a, b, c) = (take_slot(&q), take_slot(&q), take_slot(&q));
+
+        // All three slots busy: nothing to remove yet, two are owed.
+        assert_eq!(q.set_parallel_limit(1), 1);
+        q.inner.release(a);
+        q.inner.release(b);
+        assert_eq!(q.inner.semaphore.available_permits(), 0);
+
+        // The third one is the single slot the new limit allows.
+        q.inner.release(c);
+        assert_eq!(q.inner.semaphore.available_permits(), 1);
+    }
+
+    #[test]
+    fn lowering_the_limit_removes_idle_slots_at_once() {
+        let q = QueueManager::new(4);
+        let busy = take_slot(&q);
+        q.set_parallel_limit(2);
+        assert_eq!(q.inner.semaphore.available_permits(), 1);
+        q.inner.release(busy);
+        assert_eq!(q.inner.semaphore.available_permits(), 2);
+    }
+
+    #[test]
+    fn raising_the_limit_settles_owed_slots_first() {
+        let q = QueueManager::new(3);
+        let (a, b, c) = (take_slot(&q), take_slot(&q), take_slot(&q));
+        q.set_parallel_limit(1);
+        // Back up to 3 before any job finished: no slot may be added,
+        // or four downloads could run.
+        q.set_parallel_limit(3);
+        assert_eq!(q.inner.semaphore.available_permits(), 0);
+        for permit in [a, b, c] {
+            q.inner.release(permit);
+        }
+        assert_eq!(q.inner.semaphore.available_permits(), 3);
     }
 
     #[test]

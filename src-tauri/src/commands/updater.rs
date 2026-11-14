@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Leon Kasdorf
 
+use std::cmp::Ordering;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -10,6 +11,7 @@ use tauri::State;
 
 use crate::queue::QueueManager;
 use crate::ytdlp::runner::{user_ytdlp_path, ytdlp_command};
+use crate::ytdlp::user_copy::compare_versions;
 
 const RELEASES_API: &str = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
 const APP_RELEASES_API: &str = "https://api.github.com/repos/lkasdorf/ytbr/releases/latest";
@@ -64,15 +66,22 @@ async fn current_ytdlp_version(app: &tauri::AppHandle) -> Option<String> {
 }
 
 fn parse_sha_for(asset: &str, sums: &str) -> Option<String> {
-    for line in sums.lines() {
+    // find_map, not `?` in a loop: a blank or malformed line must skip
+    // that line, not end the search.
+    sums.lines().find_map(|line| {
         let mut parts = line.split_whitespace();
         let hash = parts.next()?;
-        let name = parts.next()?;
-        if name == asset {
-            return Some(hash.to_string());
-        }
-    }
-    None
+        (parts.next()? == asset).then(|| hash.to_string())
+    })
+}
+
+/// Whether the release tagged `latest` should be offered to a client
+/// running `current`. A plain inequality offered "updates" to anyone
+/// ahead of the latest release (dev builds, a pulled release) — the
+/// banner then pointed at an older version. Versions that aren't plain
+/// dotted numbers (pre-release suffixes) fall back to inequality.
+fn is_newer_version(latest: &str, current: &str) -> bool {
+    compare_versions(latest, current).map_or(latest != current, |o| o == Ordering::Greater)
 }
 
 fn hex_sha256(bytes: &[u8]) -> String {
@@ -215,11 +224,10 @@ pub struct AppUpdateCheck {
     pub release_url: String,
 }
 
-/// Lightweight "is there a newer release?" probe. No download, no
-/// signature, no auto-install — just a heads-up so the user can click
-/// through to the GitHub release page. The fully-fledged
-/// tauri-plugin-updater path would need a signing keypair and a
-/// signed `latest.json`; out of scope for now.
+/// Lightweight "is there a newer release?" probe against the GitHub
+/// API. No download, no signature — the fallback for when the signed
+/// tauri-plugin-updater check can't answer (no `latest.json` on the
+/// release, offline endpoint); the UI then links to the release page.
 #[tauri::command]
 pub async fn check_app_update() -> Result<AppUpdateCheck, String> {
     let current = env!("CARGO_PKG_VERSION").to_string();
@@ -250,9 +258,35 @@ pub async fn check_app_update() -> Result<AppUpdateCheck, String> {
         .to_string();
 
     Ok(AppUpdateCheck {
-        is_newer: latest_clean != current,
+        is_newer: is_newer_version(&latest_clean, &current),
         current,
         latest: latest_clean,
         release_url: APP_RELEASES_PAGE.to_string(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_higher_version_counts_as_newer() {
+        assert!(is_newer_version("1.4.2", "1.4.1"));
+        assert!(is_newer_version("1.10.0", "1.9.3"));
+        assert!(!is_newer_version("1.4.1", "1.4.1"));
+        assert!(!is_newer_version("1.4.0", "1.4.1"));
+    }
+
+    #[test]
+    fn unparseable_versions_fall_back_to_inequality() {
+        assert!(is_newer_version("1.5.0-beta.1", "1.4.1"));
+        assert!(!is_newer_version("1.5.0-beta.1", "1.5.0-beta.1"));
+    }
+
+    #[test]
+    fn sha_lookup_skips_blank_and_malformed_lines() {
+        let sums = "aaa  yt-dlp\n\nmalformed\nbbb  yt-dlp.exe\n";
+        assert_eq!(parse_sha_for("yt-dlp.exe", sums).as_deref(), Some("bbb"));
+        assert_eq!(parse_sha_for("yt-dlp_linux", sums), None);
+    }
 }

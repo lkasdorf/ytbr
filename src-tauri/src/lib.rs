@@ -38,7 +38,7 @@ pub fn run() {
             // no real cost to keep it on and the alternative is silent loss
             // of every prior job's history on each restart.
             let queue = app.state::<QueueManager>();
-            queue.hydrate_from_disk(&app.handle());
+            queue.hydrate_from_disk(app.handle());
             queue.start_persister(app.handle().clone());
 
             // Drop the updater's per-user yt-dlp once the bundled sidecar
@@ -89,6 +89,8 @@ pub fn run() {
             commands::download::cancel_all_jobs,
             commands::download::queue_paused,
             commands::download::prepare_for_update,
+            commands::download::resume_after_failed_update,
+            commands::download::enqueue_jobs,
             commands::settings::pick_output_dir,
             commands::settings::pick_cookies_file,
             commands::settings::set_parallel_limit,

@@ -428,7 +428,9 @@ fn humanize_yt_dlp_error(raw: &str) -> String {
     // decrypt. Closing the browser doesn't help here — only a different
     // cookie source does.
     if trimmed.starts_with("Failed to decrypt with DPAPI") {
-        return "Can't read this browser's cookies — Chrome and Edge encrypt them so other apps                 can't decrypt them (yt-dlp issue #10927). Use 'Cookies file' (cookies.txt                 exported from a private window) or 'Cookies from browser' = Firefox in Settings."
+        return "Can't read this browser's cookies — Chrome and Edge encrypt them so other apps \
+                can't decrypt them (yt-dlp issue #10927). Use 'Cookies file' (cookies.txt \
+                exported from a private window) or 'Cookies from browser' = Firefox in Settings."
             .to_string();
     }
 
@@ -451,7 +453,9 @@ fn humanize_yt_dlp_error(raw: &str) -> String {
         || trimmed.contains("members-only content")
     {
         return format!(
-            "{trimmed} — yt-dlp needs your logged-in YouTube session. Set 'Cookies file'              (cookies.txt exported from a private window) or 'Cookies from browser'              (Firefox works best) in Settings, then retry."
+            "{trimmed} — yt-dlp needs your logged-in YouTube session. Set 'Cookies file' \
+             (cookies.txt exported from a private window) or 'Cookies from browser' \
+             (Firefox works best) in Settings, then retry."
         );
     }
 
@@ -539,6 +543,11 @@ pub fn ytdlp_command(app: &AppHandle) -> Result<Command, String> {
         Some(path) => app.shell().command(path),
         None => app.shell().sidecar("yt-dlp").map_err(|e| e.to_string())?,
     };
+    // Piped output is otherwise written in the system code page on
+    // Windows (cp1252 & co.), while every reader here decodes UTF-8 —
+    // titles, file paths and error text with non-ASCII characters came
+    // out as U+FFFD.
+    let cmd = cmd.args(["--encoding", "utf-8"]);
     // Re-read PATH so yt-dlp finds the JS runtime (deno) even when YTBR
     // was relaunched by its updater with a stale environment.
     Ok(match env_path::for_child() {
@@ -636,6 +645,9 @@ mod tests {
         );
         assert!(msg.contains("Cookies file"));
         assert!(msg.contains("Firefox"));
+        // A lost `\` line continuation once left runs of indentation
+        // spaces inside the message.
+        assert!(!msg.contains("  "), "{msg}");
     }
 
     #[test]
@@ -645,6 +657,7 @@ mod tests {
         );
         assert!(msg.starts_with("[youtube] qKO1zbp_e_s"));
         assert!(msg.contains("Cookies file"));
+        assert!(!msg.contains("  "), "{msg}");
     }
 
     #[test]

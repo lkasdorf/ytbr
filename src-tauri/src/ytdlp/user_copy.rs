@@ -39,7 +39,7 @@ pub async fn prune_stale(app: AppHandle) {
                 None => true,
                 // Unparseable versions → don't guess, keep the user copy.
                 Some(bundled) => {
-                    compare_versions(user, &bundled).map_or(true, |o| o == Ordering::Greater)
+                    compare_versions(user, &bundled).is_none_or(|o| o == Ordering::Greater)
                 }
             }
         }
@@ -62,8 +62,8 @@ async fn version_of(cmd: Command) -> Option<String> {
 /// yt-dlp versions are dot-separated numbers: `2026.03.17` for stable,
 /// `2026.03.17.123456` for nightly builds. Compared component-wise, so a
 /// nightly sorts after the stable release of the same day. `None` when
-/// either side isn't in that shape.
-fn compare_versions(a: &str, b: &str) -> Option<Ordering> {
+/// either side isn't in that shape. Also used for YTBR's own `X.Y.Z`.
+pub(crate) fn compare_versions(a: &str, b: &str) -> Option<Ordering> {
     let parse = |s: &str| -> Option<Vec<u64>> {
         s.trim().split('.').map(|p| p.parse::<u64>().ok()).collect()
     };

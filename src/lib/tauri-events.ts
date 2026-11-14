@@ -12,7 +12,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { removeJob, type JobProgress, type JobStatus } from "@/lib/tauri-bridge";
 import { notifyJobFinished } from "@/lib/notify";
 
-let started = false;
+let starting: Promise<void> | null = null;
 let unlisten: UnlistenFn[] = [];
 
 interface ProgressPayload extends JobProgress {
@@ -102,10 +102,15 @@ function onStatusChange(id: string, status: JobStatus, url: string) {
 
 // Wires the global Tauri event listeners for job updates. Idempotent —
 // safe to call multiple times (e.g. under React StrictMode double-mount).
-export async function startJobListeners(): Promise<void> {
-  if (started) return;
-  started = true;
+// Every caller gets the same promise, which resolves once all listeners
+// are registered: await it before fetching the job snapshot, or events
+// emitted in between are lost.
+export function startJobListeners(): Promise<void> {
+  starting ??= registerListeners();
+  return starting;
+}
 
+async function registerListeners(): Promise<void> {
   unlisten.push(
     await listen<ProgressPayload>("job-progress", (e) => {
       const { id, ...progress } = e.payload;
@@ -142,7 +147,7 @@ export async function startJobListeners(): Promise<void> {
 export function stopJobListeners(): void {
   for (const fn of unlisten) fn();
   unlisten = [];
-  started = false;
+  starting = null;
   if (flushTimer != null) {
     clearTimeout(flushTimer);
     flush();
