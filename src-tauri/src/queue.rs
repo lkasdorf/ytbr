@@ -32,6 +32,11 @@ pub enum JobStatus {
 #[serde(rename_all = "camelCase")]
 pub struct JobSpec {
     pub url: String,
+    /// Video title for the queue / history cards. The Download tab
+    /// sends it from the probe result; for every other job the runner
+    /// fills it in once yt-dlp has resolved the URL (see `set_title`).
+    #[serde(default)]
+    pub title: Option<String>,
     /// yt-dlp `-f` argument. May be a single format id ("140"), a
     /// composite selector ("137+bestaudio/best") or a full preset
     /// expression. Despite the name, callers should treat this as
@@ -754,7 +759,10 @@ fn spawn_job(inner: Arc<QueueInner>, app: AppHandle, generation: u64, job: Pendi
 
         inner.transition(&app, &id, JobStatus::Downloading, None);
 
-        let outcome = runner::run(&app, &id, &spec, cancel_rx, pid).await;
+        let outcome = runner::run(&app, &id, &spec, cancel_rx, pid, |title| {
+            inner.set_title(&app, &id, title)
+        })
+        .await;
 
         // An orphaned task's download was killed by `shutdown`; that is
         // not a failure of the job.
@@ -796,6 +804,21 @@ impl QueueInner {
         }
         self.mark_dirty();
         emit_status(app, id, status, error);
+    }
+
+    /// Record the title yt-dlp resolved for a job and tell the frontend.
+    /// No-op when the job already carries that title (probed jobs).
+    fn set_title(&self, app: &AppHandle, id: &str, title: &str) {
+        {
+            let mut jobs = self.jobs.lock().unwrap();
+            let Some(entry) = jobs.get_mut(id) else { return };
+            if entry.state.spec.title.as_deref() == Some(title) {
+                return;
+            }
+            entry.state.spec.title = Some(title.to_string());
+        }
+        self.mark_dirty();
+        let _ = app.emit("job-title", TitlePayload { id, title });
     }
 
     fn is_current(&self, generation: u64) -> bool {
@@ -928,6 +951,12 @@ fn is_active(status: JobStatus) -> bool {
 
 fn emit_queue_paused(app: &AppHandle, paused: bool) {
     let _ = app.emit("queue-paused", paused);
+}
+
+#[derive(Serialize, Clone)]
+struct TitlePayload<'a> {
+    id: &'a str,
+    title: &'a str,
 }
 
 fn emit_status(app: &AppHandle, id: &str, status: JobStatus, error: Option<String>) {

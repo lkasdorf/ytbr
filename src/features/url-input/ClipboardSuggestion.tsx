@@ -20,10 +20,9 @@ export function ClipboardSuggestion({ currentUrl, onInsert }: Props) {
   const [dismissed, setDismissed] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!watchClipboard) {
-      setSuggestion(null);
-      return;
-    }
+    // Nothing to reset when the setting is off: the render below hides
+    // any earlier suggestion.
+    if (!watchClipboard) return;
 
     let cancelled = false;
     async function check(): Promise<void> {

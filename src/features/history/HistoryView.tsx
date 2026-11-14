@@ -46,9 +46,15 @@ export function HistoryView() {
       if (filter !== "all" && j.status !== filter) return false;
       if (q.length > 0) {
         const url = j.spec.url.toLowerCase();
+        const title = (j.spec.title ?? "").toLowerCase();
         const label = (j.spec.formatLabel ?? "").toLowerCase();
         const fmt = (j.spec.formatId ?? "").toLowerCase();
-        if (!url.includes(q) && !label.includes(q) && !fmt.includes(q)) {
+        if (
+          !url.includes(q) &&
+          !title.includes(q) &&
+          !label.includes(q) &&
+          !fmt.includes(q)
+        ) {
           return false;
         }
       }
@@ -73,6 +79,8 @@ export function HistoryView() {
       counts[j.status as Exclude<StatusFilter, "all">] += 1;
     }
     return counts;
+    // statusVersion is the change signal; the data is read from getState().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusVersion]);
   const totalTerminal = chipCounts.all;
 
@@ -101,7 +109,7 @@ export function HistoryView() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search URL or format…"
+            placeholder="Search title, URL or format…"
             spellCheck={false}
             className="min-w-0 flex-1 bg-transparent px-1 py-0.5 text-xs text-foreground outline-none placeholder:text-muted-foreground"
             aria-label="Search history"

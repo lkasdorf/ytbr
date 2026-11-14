@@ -300,11 +300,22 @@ export const JobCard = memo(function JobCard({ id }: { id: string }) {
         <StatusIcon status={job.status} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="truncate text-sm font-medium" title={job.spec.url}>
-              {job.spec.url}
+            <p
+              className="truncate text-sm font-medium"
+              title={job.spec.title ?? job.spec.url}
+            >
+              {job.spec.title ?? job.spec.url}
             </p>
             <StatusBadge status={job.status} />
           </div>
+          {job.spec.title && (
+            <p
+              className="mt-0.5 truncate font-mono text-xs text-muted-foreground"
+              title={job.spec.url}
+            >
+              {job.spec.url}
+            </p>
+          )}
           <p className="mt-0.5 text-xs text-muted-foreground">
             <span>format </span>
             <code

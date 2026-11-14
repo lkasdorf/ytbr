@@ -15,11 +15,13 @@ All commands run from the project root (`ytbr/`).
 ```bash
 pnpm install                                 # JS deps (auto-runs esbuild postinstall thanks to pnpm-workspace.yaml)
 pnpm build                                   # tsc strict-check + Vite bundle (no Rust)
+pnpm lint                                    # ESLint, zero warnings allowed (CI gate)
 pnpm tauri dev --no-watch                    # dev window — use --no-watch ALWAYS (see Gotchas)
 pnpm tauri build                             # full release bundle (.msi/.exe on Win, .deb/.AppImage on Linux)
 
 cargo test --lib --manifest-path src-tauri/Cargo.toml    # Rust unit tests (format/progress parsers)
 cargo check --manifest-path src-tauri/Cargo.toml         # quick Rust syntax check
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings   # CI gate
 
 ./scripts/fetch-binaries.ps1                 # Windows: download yt-dlp + LGPL ffmpeg into src-tauri/binaries/
 ./scripts/fetch-binaries.sh                  # Linux/macOS: same, takes optional <target-triple> arg
@@ -103,6 +105,7 @@ src/
     utils.ts              # cn() (clsx + tailwind-merge)
   stores/
     jobs.ts               # zustand: jobs map, ids order, upsert/applyBatch, statusVersion
+    probe.ts              # zustand (session-only): Download tab URL + probe result, survives tab switches
     settings.ts           # zustand persist (localStorage): outputDir
   index.css               # Tailwind v4 import + slate theme tokens (oklch) + .dark variants
 ```

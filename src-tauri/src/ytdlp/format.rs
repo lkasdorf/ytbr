@@ -22,9 +22,9 @@ pub struct RawFormat {
     pub width: Option<u32>,
     pub height: Option<u32>,
     pub fps: Option<f64>,
-    #[serde(default = "default_codec")]
+    #[serde(default = "default_codec", deserialize_with = "codec_or_none")]
     pub vcodec: String,
-    #[serde(default = "default_codec")]
+    #[serde(default = "default_codec", deserialize_with = "codec_or_none")]
     pub acodec: String,
     pub filesize: Option<u64>,
     pub filesize_approx: Option<u64>,
@@ -33,6 +33,13 @@ pub struct RawFormat {
 
 fn default_codec() -> String {
     "none".to_string()
+}
+
+// yt-dlp writes `"vcodec": null` for direct media URLs (generic
+// extractor), where it doesn't know the codec. `default` only covers a
+// missing key, so an explicit null failed the whole probe.
+fn codec_or_none<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    Ok(Option::<String>::deserialize(d)?.unwrap_or_else(default_codec))
 }
 
 // ---------- wire shape returned to the frontend ----------
@@ -126,6 +133,19 @@ mod tests {
         assert_eq!(video.height, Some(1080));
         assert_eq!(video.acodec, "none");
         assert_eq!(video.filesize_bytes, Some(5_000_000)); // from filesize_approx
+    }
+
+    #[test]
+    fn accepts_null_codecs_from_direct_media_urls() {
+        let raw = r#"{
+            "id": "mov_bbb", "title": "mov_bbb",
+            "formats": [{"format_id": "mp4", "ext": "mp4", "vcodec": null, "tbr": null}]
+        }"#;
+
+        let info: VideoInfo = serde_json::from_str(raw).unwrap();
+        let f = &info.formats[0];
+        assert_eq!(f.vcodec, "none");
+        assert_eq!(f.acodec, "none");
     }
 
     #[test]
