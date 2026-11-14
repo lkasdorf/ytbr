@@ -6,6 +6,7 @@ import { Download, ExternalLink, X } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { checkAppUpdate, type AppUpdateCheck } from "@/lib/tauri-bridge";
+import { UpdateProgress } from "@/components/UpdateProgress";
 import { useUpdateInstall } from "@/lib/use-update-install";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export function UpdateBanner() {
   );
   const {
     installing,
+    progress,
     installed,
     error: installError,
     install,
@@ -80,6 +82,7 @@ export function UpdateBanner() {
         <p className="font-medium text-foreground">
           YTBR v{version} is available
         </p>
+        {progress && <UpdateProgress progress={progress} className="mt-1.5 max-w-sm" />}
         {installError && (
           <p className="mt-1 font-mono text-[11px] text-destructive">
             {installError}
@@ -93,7 +96,7 @@ export function UpdateBanner() {
             onClick={() => void install()}
             disabled={installing != null || installed}
             className={cn(
-              "rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground",
+              "rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground tabular-nums",
               "transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
             )}
           >
